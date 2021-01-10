@@ -6,15 +6,19 @@ import (
 	"github.com/eventually-rs/eventually-go"
 )
 
+type Applier interface {
+	Apply(eventually.Event) error
+}
+
 type Root interface {
-	eventually.EventApplier
+	Applier
 
 	AggregateID() string
 	Version() int64
 
 	updateVersion(int64)
 	flushRecordedEvents() []eventually.Event
-	recordThat(eventually.EventApplier, ...eventually.Event) error
+	recordThat(Applier, ...eventually.Event) error
 }
 
 func Record(root Root, event interface{}) error {
@@ -37,7 +41,7 @@ func (br BaseRoot) Version() int64 { return br.version }
 
 func (br *BaseRoot) updateVersion(v int64) { br.version = v }
 
-func (br *BaseRoot) recordThat(aggregate eventually.EventApplier, events ...eventually.Event) error {
+func (br *BaseRoot) recordThat(aggregate Applier, events ...eventually.Event) error {
 	for _, event := range events {
 		if err := aggregate.Apply(event); err != nil {
 			return fmt.Errorf("aggregate: failed to record event: %w", err)
