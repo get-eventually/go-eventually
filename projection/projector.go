@@ -11,11 +11,11 @@ import (
 )
 
 type Projector struct {
-	projection   Projection
+	projection   Applier
 	subscription subscription.Subscription
 }
 
-func NewProjector(projection Projection, subscription subscription.Subscription) *Projector {
+func NewProjector(projection Applier, subscription subscription.Subscription) *Projector {
 	return &Projector{
 		projection:   projection,
 		subscription: subscription,

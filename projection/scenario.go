@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/eventually-rs/eventually-go/eventstore"
+	"github.com/eventually-rs/eventually-go/query"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -16,16 +17,16 @@ type Scenario struct {
 	given []eventstore.Event
 }
 
-func (s Scenario) When(query Query) ScenarioWhen {
+func (s Scenario) When(query query.Query) ScenarioWhen {
 	return ScenarioWhen{given: s.given, when: query}
 }
 
 type ScenarioWhen struct {
 	given []eventstore.Event
-	when  Query
+	when  query.Query
 }
 
-func (s ScenarioWhen) Then(answer Answer) ScenarioThen {
+func (s ScenarioWhen) Then(answer query.Answer) ScenarioThen {
 	return ScenarioThen{
 		given: s.given,
 		when:  s.when,
@@ -52,8 +53,8 @@ func (s ScenarioWhen) ThenFails() ScenarioThen {
 
 type ScenarioThen struct {
 	given     []eventstore.Event
-	when      Query
-	then      Answer
+	when      query.Query
+	then      query.Answer
 	thenError error
 	wantError bool
 }
@@ -68,7 +69,7 @@ func (s ScenarioThen) Using(t *testing.T, projectionFactory func() Projection) {
 		}
 	}
 
-	answer, err := projection.Evaluate(ctx, s.when)
+	answer, err := projection.Handle(ctx, s.when)
 
 	if !s.wantError {
 		assert.NoError(t, err)

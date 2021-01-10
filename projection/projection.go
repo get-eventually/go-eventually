@@ -4,13 +4,14 @@ import (
 	"context"
 
 	"github.com/eventually-rs/eventually-go/eventstore"
+	"github.com/eventually-rs/eventually-go/query"
 )
 
-type Query interface{}
-
-type Answer interface{}
+type Applier interface {
+	Apply(context.Context, eventstore.Event) error
+}
 
 type Projection interface {
-	Apply(context.Context, eventstore.Event) error
-	Evaluate(context.Context, Query) (Answer, error)
+	query.Handler
+	Applier
 }
