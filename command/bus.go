@@ -6,6 +6,10 @@ import (
 	"reflect"
 )
 
+type Dispatcher interface {
+	Dispatch(context.Context, Command) error
+}
+
 type SimpleBus struct {
 	handlers map[reflect.Type]Handler
 }

@@ -112,6 +112,10 @@ func (sc HandlerScenarioThen) Using(
 }
 
 func toEvents(payloads ...interface{}) []eventually.Event {
+	if len(payloads) == 0 {
+		return nil
+	}
+
 	events := make([]eventually.Event, 0, len(payloads))
 
 	for _, payload := range payloads {
@@ -122,6 +126,10 @@ func toEvents(payloads ...interface{}) []eventually.Event {
 }
 
 func toPayloads(events ...eventually.Event) []interface{} {
+	if len(events) == 0 {
+		return nil
+	}
+
 	payloads := make([]interface{}, 0, len(events))
 
 	for _, event := range events {
