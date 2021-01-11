@@ -23,7 +23,7 @@ func NewProjector(projection Applier, subscription subscription.Subscription) *P
 }
 
 func (p *Projector) Start(ctx context.Context) error {
-	stream := make(chan eventstore.Event, 1) // should buffer more?
+	stream := make(chan eventstore.Event, 128) // should buffer more?
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
