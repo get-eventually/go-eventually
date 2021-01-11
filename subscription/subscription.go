@@ -2,6 +2,7 @@ package subscription
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/eventually-rs/eventually-go/eventstore"
 
@@ -13,11 +14,8 @@ type Subscription interface {
 	Start(context.Context, eventstore.EventStream) error
 }
 
-type CheckpointGetter interface {
+type Checkpointer interface {
 	Get(context.Context, string) (int64, error)
-}
-
-type CheckpointStorer interface {
 	Store(context.Context, string, int64) error
 }
 
@@ -28,7 +26,7 @@ type CatchUp struct {
 	startFrom       int64
 	eventStreamer   eventstore.Streamer
 	eventSubscriber eventstore.Subscriber
-	// checkpointStorer CheckpointStorer
+	checkpointer    Checkpointer
 }
 
 func NewCatchUp(
@@ -36,18 +34,19 @@ func NewCatchUp(
 	name string,
 	eventStreamer eventstore.Streamer,
 	eventSubscriber eventstore.Subscriber,
-	// checkpointGetter CheckpointGetter,
-	// checkpointStorer CheckpointStorer,
+	checkpointer Checkpointer,
 ) (CatchUp, error) {
-	// from, err := checkpointGetter.Get(ctx, name)
-	// if err != nil {
-	// 	return CatchUp{}, fmt.Errorf("subscription: failed to get checkpoint: %w", err)
-	// }
+	from, err := checkpointer.Get(ctx, name)
+	if err != nil {
+		return CatchUp{}, fmt.Errorf("subscription: failed to get checkpoint: %w", err)
+	}
 
 	return CatchUp{
 		name:            name,
+		startFrom:       from,
 		eventStreamer:   eventStreamer,
 		eventSubscriber: eventSubscriber,
+		checkpointer:    checkpointer,
 	}, nil
 }
 
@@ -66,11 +65,16 @@ func (s CatchUp) Start(ctx context.Context, stream eventstore.EventStream) error
 	lastSequenceNumber := s.startFrom
 
 	for event := range streamed {
-		if sn, ok := event.Metadata.GlobalSequenceNumber(); ok {
-			lastSequenceNumber = sn
-		}
-
 		stream <- event
+
+		sn, ok := event.Metadata.GlobalSequenceNumber()
+		if ok {
+			lastSequenceNumber = sn
+
+			if err := s.checkpointer.Store(ctx, s.name, lastSequenceNumber); err != nil {
+				return fmt.Errorf("subscription.CatchUp: failed to checkpoint: %w", err)
+			}
+		}
 	}
 
 	for event := range subscribed {
@@ -83,6 +87,10 @@ func (s CatchUp) Start(ctx context.Context, stream eventstore.EventStream) error
 
 		if ok {
 			lastSequenceNumber = sn
+
+			if err := s.checkpointer.Store(ctx, s.name, lastSequenceNumber); err != nil {
+				return fmt.Errorf("subscription.CatchUp: failed to checkpoint: %w", err)
+			}
 		}
 	}
 

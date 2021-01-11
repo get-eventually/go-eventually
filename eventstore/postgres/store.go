@@ -11,12 +11,15 @@ import (
 
 	"github.com/eventually-rs/eventually-go"
 	"github.com/eventually-rs/eventually-go/eventstore"
+	"github.com/eventually-rs/eventually-go/subscription"
+
 	"github.com/lib/pq"
 )
 
 const streamAllName = "$all"
 
 var _ eventstore.Store = &EventStore{}
+var _ subscription.Checkpointer = &EventStore{}
 
 type EventStore struct {
 	dsn             string
@@ -37,6 +40,38 @@ func OpenEventStore(dsn string) (*EventStore, error) {
 		eventNameToType: make(map[string]reflect.Type),
 		eventTypeToName: make(map[reflect.Type]string),
 	}, nil
+}
+
+func (st *EventStore) Get(ctx context.Context, subscriptionName string) (int64, error) {
+	row := st.db.QueryRowContext(
+		ctx,
+		"SELECT get_or_create_subscription_checkpoint($1)",
+		subscriptionName,
+	)
+
+	var lastSequenceNumber int64
+	if err := row.Scan(&lastSequenceNumber); err != nil {
+		return 0, fmt.Errorf("postgres.EventStore: failed to get subscription checkpoint: %w", err)
+	}
+
+	return lastSequenceNumber, nil
+}
+
+func (st *EventStore) Store(ctx context.Context, subscriptionName string, sequenceNumber int64) error {
+	_, err := st.db.ExecContext(
+		ctx,
+		`UPDATE subscriptions_checkpoints
+		SET last_sequence_number = $1
+		WHERE subscription_id = $2`,
+		sequenceNumber,
+		subscriptionName,
+	)
+
+	if err != nil {
+		return fmt.Errorf("postgres.EventStore: failed to store subscription checkpoint: %w", err)
+	}
+
+	return nil
 }
 
 func (st *EventStore) Register(ctx context.Context, typ string, events map[string]interface{}) error {

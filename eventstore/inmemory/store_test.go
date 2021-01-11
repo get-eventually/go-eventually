@@ -143,7 +143,14 @@ func TestCatchUpSubscription(t *testing.T) {
 		return
 	}
 
-	subscription, err := subscription.NewCatchUp(ctx, "test-subscription", mytypeStore, mytypeStore)
+	subscription, err := subscription.NewCatchUp(
+		ctx,
+		"test-subscription",
+		mytypeStore,
+		mytypeStore,
+		subscription.NopCheckpointer{},
+	)
+
 	if !assert.NoError(t, err) {
 		return
 	}
