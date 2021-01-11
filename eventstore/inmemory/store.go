@@ -32,7 +32,7 @@ func NewEventStore() *EventStore {
 	}
 }
 
-func (s *EventStore) Type(typ string) (eventstore.Typed, error) {
+func (s *EventStore) Type(ctx context.Context, typ string) (eventstore.Typed, error) {
 	_, ok := s.byType[typ]
 	if !ok {
 		return nil, fmt.Errorf("inmemory: type not registered in the event store")
@@ -41,10 +41,12 @@ func (s *EventStore) Type(typ string) (eventstore.Typed, error) {
 	return typedEventStoreAccess{EventStore: s, typ: typ}, nil
 }
 
-func (s *EventStore) Register(typ string, events ...interface{}) {
+func (s *EventStore) Register(ctx context.Context, typ string, events map[string]interface{}) error {
 	s.byType[typ] = nil
 	s.subscribersByType[typ] = nil
 	s.byTypeAndInstance[typ] = make(map[string][]eventstore.Event)
+
+	return nil
 }
 
 func (s *EventStore) Stream(ctx context.Context, es eventstore.EventStream, from int64) error {

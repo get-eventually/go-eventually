@@ -7,17 +7,26 @@ import (
 
 	"github.com/eventually-rs/eventually-go"
 	"github.com/eventually-rs/eventually-go/eventstore"
-	"github.com/eventually-rs/eventually-go/inmemory"
+	"github.com/eventually-rs/eventually-go/eventstore/inmemory"
 	"github.com/eventually-rs/eventually-go/subscription"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestTypedSubscribe(t *testing.T) {
-	store := inmemory.NewEventStore()
-	store.Register("mytype")
+	ctx := context.Background()
 
-	mytypeStore, _ := store.Type("mytype")
+	store := inmemory.NewEventStore()
+	// We don't need events registration.
+	if err := store.Register(ctx, "mytype", nil); !assert.NoError(t, err) {
+		return
+	}
+
+	mytypeStore, err := store.Type(ctx, "mytype")
+	if !assert.NoError(t, err) {
+		return
+	}
+
 	stream := make(chan eventstore.Event, 1)
 	go mytypeStore.Subscribe(context.Background(), stream)
 
@@ -37,12 +46,19 @@ func TestTypedSubscribe(t *testing.T) {
 }
 
 func TestTypedSubscribeCloseContext(t *testing.T) {
-	store := inmemory.NewEventStore()
-	store.Register("mytype")
-
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	mytypeStore, _ := store.Type("mytype")
+	store := inmemory.NewEventStore()
+	if err := store.Register(ctx, "mytype", nil); !assert.NoError(t, err) {
+		return
+	}
+
+	mytypeStore, err := store.Type(ctx, "mytype")
+	if !assert.NoError(t, err) {
+		return
+	}
+
 	stream := make(chan eventstore.Event, 1)
 	go mytypeStore.Subscribe(ctx, stream)
 	cancel()
@@ -64,26 +80,39 @@ func TestTypedSubscribeCloseContext(t *testing.T) {
 }
 
 func TestStreamAll(t *testing.T) {
+	ctx := context.Background()
 	store := inmemory.NewEventStore()
 
-	store.Register("mytype")
-	store.Register("myothertype")
+	if err := store.Register(ctx, "mytype", nil); !assert.NoError(t, err) {
+		return
+	}
 
-	mytypeStore, _ := store.Type("mytype")
-	myothertypeStore, _ := store.Type("myothertype")
+	if err := store.Register(ctx, "myothertype", nil); !assert.NoError(t, err) {
+		return
+	}
+
+	mytypeStore, err := store.Type(ctx, "mytype")
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	myothertypeStore, err := store.Type(ctx, "myothertype")
+	if !assert.NoError(t, err) {
+		return
+	}
 
 	for i := 0; i < 10; i++ {
 		mytypeStore.
 			Instance("test").
-			Append(context.Background(), int64(i), eventually.Event{Payload: i})
+			Append(ctx, int64(i), eventually.Event{Payload: i})
 
 		myothertypeStore.
 			Instance("test").
-			Append(context.Background(), int64(i), eventually.Event{Payload: i})
+			Append(ctx, int64(i), eventually.Event{Payload: i})
 	}
 
 	stream := make(chan eventstore.Event, 1)
-	go store.Stream(context.Background(), stream, 0)
+	go store.Stream(ctx, stream, 0)
 
 	for event := range stream {
 		t.Logf("Event received: %#v", event)
@@ -91,26 +120,33 @@ func TestStreamAll(t *testing.T) {
 }
 
 func TestCatchUpSubscription(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	store := inmemory.NewEventStore()
 
-	store.Register("mytype")
-	store.Register("myothertype")
+	if err := store.Register(ctx, "mytype", nil); !assert.NoError(t, err) {
+		return
+	}
 
-	mytypeStore, _ := store.Type("mytype")
-	myothertypeStore, _ := store.Type("myothertype")
+	if err := store.Register(ctx, "myothertype", nil); !assert.NoError(t, err) {
+		return
+	}
 
-	subscription, err := subscription.NewCatchUp(
-		context.TODO(),
-		"test-subscription",
-		mytypeStore,
-		mytypeStore,
-	)
-
+	mytypeStore, err := store.Type(ctx, "mytype")
 	if !assert.NoError(t, err) {
 		return
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	myothertypeStore, err := store.Type(ctx, "myothertype")
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	subscription, err := subscription.NewCatchUp(ctx, "test-subscription", mytypeStore, mytypeStore)
+	if !assert.NoError(t, err) {
+		return
+	}
 
 	stream := make(chan eventstore.Event, 1)
 	go subscription.Start(ctx, stream)

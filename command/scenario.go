@@ -7,7 +7,7 @@ import (
 
 	"github.com/eventually-rs/eventually-go"
 	"github.com/eventually-rs/eventually-go/aggregate"
-	"github.com/eventually-rs/eventually-go/inmemory"
+	"github.com/eventually-rs/eventually-go/eventstore/inmemory"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -67,10 +67,14 @@ func (sc HandlerScenarioThen) Using(
 	aggregateType aggregate.Type,
 	handlerFactory func(*aggregate.Repository) Handler,
 ) {
+	ctx := context.Background()
 	store := inmemory.NewEventStore()
-	store.Register(aggregateType.Name())
 
-	typedStore, err := store.Type(aggregateType.Name())
+	if err := store.Register(ctx, aggregateType.Name(), nil); !assert.NoError(t, err) {
+		return
+	}
+
+	typedStore, err := store.Type(ctx, aggregateType.Name())
 	if !assert.NoError(t, err) {
 		return
 	}

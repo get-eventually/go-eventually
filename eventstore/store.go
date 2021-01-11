@@ -28,8 +28,8 @@ type Store interface {
 	Streamer
 	Subscriber
 
-	Type(typ string) (Typed, error)
-	Register(typ string, events ...interface{})
+	Type(ctx context.Context, typ string) (Typed, error)
+	Register(ctx context.Context, typ string, events map[string]interface{}) error
 }
 
 type Typed interface {
