@@ -42,6 +42,10 @@ func OpenEventStore(dsn string) (*EventStore, error) {
 	}, nil
 }
 
+func (st *EventStore) Close() error {
+	return st.db.Close()
+}
+
 func (st *EventStore) Get(ctx context.Context, subscriptionName string) (int64, error) {
 	row := st.db.QueryRowContext(
 		ctx,
