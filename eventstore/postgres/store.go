@@ -146,7 +146,7 @@ func (st *EventStore) Stream(ctx context.Context, es eventstore.EventStream, fro
 	rows, err := st.db.QueryContext(
 		ctx,
 		`SELECT * FROM events
-			WHERE global_sequence_number > $1
+			WHERE global_sequence_number >= $1
 			ORDER BY global_sequence_number ASC`,
 		from,
 	)
@@ -245,7 +245,7 @@ func (st *typedEventStore) Stream(ctx context.Context, es eventstore.EventStream
 	rows, err := db.QueryContext(
 		ctx,
 		`SELECT * FROM events
-			WHERE stream_type = $1 AND global_sequence_number > $2
+			WHERE stream_type = $1 AND global_sequence_number >= $2
 			ORDER BY global_sequence_number ASC`,
 		st.streamType,
 		from,
@@ -283,7 +283,7 @@ func (st *instancedEventStore) Stream(ctx context.Context, es eventstore.EventSt
 	rows, err := db.QueryContext(
 		ctx,
 		`SELECT * FROM events
-			WHERE stream_type = $1 AND stream_id = $2 AND "version" > $3
+			WHERE stream_type = $1 AND stream_id = $2 AND "version" >= $3
 			ORDER BY "version" ASC`,
 		streamType,
 		st.streamID,
