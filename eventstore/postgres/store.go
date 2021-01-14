@@ -5,14 +5,19 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"time"
 
 	"github.com/eventually-rs/eventually-go"
 	"github.com/eventually-rs/eventually-go/eventstore"
+	"github.com/eventually-rs/eventually-go/eventstore/postgres/migrations"
 	"github.com/eventually-rs/eventually-go/subscription"
 
+	"github.com/golang-migrate/migrate"
+	_ "github.com/golang-migrate/migrate/database/postgres" // postgres driver for migrate
+	bindata "github.com/golang-migrate/migrate/source/go_bindata"
 	"github.com/lib/pq"
 )
 
@@ -34,12 +39,38 @@ func OpenEventStore(dsn string) (*EventStore, error) {
 		return nil, fmt.Errorf("postgres.EventStore: failed to open connection with the db: %w", err)
 	}
 
+	if err := runMigrations(dsn); err != nil {
+		return nil, err
+	}
+
 	return &EventStore{
 		db:              db,
 		dsn:             dsn,
 		eventNameToType: make(map[string]reflect.Type),
 		eventTypeToName: make(map[reflect.Type]string),
 	}, nil
+}
+
+func runMigrations(dsn string) (err error) {
+	src := bindata.Resource(migrations.AssetNames(), func(name string) ([]byte, error) {
+		return migrations.Asset(name)
+	})
+
+	driver, err := bindata.WithInstance(src)
+	if err != nil {
+		return fmt.Errorf("postgres.EventStore: failed to access migrations: %w", err)
+	}
+
+	m, err := migrate.NewWithSourceInstance("go-bindata", driver, dsn)
+	if err != nil {
+		return fmt.Errorf("postgres.EventStore: failed to create migrate instance: %w", err)
+	}
+
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		return fmt.Errorf("postgres.EventStore: failed to migrate database: %w", err)
+	}
+
+	return nil
 }
 
 func (st *EventStore) Close() error {
@@ -83,10 +114,6 @@ func (st *EventStore) Register(ctx context.Context, typ string, events map[strin
 		return fmt.Errorf("postgres.EventStore: failed to register types: %w", err)
 	}
 
-	if _, err := st.db.ExecContext(ctx, "SELECT create_stream_type($1)", typ); err != nil {
-		return fmt.Errorf("postgres.EventStore: failed to register stream type: %w", err)
-	}
-
 	return nil
 }
 
@@ -119,7 +146,7 @@ func (st *EventStore) Stream(ctx context.Context, es eventstore.EventStream, fro
 	rows, err := st.db.QueryContext(
 		ctx,
 		`SELECT * FROM events
-			WHERE global_sequence_number >= $1
+			WHERE global_sequence_number > $1
 			ORDER BY global_sequence_number ASC`,
 		from,
 	)
@@ -165,6 +192,11 @@ func (st *EventStore) subscribe(ctx context.Context, name string, es eventstore.
 		case <-ctx.Done():
 			return fmt.Errorf("postgres.EventStore: listener closed: %w", ctx.Err())
 
+		case <-time.After(10 * time.Second):
+			if err := listener.Ping(); err != nil {
+				return fmt.Errorf("postgres.EventStore: failed to ping listener: %w", err)
+			}
+
 		case notification := <-listener.Notify:
 			if notification == nil {
 				continue
@@ -198,8 +230,6 @@ func (st *EventStore) subscribe(ctx context.Context, name string, es eventstore.
 			}
 		}
 	}
-
-	return nil
 }
 
 type typedEventStore struct {
@@ -215,7 +245,7 @@ func (st *typedEventStore) Stream(ctx context.Context, es eventstore.EventStream
 	rows, err := db.QueryContext(
 		ctx,
 		`SELECT * FROM events
-			WHERE stream_type = $1 AND global_sequence_number >= $2
+			WHERE stream_type = $1 AND global_sequence_number > $2
 			ORDER BY global_sequence_number ASC`,
 		st.streamType,
 		from,
@@ -253,7 +283,7 @@ func (st *instancedEventStore) Stream(ctx context.Context, es eventstore.EventSt
 	rows, err := db.QueryContext(
 		ctx,
 		`SELECT * FROM events
-			WHERE stream_type = $1 AND stream_id = $2 AND "version" >= $3
+			WHERE stream_type = $1 AND stream_id = $2 AND "version" > $3
 			ORDER BY "version" ASC`,
 		streamType,
 		st.streamID,

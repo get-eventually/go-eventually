@@ -1,16 +1,9 @@
-CREATE TABLE stream_types (
-    id TEXT PRIMARY KEY
-);
-
 CREATE TABLE streams (
     id          TEXT    NOT NULL,
     stream_type TEXT    NOT NULL,
     "version"   INTEGER NOT NULL  DEFAULT 0,
 
-    PRIMARY KEY (stream_type, id),
-
-    -- Remove all streams in case the stream type is deleted.
-    FOREIGN KEY (stream_type) REFERENCES stream_types(id) ON DELETE CASCADE
+    PRIMARY KEY (stream_type, id)
 );
 
 CREATE TABLE events (
@@ -23,7 +16,5 @@ CREATE TABLE events (
     metadata               JSONB   NOT NULL,
 
     PRIMARY KEY (stream_type, stream_id, "version"),
-
-    FOREIGN KEY (stream_type) REFERENCES stream_types(id) ON DELETE CASCADE,
     FOREIGN KEY (stream_type, stream_id) REFERENCES streams(stream_type, id) ON DELETE CASCADE
 );
