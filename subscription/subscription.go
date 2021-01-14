@@ -68,29 +68,37 @@ func (s CatchUp) Start(ctx context.Context, stream eventstore.EventStream) error
 		stream <- event
 
 		sn, ok := event.Metadata.GlobalSequenceNumber()
-		if ok {
-			lastSequenceNumber = sn
+		// Skip sequence number checkpointing if the event does not have a
+		// global sequence number recorded.
+		if !ok {
+			continue
+		}
 
-			if err := s.checkpointer.Store(ctx, s.name, lastSequenceNumber); err != nil {
-				return fmt.Errorf("subscription.CatchUp: failed to checkpoint: %w", err)
-			}
+		lastSequenceNumber = sn
+
+		if err := s.checkpointer.Store(ctx, s.name, lastSequenceNumber); err != nil {
+			return fmt.Errorf("subscription.CatchUp: failed to checkpoint: %w", err)
 		}
 	}
 
 	for event := range subscribed {
 		sn, ok := event.Metadata.GlobalSequenceNumber()
-		if ok && lastSequenceNumber >= sn {
+		if ok && lastSequenceNumber > sn {
 			continue
 		}
 
 		stream <- event
 
-		if ok {
-			lastSequenceNumber = sn
+		// Skip sequence number checkpointing if the event does not have a
+		// global sequence number recorded.
+		if !ok {
+			continue
+		}
 
-			if err := s.checkpointer.Store(ctx, s.name, lastSequenceNumber); err != nil {
-				return fmt.Errorf("subscription.CatchUp: failed to checkpoint: %w", err)
-			}
+		lastSequenceNumber = sn
+
+		if err := s.checkpointer.Store(ctx, s.name, lastSequenceNumber); err != nil {
+			return fmt.Errorf("subscription.CatchUp: failed to checkpoint: %w", err)
 		}
 	}
 
