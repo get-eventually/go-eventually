@@ -20,20 +20,13 @@ type CatchUp struct {
 }
 
 func NewCatchUp(
-	ctx context.Context,
 	name string,
 	eventStreamer eventstore.Streamer,
 	eventSubscriber eventstore.Subscriber,
 	checkpointer Checkpointer,
 ) (CatchUp, error) {
-	from, err := checkpointer.Get(ctx, name)
-	if err != nil {
-		return CatchUp{}, fmt.Errorf("subscription: failed to get checkpoint: %w", err)
-	}
-
 	return CatchUp{
 		name:            name,
-		startFrom:       from,
 		eventStreamer:   eventStreamer,
 		eventSubscriber: eventSubscriber,
 		checkpointer:    checkpointer,
@@ -43,6 +36,11 @@ func NewCatchUp(
 func (s CatchUp) Name() string { return s.name }
 
 func (s CatchUp) Start(ctx context.Context, stream eventstore.EventStream) error {
+	lastSequenceNumber, err := s.checkpointer.Get(ctx, s.Name())
+	if err != nil {
+		return fmt.Errorf("subscription.CatchUp: failed to get checkpoint: %w", err)
+	}
+
 	defer close(stream)
 
 	streamed := make(chan eventstore.Event, len(stream))
@@ -51,8 +49,6 @@ func (s CatchUp) Start(ctx context.Context, stream eventstore.EventStream) error
 	group, ctx := errgroup.WithContext(ctx)
 	group.Go(func() error { return s.eventSubscriber.Subscribe(ctx, subscribed) })
 	group.Go(func() error { return s.eventStreamer.Stream(ctx, streamed, s.startFrom) })
-
-	lastSequenceNumber := s.startFrom
 
 	if err := s.stream(ctx, &lastSequenceNumber, stream, streamed); err != nil {
 		return err
@@ -87,7 +83,7 @@ func (s CatchUp) stream(
 
 		*lastSequenceNumber = sn
 
-		if err := s.checkpointer.Store(ctx, s.name, *lastSequenceNumber); err != nil {
+		if err := s.checkpointer.Store(ctx, s.Name(), *lastSequenceNumber); err != nil {
 			return fmt.Errorf("subscription.CatchUp: failed to checkpoint: %w", err)
 		}
 	}

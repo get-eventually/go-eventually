@@ -144,7 +144,6 @@ func TestCatchUpSubscription(t *testing.T) {
 	}
 
 	subscription, err := subscription.NewCatchUp(
-		ctx,
 		"test-subscription",
 		mytypeStore,
 		mytypeStore,
