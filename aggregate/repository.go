@@ -22,7 +22,9 @@ func NewRepository(aggregateType Type, eventStore eventstore.Typed) *Repository 
 
 func (r *Repository) Add(ctx context.Context, root Root) error {
 	events := root.flushRecordedEvents()
-	newVersion, err := r.eventStore.Instance(root.AggregateID()).Append(ctx, root.Version(), events...)
+	newVersion, err := r.eventStore.
+		Instance(root.AggregateID().String()).
+		Append(ctx, root.Version(), events...)
 
 	if err != nil {
 		return fmt.Errorf("aggregate.Repository: failed to commit recorded events: %w", err)
@@ -32,7 +34,7 @@ func (r *Repository) Add(ctx context.Context, root Root) error {
 	return nil
 }
 
-func (r Repository) Get(ctx context.Context, id string) (Root, error) {
+func (r Repository) Get(ctx context.Context, id ID) (Root, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -41,7 +43,7 @@ func (r Repository) Get(ctx context.Context, id string) (Root, error) {
 
 	group, ctx := errgroup.WithContext(ctx)
 	group.Go(func() error {
-		if err := r.eventStore.Instance(id).Stream(ctx, stream, 0); err != nil {
+		if err := r.eventStore.Instance(id.String()).Stream(ctx, stream, 0); err != nil {
 			return fmt.Errorf("aggregate.Repository: failed while reading event from stream: %w", err)
 		}
 

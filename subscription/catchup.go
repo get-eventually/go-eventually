@@ -68,7 +68,7 @@ func (s CatchUp) stream(
 	source <-chan eventstore.Event,
 ) error {
 	for event := range source {
-		sn, ok := event.Metadata.GlobalSequenceNumber()
+		sn, ok := event.GlobalSequenceNumber()
 		if ok && *lastSequenceNumber >= sn {
 			continue
 		}

@@ -6,6 +6,14 @@ import (
 	"github.com/eventually-rs/eventually-go"
 )
 
+type ID interface {
+	fmt.Stringer
+}
+
+type StringID string
+
+func (id StringID) String() string { return string(id) }
+
 type Applier interface {
 	Apply(eventually.Event) error
 }
@@ -13,7 +21,7 @@ type Applier interface {
 type Root interface {
 	Applier
 
-	AggregateID() string
+	AggregateID() ID
 	Version() int64
 
 	updateVersion(int64)
@@ -21,15 +29,8 @@ type Root interface {
 	recordThat(Applier, ...eventually.Event) error
 }
 
-func Record(root Root, event interface{}) error {
-	return RecordWithMetadata(root, event, nil)
-}
-
-func RecordWithMetadata(root Root, event interface{}, metadata eventually.Metadata) error {
-	return root.recordThat(root, eventually.Event{
-		Payload:  event,
-		Metadata: metadata,
-	})
+func RecordThat(root Root, event eventually.Event) error {
+	return root.recordThat(root, event)
 }
 
 type BaseRoot struct {

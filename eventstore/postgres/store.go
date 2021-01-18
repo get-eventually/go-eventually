@@ -407,10 +407,9 @@ func (st *EventStore) rowsToStream(rows *sql.Rows, es eventstore.EventStream) (e
 			return fmt.Errorf("postgres.EventStore: failed to unmarshal event metadata from json: %w", err)
 		}
 
-		metadata.WithGlobalSequenceNumber(globalSequenceNumber)
-
 		event.Payload = vp.Elem().Interface()
 		event.Metadata = metadata
+		event.Event = event.WithGlobalSequenceNumber(globalSequenceNumber)
 
 		es <- event
 	}

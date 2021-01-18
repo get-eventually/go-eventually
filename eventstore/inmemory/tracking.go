@@ -8,22 +8,45 @@ import (
 )
 
 type TrackingEventStore struct {
-	eventstore.Typed
-	recorded []eventually.Event
+	eventstore.Store
+	recorded []eventstore.Event
 }
 
-func (es *TrackingEventStore) Recorded() []eventually.Event { return es.recorded }
+func (es *TrackingEventStore) Recorded() []eventstore.Event { return es.recorded }
 
-func (es *TrackingEventStore) Instance(id string) eventstore.Instanced {
+func (es *TrackingEventStore) Type(ctx context.Context, typ string) (eventstore.Typed, error) {
+	typed, err := es.Store.Type(ctx, typ)
+	if err != nil {
+		return typed, err
+	}
+
+	return &typedTrackingEventStore{
+		parent:     es,
+		streamType: typ,
+		Typed:      typed,
+	}, nil
+}
+
+type typedTrackingEventStore struct {
+	eventstore.Typed
+	streamType string
+	parent     *TrackingEventStore
+}
+
+func (es *typedTrackingEventStore) Instance(id string) eventstore.Instanced {
 	return &instancedTrackingEventStore{
-		parent:    es,
-		Instanced: es.Typed.Instance(id),
+		parent:     es.parent,
+		streamName: id,
+		streamType: es.streamType,
+		Instanced:  es.Typed.Instance(id),
 	}
 }
 
 type instancedTrackingEventStore struct {
 	eventstore.Instanced
-	parent *TrackingEventStore
+	streamType string
+	streamName string
+	parent     *TrackingEventStore
 }
 
 func (es *instancedTrackingEventStore) Append(
@@ -32,9 +55,17 @@ func (es *instancedTrackingEventStore) Append(
 	events ...eventually.Event,
 ) (int64, error) {
 	v, err := es.Instanced.Append(ctx, version, events...)
+	if err != nil {
+		return v, err
+	}
 
-	if err == nil {
-		es.parent.recorded = append(es.parent.recorded, events...)
+	for i, event := range events {
+		es.parent.recorded = append(es.parent.recorded, eventstore.Event{
+			StreamType: es.streamType,
+			StreamName: es.streamName,
+			Version:    version + int64(i) + 1,
+			Event:      event,
+		})
 	}
 
 	return v, err

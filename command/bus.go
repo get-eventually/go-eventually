@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+
+	"github.com/eventually-rs/eventually-go"
 )
 
 type Dispatcher interface {
-	Dispatch(context.Context, Command) error
+	Dispatch(context.Context, eventually.Command) error
 }
 
 type SimpleBus struct {
@@ -23,12 +25,12 @@ func (b *SimpleBus) Register(handler Handler) {
 	b.handlers[typ] = handler
 }
 
-func (b SimpleBus) Dispatch(ctx context.Context, cmd Command) error {
-	typ := reflect.TypeOf(cmd)
+func (b SimpleBus) Dispatch(ctx context.Context, cmd eventually.Command) error {
+	typ := reflect.TypeOf(cmd.Payload)
 
 	handler, ok := b.handlers[typ]
 	if !ok {
-		return fmt.Errorf("command.Bus: no handler registered for type %s", typ.Name())
+		return fmt.Errorf("command.SimpleBus: no handler registered for type %s", typ.Name())
 	}
 
 	return handler.Handle(ctx, cmd)

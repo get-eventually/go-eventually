@@ -42,9 +42,17 @@ func (s *EventStore) Type(ctx context.Context, typ string) (eventstore.Typed, er
 }
 
 func (s *EventStore) Register(ctx context.Context, typ string, events map[string]interface{}) error {
-	s.byType[typ] = nil
-	s.subscribersByType[typ] = nil
-	s.byTypeAndInstance[typ] = make(map[string][]eventstore.Event)
+	if _, ok := s.byType[typ]; !ok {
+		s.byType[typ] = nil
+	}
+
+	if _, ok := s.subscribersByType[typ]; !ok {
+		s.subscribersByType[typ] = nil
+	}
+
+	if _, ok := s.byTypeAndInstance[typ]; !ok {
+		s.byTypeAndInstance[typ] = make(map[string][]eventstore.Event)
+	}
 
 	return nil
 }
@@ -55,7 +63,7 @@ func (s *EventStore) Stream(ctx context.Context, es eventstore.EventStream, from
 	defer close(es)
 
 	for _, event := range s.events {
-		sequenceNumber, ok := event.Metadata.GlobalSequenceNumber()
+		sequenceNumber, ok := event.GlobalSequenceNumber()
 		if !ok {
 			return fmt.Errorf("inmemory: event does not have global sequence number")
 		}
@@ -114,7 +122,7 @@ func (s typedEventStoreAccess) Stream(ctx context.Context, es eventstore.EventSt
 	defer close(es)
 
 	for _, event := range s.byType[s.typ] {
-		sequenceNumber, ok := event.Metadata.GlobalSequenceNumber()
+		sequenceNumber, ok := event.GlobalSequenceNumber()
 		if !ok {
 			return fmt.Errorf("inmemory: event does not have global sequence number")
 		}
@@ -206,13 +214,11 @@ func (s instanceEventStoreAccess) Append(ctx context.Context, version int64, eve
 	}
 
 	for i, event := range events {
-		event.Metadata.WithGlobalSequenceNumber(atomic.AddInt64(&s.offset, 1))
-
 		evt := eventstore.Event{
 			StreamType: s.typ,
 			StreamName: s.id,
 			Version:    currentVersion + int64(i) + 1,
-			Event:      event,
+			Event:      event.WithGlobalSequenceNumber(atomic.AddInt64(&s.offset, 1)),
 		}
 
 		persisted = append(persisted, evt)
