@@ -9,17 +9,30 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// ErrRootNotFound is returned by the Repository when no Events for the
+// specified Aggregate Root have been found.
 var ErrRootNotFound = fmt.Errorf("aggregate.Repository: aggregate root not found")
 
+// Repository is an Event-sourced Repository implementation for retrieving
+// and saving Aggregate Roots, using an underlying Event Store instance.
+//
+// Use `NewRepository` to create a new instance of this type.
 type Repository struct {
 	eventStore    eventstore.Typed
 	aggregateType Type
 }
 
+// NewRepository creates a new instance for retrieving and saving Aggregate Roots
+// of the Aggregate type specified in the supplied Type argument.
 func NewRepository(aggregateType Type, eventStore eventstore.Typed) *Repository {
 	return &Repository{aggregateType: aggregateType, eventStore: eventStore}
 }
 
+// Add saves the provided Aggregate Root instance into the Event Store,
+// by flushing any uncommitted event produced while handling commands.
+//
+// An error is returned if the underlying Event Store fails to commit the
+// Aggregate's events.
 func (r *Repository) Add(ctx context.Context, root Root) error {
 	events := root.flushRecordedEvents()
 	newVersion, err := r.eventStore.
@@ -34,6 +47,13 @@ func (r *Repository) Add(ctx context.Context, root Root) error {
 	return nil
 }
 
+// Get retrieves the Aggregate Root instance identified by the provided ID.
+//
+// ErrRootNotFound is returned if no Events for the specified Aggregate Root
+// have been found.
+//
+// An error is also returned if the underlying Event Store fails to
+// stream the Root's Event Stream back into the application.
 func (r Repository) Get(ctx context.Context, id ID) (Root, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
