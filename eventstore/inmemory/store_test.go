@@ -166,7 +166,7 @@ func TestEventStore_Stream(t *testing.T) {
 
 	// Append some events in both Streams
 	for i := 1; i < 4; i++ {
-		_, err := myTypeStore.
+		_, err = myTypeStore.
 			Instance(testInstance).
 			Append(ctx, int64(i-1), eventually.Event{Payload: i})
 
