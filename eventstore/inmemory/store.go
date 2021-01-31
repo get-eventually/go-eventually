@@ -225,18 +225,20 @@ func (s instanceEventStoreAccess) Append(ctx context.Context, version int64, eve
 	s.byType[s.typ] = typedEvents
 	s.byTypeAndInstance[s.typ][s.id] = persisted
 
-	go func() {
-		s.mx.RLock()
-		defer s.mx.RUnlock()
-
-		subscribers := append(s.subscribers, s.subscribersByType[s.typ]...)
-
-		for _, event := range persisted {
-			for _, subscriber := range subscribers {
-				subscriber <- event
-			}
-		}
-	}()
+	go s.notify(persisted...)
 
 	return int64(len(persisted)), nil
+}
+
+func (s instanceEventStoreAccess) notify(events ...eventstore.Event) {
+	s.mx.RLock()
+	defer s.mx.RUnlock()
+
+	subscribers := append(s.subscribers, s.subscribersByType[s.typ]...)
+
+	for _, event := range events {
+		for _, subscriber := range subscribers {
+			subscriber <- event
+		}
+	}
 }
