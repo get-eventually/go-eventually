@@ -21,10 +21,17 @@ import (
 	"github.com/lib/pq"
 )
 
-const streamAllName = "$all"
+const (
+	streamAllName = "$all"
 
-var _ eventstore.Store = &EventStore{}
-var _ subscription.Checkpointer = &EventStore{}
+	DefaultNotifyChannelTimeout = 10 * time.Second
+	DefaultReconnectionTimeout  = 10 * time.Second
+)
+
+var (
+	_ eventstore.Store          = &EventStore{}
+	_ subscription.Checkpointer = &EventStore{}
+)
 
 type EventStore struct {
 	dsn             string
@@ -52,9 +59,7 @@ func OpenEventStore(dsn string) (*EventStore, error) {
 }
 
 func runMigrations(dsn string) (err error) {
-	src := bindata.Resource(migrations.AssetNames(), func(name string) ([]byte, error) {
-		return migrations.Asset(name)
-	})
+	src := bindata.Resource(migrations.AssetNames(), migrations.Asset)
 
 	driver, err := bindata.WithInstance(src)
 	if err != nil {
@@ -174,11 +179,16 @@ func (st *EventStore) Subscribe(ctx context.Context, es eventstore.EventStream) 
 func (st *EventStore) subscribe(ctx context.Context, name string, es eventstore.EventStream) error {
 	defer close(es)
 
-	listener := pq.NewListener(st.dsn, 10*time.Second, time.Minute, func(ev pq.ListenerEventType, err error) {
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-	})
+	listener := pq.NewListener(
+		st.dsn,
+		DefaultReconnectionTimeout,
+		time.Minute,
+		func(ev pq.ListenerEventType, err error) {
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+		},
+	)
 
 	// TODO: proper error handling!
 	defer listener.Close()
@@ -192,7 +202,7 @@ func (st *EventStore) subscribe(ctx context.Context, name string, es eventstore.
 		case <-ctx.Done():
 			return fmt.Errorf("postgres.EventStore: listener closed: %w", ctx.Err())
 
-		case <-time.After(10 * time.Second):
+		case <-time.After(DefaultNotifyChannelTimeout):
 			if err := listener.Ping(); err != nil {
 				return fmt.Errorf("postgres.EventStore: failed to ping listener: %w", err)
 			}

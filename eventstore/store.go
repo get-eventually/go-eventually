@@ -39,7 +39,7 @@ type Event struct {
 //
 // Event Stream channel is provided in input as inversion of dependency,
 // in order to allow to callers to choose the desired buffering on the channel,
-// maching the caller concurrency properties.
+// matching the caller concurrency properties.
 type Streamer interface {
 	Stream(ctx context.Context, es EventStream, from int64) error
 }
@@ -54,7 +54,7 @@ type Streamer interface {
 //
 // Event Stream channel is provided in input as inversion of dependency,
 // in order to allow to callers to choose the desired buffering on the channel,
-// maching the caller concurrency properties.
+// matching the caller concurrency properties.
 type Subscriber interface {
 	Subscribe(ctx context.Context, es EventStream) error
 }

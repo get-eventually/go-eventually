@@ -10,6 +10,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+const DefaultProjectorBufferSize = 128
+
 type Projector struct {
 	projection   Applier
 	subscription subscription.Subscription
@@ -23,7 +25,7 @@ func NewProjector(projection Applier, subscription subscription.Subscription) *P
 }
 
 func (p *Projector) Start(ctx context.Context) error {
-	stream := make(chan eventstore.Event, 128) // should buffer more?
+	stream := make(chan eventstore.Event, DefaultProjectorBufferSize)
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()

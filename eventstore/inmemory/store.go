@@ -13,7 +13,9 @@ import (
 var _ eventstore.Store = &EventStore{}
 
 type EventStore struct {
-	mx     sync.RWMutex
+	mx sync.RWMutex
+
+	//nolint:structcheck
 	offset int64
 
 	events            []eventstore.Event
@@ -82,27 +84,24 @@ func (s *EventStore) Subscribe(ctx context.Context, es eventstore.EventStream) e
 	defer close(es)
 
 	s.mx.Lock()
-	{
-		s.subscribers = append(s.subscribers, es)
-	}
+	s.subscribers = append(s.subscribers, es)
 	s.mx.Unlock()
 
 	<-ctx.Done()
 
 	s.mx.Lock()
-	{
-		subscribers := make([]eventstore.EventStream, 0, len(s.subscribers)-1)
+	defer s.mx.Unlock()
 
-		for _, subscriber := range s.subscribers {
-			if subscriber == es {
-				continue
-			}
-			subscribers = append(subscribers, subscriber)
+	subscribers := make([]eventstore.EventStream, 0, len(s.subscribers)-1)
+
+	for _, subscriber := range s.subscribers {
+		if subscriber == es {
+			continue
 		}
-
-		s.subscribers = subscribers
+		subscribers = append(subscribers, subscriber)
 	}
-	s.mx.Unlock()
+
+	s.subscribers = subscribers
 
 	return ctx.Err()
 }
@@ -141,27 +140,24 @@ func (s typedEventStoreAccess) Subscribe(ctx context.Context, es eventstore.Even
 	defer close(es)
 
 	s.mx.Lock()
-	{
-		s.subscribersByType[s.typ] = append(s.subscribersByType[s.typ], es)
-	}
+	s.subscribersByType[s.typ] = append(s.subscribersByType[s.typ], es)
 	s.mx.Unlock()
 
 	<-ctx.Done()
 
 	s.mx.Lock()
-	{
-		subscribers := make([]eventstore.EventStream, 0, len(s.subscribersByType[s.typ])-1)
+	defer s.mx.Unlock()
 
-		for _, subscriber := range s.subscribersByType[s.typ] {
-			if subscriber == es {
-				continue
-			}
-			subscribers = append(subscribers, subscriber)
+	subscribers := make([]eventstore.EventStream, 0, len(s.subscribersByType[s.typ])-1)
+
+	for _, subscriber := range s.subscribersByType[s.typ] {
+		if subscriber == es {
+			continue
 		}
-
-		s.subscribersByType[s.typ] = subscribers
+		subscribers = append(subscribers, subscriber)
 	}
-	s.mx.Unlock()
+
+	s.subscribersByType[s.typ] = subscribers
 
 	return ctx.Err()
 }
@@ -196,14 +192,14 @@ func (s instanceEventStoreAccess) Append(ctx context.Context, version int64, eve
 	s.mx.Lock()
 	defer s.mx.Unlock()
 
-	persisted, _ := s.byTypeAndInstance[s.typ][s.id]
+	persisted := s.byTypeAndInstance[s.typ][s.id]
 	currentVersion := int64(len(persisted))
 
 	if version != -1 && currentVersion != version {
 		return 0, fmt.Errorf("inmemory: invalid version check, expected %d", currentVersion)
 	}
 
-	typedEvents, _ := s.byType[s.typ]
+	typedEvents := s.byType[s.typ]
 
 	if len(typedEvents) == 0 {
 		typedEvents = make([]eventstore.Event, 0, len(events))
