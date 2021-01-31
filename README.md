@@ -16,15 +16,15 @@
 
 <div align="center">
     <!-- Testing pipeline -->
-    <!-- <a href="https://github.com/eventually-rs/eventually-rs/actions?query=workflow%3A%22Rust+%28stable%29%22">
+    <a href="https://github.com/eventually-rs/eventually-go/actions?query=workflow%3A%22Main+Workflow%22">
         <img alt="GitHub Workflow Status"
-        src="https://img.shields.io/github/workflow/status/eventually-rs/eventually-rs/Rust%20(stable)?style=flat-square">
-    </a> -->
-    <!-- Codecov -->
-    <!-- <a href="https://codecov.io/gh/eventually-rs/eventually-rs">
-            <img alt="Codecov"
-            src="https://img.shields.io/codecov/c/github/eventually-rs/eventually-rs?style=flat-square">
-    </a> -->
+        src="https://img.shields.io/github/workflow/status/eventually-rs/eventually-go/Main%20Workflow?style=flat-square">
+    </a>
+    <!-- Code Coverage -->
+    <a href="https://sonarcloud.io/project/activity?custom_metrics=coverage&graph=custom&id=eventually-rs_eventually-go">
+        <img alt="Sonar Coverage"
+        src="https://img.shields.io/sonar/coverage/eventually-rs_eventually-go?server=https%3A%2F%2Fsonarcloud.io&style=flat-square">
+    </a>
     <!-- pkg.go.dev -->
     <a href="https://pkg.go.dev/github.com/eventually-rs/eventually-go">
         <img alt="Go Reference"
