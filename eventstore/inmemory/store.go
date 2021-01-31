@@ -95,7 +95,7 @@ func (s *EventStore) Stream(ctx context.Context, es eventstore.EventStream, from
 		select {
 		case es <- event:
 		case <-ctx.Done():
-			return fmt.Errorf("inmemory.EventStore: context done: %w", ctx.Err())
+			return contextErr(ctx)
 		}
 	}
 
@@ -132,7 +132,7 @@ func (s *EventStore) Subscribe(ctx context.Context, es eventstore.EventStream) e
 
 	s.subscribers = subscribers
 
-	return fmt.Errorf("inmemory.EventStore: context done: %w", ctx.Err())
+	return contextErr(ctx)
 }
 
 type typedEventStoreAccess struct {
@@ -163,7 +163,7 @@ func (s typedEventStoreAccess) Stream(ctx context.Context, es eventstore.EventSt
 		select {
 		case es <- event:
 		case <-ctx.Done():
-			return fmt.Errorf("inmemory.EventStore: context done: %w", ctx.Err())
+			return contextErr(ctx)
 		}
 	}
 
@@ -221,7 +221,7 @@ func (s instanceEventStoreAccess) Stream(ctx context.Context, es eventstore.Even
 		select {
 		case es <- event:
 		case <-ctx.Done():
-			return fmt.Errorf("inmemory.EventStore: context done: %w", ctx.Err())
+			return contextErr(ctx)
 		}
 	}
 
@@ -276,4 +276,12 @@ func (s instanceEventStoreAccess) notify(events ...eventstore.Event) {
 			subscriber <- event
 		}
 	}
+}
+
+func contextErr(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("inmemory.EventStore: context done: %w", err)
+	}
+
+	return nil
 }
