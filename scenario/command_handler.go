@@ -22,18 +22,18 @@ func (sc CommandHandlerInit) Given(events ...eventstore.Event) CommandHandlerGiv
 	return CommandHandlerGiven{given: events}
 }
 
-func (sc CommandHandlerInit) When(command eventually.Command) CommandHandlerWhen {
-	return CommandHandlerWhen{when: command}
+func (sc CommandHandlerInit) When(cmd eventually.Command) CommandHandlerWhen {
+	return CommandHandlerWhen{when: cmd}
 }
 
 type CommandHandlerGiven struct {
 	given []eventstore.Event
 }
 
-func (sc CommandHandlerGiven) When(command eventually.Command) CommandHandlerWhen {
+func (sc CommandHandlerGiven) When(cmd eventually.Command) CommandHandlerWhen {
 	return CommandHandlerWhen{
 		CommandHandlerGiven: sc,
-		when:                command,
+		when:                cmd,
 	}
 }
 
@@ -71,7 +71,7 @@ type CommandHandlerThen struct {
 	wantError bool
 }
 
-func (sc CommandHandlerThen) Using(
+func (sc CommandHandlerThen) Using( //nolint:gocritic
 	t *testing.T,
 	aggregateType aggregate.Type,
 	handlerFactory func(*aggregate.Repository) command.Handler,

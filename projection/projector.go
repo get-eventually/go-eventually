@@ -17,10 +17,10 @@ type Projector struct {
 	subscription subscription.Subscription
 }
 
-func NewProjector(projection Applier, subscription subscription.Subscription) *Projector {
+func NewProjector(p Applier, s subscription.Subscription) *Projector {
 	return &Projector{
-		projection:   projection,
-		subscription: subscription,
+		projection:   p,
+		subscription: s,
 	}
 }
 
