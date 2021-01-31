@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"sync/atomic"
 
 	"github.com/eventually-rs/eventually-go"
 	"github.com/eventually-rs/eventually-go/eventstore"
@@ -12,37 +11,46 @@ import (
 
 var _ eventstore.Store = &EventStore{}
 
+// EventStore is an in-memory eventstore.Store implementation.
 type EventStore struct {
 	mx sync.RWMutex
 
-	//nolint:structcheck
-	offset int64
-
 	events            []eventstore.Event
-	byType            map[string][]eventstore.Event
-	byTypeAndInstance map[string]map[string][]eventstore.Event
+	byType            map[string][]int
+	byTypeAndInstance map[string]map[string][]int
 
 	subscribers       []eventstore.EventStream
 	subscribersByType map[string][]eventstore.EventStream
 }
 
+// NewEventStore creates a new empty EventStore instance.
 func NewEventStore() *EventStore {
 	return &EventStore{
-		byType:            make(map[string][]eventstore.Event),
-		byTypeAndInstance: make(map[string]map[string][]eventstore.Event),
+		byType:            make(map[string][]int),
+		byTypeAndInstance: make(map[string]map[string][]int),
 		subscribersByType: make(map[string][]eventstore.EventStream),
 	}
 }
 
+// Type returns an eventstore.Typed access instance using the specified
+// Stream type identifier.
+//
+// An error is returned if the type has not been registered yet.
 func (s *EventStore) Type(ctx context.Context, typ string) (eventstore.Typed, error) {
 	_, ok := s.byType[typ]
 	if !ok {
-		return nil, fmt.Errorf("inmemory: type not registered in the event store")
+		return nil, fmt.Errorf("inmemory.EventStore: type not registered in the event store")
 	}
 
 	return typedEventStoreAccess{EventStore: s, typ: typ}, nil
 }
 
+// Register registers the provided type identifier.
+//
+// Note: nil is a valid value for the events mapper, as there is no need
+// for this particular Event Store mechanism to register Event types.
+//
+// This function never fails.
 func (s *EventStore) Register(ctx context.Context, typ string, events map[string]interface{}) error {
 	if _, ok := s.byType[typ]; !ok {
 		s.byType[typ] = nil
@@ -53,12 +61,22 @@ func (s *EventStore) Register(ctx context.Context, typ string, events map[string
 	}
 
 	if _, ok := s.byTypeAndInstance[typ]; !ok {
-		s.byTypeAndInstance[typ] = make(map[string][]eventstore.Event)
+		s.byTypeAndInstance[typ] = make(map[string][]int)
 	}
 
 	return nil
 }
 
+// Stream streams all Event Store committed events onto the provided EventStream,
+// from the specified Global Sequence Number in `from`.
+//
+// Note: this call is synchronous, and will return when all the Events
+// have been successfully written to the provided EventStream, or when
+// the context has been canceled.
+//
+// An error is returned if one Event in the Event Store does not have a
+// Global Sequence Number (which should never happen), or when the context
+// is done.
 func (s *EventStore) Stream(ctx context.Context, es eventstore.EventStream, from int64) error {
 	s.mx.RLock()
 	defer s.mx.RUnlock()
@@ -67,19 +85,30 @@ func (s *EventStore) Stream(ctx context.Context, es eventstore.EventStream, from
 	for _, event := range s.events {
 		sequenceNumber, ok := event.GlobalSequenceNumber()
 		if !ok {
-			return fmt.Errorf("inmemory: event does not have global sequence number")
+			return fmt.Errorf("inmemory.EventStore: event does not have global sequence number")
 		}
 
 		if sequenceNumber < from {
 			continue
 		}
 
-		es <- event
+		select {
+		case es <- event:
+		case <-ctx.Done():
+			return contextErr(ctx)
+		}
 	}
 
 	return nil
 }
 
+// Subscribe subscribes to all committed Events in the Event Store and
+// uses the provided EventStream to notify the callers with such Events.
+//
+// Note: this call is synchronous, and returns to the caller
+// only when the context is closed.
+//
+// context.Canceled error is always returned.
 func (s *EventStore) Subscribe(ctx context.Context, es eventstore.EventStream) error {
 	defer close(es)
 
@@ -103,7 +132,7 @@ func (s *EventStore) Subscribe(ctx context.Context, es eventstore.EventStream) e
 
 	s.subscribers = subscribers
 
-	return ctx.Err()
+	return contextErr(ctx)
 }
 
 type typedEventStoreAccess struct {
@@ -120,7 +149,8 @@ func (s typedEventStoreAccess) Stream(ctx context.Context, es eventstore.EventSt
 	defer s.mx.RUnlock()
 	defer close(es)
 
-	for _, event := range s.byType[s.typ] {
+	for _, eventIdx := range s.byType[s.typ] {
+		event := s.events[eventIdx]
 		sequenceNumber, ok := event.GlobalSequenceNumber()
 		if !ok {
 			return fmt.Errorf("inmemory: event does not have global sequence number")
@@ -130,7 +160,11 @@ func (s typedEventStoreAccess) Stream(ctx context.Context, es eventstore.EventSt
 			continue
 		}
 
-		es <- event
+		select {
+		case es <- event:
+		case <-ctx.Done():
+			return contextErr(ctx)
+		}
 	}
 
 	return nil
@@ -172,17 +206,23 @@ func (s instanceEventStoreAccess) Stream(ctx context.Context, es eventstore.Even
 	defer s.mx.RUnlock()
 	defer close(es)
 
-	events, ok := s.byTypeAndInstance[s.typ][s.id]
+	eventIdxs, ok := s.byTypeAndInstance[s.typ][s.id]
 	if !ok {
 		return nil
 	}
 
-	for _, event := range events {
+	for _, idx := range eventIdxs {
+		event := s.events[idx]
+
 		if event.Version < from {
 			continue
 		}
 
-		es <- event
+		select {
+		case es <- event:
+		case <-ctx.Done():
+			return contextErr(ctx)
+		}
 	}
 
 	return nil
@@ -192,51 +232,56 @@ func (s instanceEventStoreAccess) Append(ctx context.Context, version int64, eve
 	s.mx.Lock()
 	defer s.mx.Unlock()
 
-	persisted := s.byTypeAndInstance[s.typ][s.id]
-	currentVersion := int64(len(persisted))
-
+	currentVersion := int64(len(s.byTypeAndInstance[s.typ][s.id]))
 	if version != -1 && currentVersion != version {
 		return 0, fmt.Errorf("inmemory: invalid version check, expected %d", currentVersion)
 	}
 
-	typedEvents := s.byType[s.typ]
-
-	if len(typedEvents) == 0 {
-		typedEvents = make([]eventstore.Event, 0, len(events))
-	}
-
-	if currentVersion == 0 {
-		persisted = make([]eventstore.Event, 0, len(events))
-	}
+	nextOffset := int64(len(s.events))
+	newPersistedEvents := make([]eventstore.Event, 0, len(events))
+	newIndexes := make([]int, 0, len(events))
 
 	for i, event := range events {
-		evt := eventstore.Event{
+		nextIndex := int(nextOffset) + i
+
+		// Sequence numbers and versions should all start from 1,
+		// hence why this block uses `+ 1`.
+		newPersistedEvents = append(newPersistedEvents, eventstore.Event{
 			StreamType: s.typ,
 			StreamName: s.id,
 			Version:    currentVersion + int64(i) + 1,
-			Event:      event.WithGlobalSequenceNumber(atomic.AddInt64(&s.offset, 1)),
-		}
+			Event:      event.WithGlobalSequenceNumber(int64(nextIndex) + 1),
+		})
 
-		persisted = append(persisted, evt)
-		typedEvents = append(typedEvents, evt)
-		s.events = append(s.events, evt)
+		newIndexes = append(newIndexes, nextIndex)
 	}
 
-	s.byType[s.typ] = typedEvents
-	s.byTypeAndInstance[s.typ][s.id] = persisted
+	s.events = append(s.events, newPersistedEvents...)
+	s.byType[s.typ] = append(s.byType[s.typ], newIndexes...)
+	s.byTypeAndInstance[s.typ][s.id] = append(s.byTypeAndInstance[s.typ][s.id], newIndexes...)
 
-	go func() {
-		s.mx.RLock()
-		defer s.mx.RUnlock()
+	// Send notifications to subscribers.
+	defer func() { s.notify(newPersistedEvents...) }()
 
-		subscribers := append(s.subscribers, s.subscribersByType[s.typ]...)
+	lastCommittedEvent := newPersistedEvents[len(newPersistedEvents)-1]
 
-		for _, event := range persisted {
-			for _, subscriber := range subscribers {
-				subscriber <- event
-			}
+	return lastCommittedEvent.Version, nil
+}
+
+func (s instanceEventStoreAccess) notify(events ...eventstore.Event) {
+	subscribers := append(s.subscribers, s.subscribersByType[s.typ]...)
+
+	for _, event := range events {
+		for _, subscriber := range subscribers {
+			subscriber <- event
 		}
-	}()
+	}
+}
 
-	return int64(len(persisted)), nil
+func contextErr(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("inmemory.EventStore: context done: %w", err)
+	}
+
+	return nil
 }

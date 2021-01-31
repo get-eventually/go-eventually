@@ -6,9 +6,6 @@ import (
 	"github.com/eventually-rs/eventually-go"
 )
 
-// EventStream is a stream of persisted Events.
-type EventStream chan<- Event
-
 // Event represents an Event Message that has been persisted into the
 // Event Store.
 type Event struct {

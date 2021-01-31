@@ -7,13 +7,19 @@ import (
 	"github.com/eventually-rs/eventually-go/eventstore"
 )
 
+// TrackingEventStore is an Event Store wrapper to track the Events
+// committed to the inner Event Store.
+//
+// Useful for tests assertion.
 type TrackingEventStore struct {
 	eventstore.Store
 	recorded []eventstore.Event
 }
 
+// Recorded returns the list of recorded Events.
 func (es *TrackingEventStore) Recorded() []eventstore.Event { return es.recorded }
 
+// Type returns an eventstore.Typed instance for the specified type identifier.
 func (es *TrackingEventStore) Type(ctx context.Context, typ string) (eventstore.Typed, error) {
 	typed, err := es.Store.Type(ctx, typ)
 	if err != nil {
