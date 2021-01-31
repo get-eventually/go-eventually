@@ -91,5 +91,6 @@ func (br *BaseRoot) recordThat(aggregate Applier, events ...eventually.Event) er
 func (br *BaseRoot) flushRecordedEvents() []eventually.Event {
 	flushed := br.recordedEvents
 	br.recordedEvents = nil
+
 	return flushed
 }

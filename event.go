@@ -26,6 +26,7 @@ func (evt Event) GlobalSequenceNumber() (int64, bool) {
 	}
 
 	i64, ok := evt.Metadata[GlobalSequenceNumberKey].(int64)
+
 	return i64, ok
 }
 

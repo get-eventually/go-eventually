@@ -105,6 +105,7 @@ func (sc CommandHandlerThen) Using(
 
 	trackingStore := &inmemory.TrackingEventStore{Store: store}
 	typedStore, err := trackingStore.Type(ctx, aggregateType.Name())
+
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -117,6 +118,7 @@ func (sc CommandHandlerThen) Using(
 	if !sc.wantError {
 		assert.NoError(t, err)
 		assert.Equal(t, sc.then, trackingStore.Recorded())
+
 		return
 	}
 

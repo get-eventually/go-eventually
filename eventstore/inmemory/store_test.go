@@ -136,6 +136,7 @@ func TestEventStore_Stream(t *testing.T) {
 	if err := store.Register(ctx, myType, nil); !assert.NoError(t, err) {
 		return
 	}
+
 	if err := store.Register(ctx, myOtherType, nil); !assert.NoError(t, err) {
 		return
 	}
@@ -216,6 +217,7 @@ func TestEventStore_Subscribe(t *testing.T) {
 	if err := store.Register(ctx, myType, nil); !assert.NoError(t, err) {
 		return
 	}
+
 	if err := store.Register(ctx, myOtherType, nil); !assert.NoError(t, err) {
 		return
 	}

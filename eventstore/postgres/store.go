@@ -327,6 +327,7 @@ func (st *instancedEventStore) Append(ctx context.Context, version int64, events
 	for _, event := range events {
 		eventType := reflect.TypeOf(event.Payload)
 		eventName, ok := st.parent.parent.eventTypeToName[eventType]
+
 		if !ok {
 			return 0, fmt.Errorf("postgres.EventStore: event type not registered: %s", eventType.Name())
 		}

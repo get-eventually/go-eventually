@@ -44,6 +44,7 @@ func (r *Repository) Add(ctx context.Context, root Root) error {
 	}
 
 	root.updateVersion(newVersion)
+
 	return nil
 }
 
@@ -76,6 +77,7 @@ func (r Repository) Get(ctx context.Context, id ID) (Root, error) {
 		}
 
 		isEmpty = false
+
 		root.updateVersion(event.Version)
 	}
 
