@@ -24,8 +24,8 @@ type ProjectionGiven struct {
 	given []eventstore.Event
 }
 
-func (s ProjectionGiven) When(query query.Query) ProjectionWhen {
-	return ProjectionWhen{ProjectionGiven: s, when: query}
+func (s ProjectionGiven) When(q query.Query) ProjectionWhen {
+	return ProjectionWhen{ProjectionGiven: s, when: q}
 }
 
 type ProjectionWhen struct {
@@ -64,15 +64,15 @@ type ProjectionThen struct {
 
 func (s ProjectionThen) Using(t *testing.T, projectionFactory func() projection.Projection) {
 	ctx := context.Background()
-	projection := projectionFactory()
+	proj := projectionFactory()
 
 	for _, event := range s.given {
-		if err := projection.Apply(ctx, event); !assert.NoError(t, err) {
+		if err := proj.Apply(ctx, event); !assert.NoError(t, err) {
 			return
 		}
 	}
 
-	answer, err := projection.Handle(ctx, s.when)
+	answer, err := proj.Handle(ctx, s.when)
 
 	if !s.wantError {
 		assert.NoError(t, err)
