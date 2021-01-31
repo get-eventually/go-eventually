@@ -34,6 +34,7 @@ func (msg Message) CorrelationID() (string, bool) {
 	}
 
 	s, ok := v.(string)
+
 	return s, ok
 }
 
@@ -44,5 +45,6 @@ func (msg Message) CausationID() (string, bool) {
 	}
 
 	s, ok := v.(string)
+
 	return s, ok
 }

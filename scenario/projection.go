@@ -77,6 +77,7 @@ func (s ProjectionThen) Using(t *testing.T, projectionFactory func() projection.
 	if !s.wantError {
 		assert.NoError(t, err)
 		assert.Equal(t, s.then, answer)
+
 		return
 	}
 

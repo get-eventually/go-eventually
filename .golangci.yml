@@ -5,7 +5,7 @@ linters-settings:
     lines: 100
     statements: 50
   gci:
-    local-prefixes: github.com/golangci/golangci-lint
+    local-prefixes: github.com/eventually-rs/eventually-go
   goconst:
     min-len: 2
     min-occurrences: 2
@@ -25,7 +25,7 @@ linters-settings:
   gocyclo:
     min-complexity: 15
   goimports:
-    local-prefixes: github.com/golangci/golangci-lint
+    local-prefixes: github.com/eventually-rs/eventually-go
   golint:
     min-confidence: 0
   gomnd:
@@ -90,6 +90,7 @@ linters:
     - unused
     - varcheck
     - whitespace
+    - wsl
 
   # don't enable:
   # - asciicheck
@@ -102,7 +103,6 @@ linters:
   # - nestif
   # - prealloc
   # - testpackage
-  # - wsl
 
 issues:
   # Excluding configuration per-path, per-linter, per-text and per-source
@@ -116,23 +116,13 @@ issues:
         - gocritic
       text: "unnecessaryDefer:"
 
-    # TODO temporary rule, must be removed
-    # seems related to v0.34.1, but I was not able to reproduce locally,
-    # I was also not able to reproduce in the CI of a fork,
-    # only the golangci-lint CI seems to be affected by this invalid analysis.
-    - path: pkg/golinters/scopelint.go
-      text: 'directive `//nolint:interfacer` is unused for linter interfacer'
-
-run:
-  skip-dirs:
-    - test/testdata_etc
-    - internal/cache
-    - internal/renameio
-    - internal/robustio
+    - path: aggregate/root.go
+      linters:
+        - unused
 
 # golangci.com configuration
 # https://github.com/golangci/golangci/wiki/Configuration
 service:
-  golangci-lint-version: 1.23.x # use the fixed version to not introduce new linters unexpectedly
+  golangci-lint-version: 1.35.x
   prepare:
     - echo "here I can run custom commands, but no preparation needed for this repo"

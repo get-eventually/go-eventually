@@ -127,6 +127,7 @@ func (s *EventStore) Subscribe(ctx context.Context, es eventstore.EventStream) e
 		if subscriber == es {
 			continue
 		}
+
 		subscribers = append(subscribers, subscriber)
 	}
 
@@ -152,6 +153,7 @@ func (s typedEventStoreAccess) Stream(ctx context.Context, es eventstore.EventSt
 	for _, eventIdx := range s.byType[s.typ] {
 		event := s.events[eventIdx]
 		sequenceNumber, ok := event.GlobalSequenceNumber()
+
 		if !ok {
 			return fmt.Errorf("inmemory: event does not have global sequence number")
 		}
@@ -188,6 +190,7 @@ func (s typedEventStoreAccess) Subscribe(ctx context.Context, es eventstore.Even
 		if subscriber == es {
 			continue
 		}
+
 		subscribers = append(subscribers, subscriber)
 	}
 
