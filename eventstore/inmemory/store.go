@@ -11,6 +11,7 @@ import (
 
 var _ eventstore.Store = &EventStore{}
 
+// EventStore is an in-memory eventstore.Store implementation.
 type EventStore struct {
 	mx sync.RWMutex
 
@@ -23,6 +24,7 @@ type EventStore struct {
 	subscribersByType map[string][]eventstore.EventStream
 }
 
+// NewEventStore creates a new empty EventStore instance.
 func NewEventStore() *EventStore {
 	return &EventStore{
 		byType:            make(map[string][]int),
@@ -31,15 +33,25 @@ func NewEventStore() *EventStore {
 	}
 }
 
+// Type returns an eventstore.Typed access instance using the specified
+// Stream type identifier.
+//
+// An error is returned if the type has not been registered yet.
 func (s *EventStore) Type(ctx context.Context, typ string) (eventstore.Typed, error) {
 	_, ok := s.byType[typ]
 	if !ok {
-		return nil, fmt.Errorf("inmemory: type not registered in the event store")
+		return nil, fmt.Errorf("inmemory.EventStore: type not registered in the event store")
 	}
 
 	return typedEventStoreAccess{EventStore: s, typ: typ}, nil
 }
 
+// Register registers the provided type identifier.
+//
+// Note: nil is a valid value for the events mapper, as there is no need
+// for this particular Event Store mechanism to register Event types.
+//
+// This function never fails.
 func (s *EventStore) Register(ctx context.Context, typ string, events map[string]interface{}) error {
 	if _, ok := s.byType[typ]; !ok {
 		s.byType[typ] = nil
@@ -56,6 +68,16 @@ func (s *EventStore) Register(ctx context.Context, typ string, events map[string
 	return nil
 }
 
+// Stream streams all Event Store committed events onto the provided EventStream,
+// from the specified Global Sequence Number in `from`.
+//
+// Note: this call is synchronous, and will return when all the Events
+// have been successfully written to the provided EventStream, or when
+// the context has been canceled.
+//
+// An error is returned if one Event in the Event Store does not have a
+// Global Sequence Number (which should never happen), or when the context
+// is done.
 func (s *EventStore) Stream(ctx context.Context, es eventstore.EventStream, from int64) error {
 	s.mx.RLock()
 	defer s.mx.RUnlock()
@@ -64,19 +86,30 @@ func (s *EventStore) Stream(ctx context.Context, es eventstore.EventStream, from
 	for _, event := range s.events {
 		sequenceNumber, ok := event.GlobalSequenceNumber()
 		if !ok {
-			return fmt.Errorf("inmemory: event does not have global sequence number")
+			return fmt.Errorf("inmemory.EventStore: event does not have global sequence number")
 		}
 
 		if sequenceNumber < from {
 			continue
 		}
 
-		es <- event
+		select {
+		case es <- event:
+		case <-ctx.Done():
+			return fmt.Errorf("inmemory.EventStore: context done: %w", ctx.Err())
+		}
 	}
 
 	return nil
 }
 
+// Subscribe subscribes to all committed Events in the Event Store and
+// uses the provided EventStream to notify the callers with such Events.
+//
+// Note: this call is synchronous, and returns to the caller
+// only when the context is closed.
+//
+// context.Canceled error is always returned.
 func (s *EventStore) Subscribe(ctx context.Context, es eventstore.EventStream) error {
 	defer close(es)
 
@@ -100,7 +133,7 @@ func (s *EventStore) Subscribe(ctx context.Context, es eventstore.EventStream) e
 
 	s.subscribers = subscribers
 
-	return ctx.Err()
+	return fmt.Errorf("inmemory.EventStore: context done: %w", ctx.Err())
 }
 
 type typedEventStoreAccess struct {
@@ -128,7 +161,11 @@ func (s typedEventStoreAccess) Stream(ctx context.Context, es eventstore.EventSt
 			continue
 		}
 
-		es <- event
+		select {
+		case es <- event:
+		case <-ctx.Done():
+			return fmt.Errorf("inmemory.EventStore: context done: %w", ctx.Err())
+		}
 	}
 
 	return nil
@@ -182,7 +219,11 @@ func (s instanceEventStoreAccess) Stream(ctx context.Context, es eventstore.Even
 			continue
 		}
 
-		es <- event
+		select {
+		case es <- event:
+		case <-ctx.Done():
+			return fmt.Errorf("inmemory.EventStore: context done: %w", ctx.Err())
+		}
 	}
 
 	return nil
