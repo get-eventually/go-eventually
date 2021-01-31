@@ -15,7 +15,6 @@ var _ eventstore.Store = &EventStore{}
 type EventStore struct {
 	mx sync.RWMutex
 
-	//nolint:structcheck
 	events            []eventstore.Event
 	byType            map[string][]int
 	byTypeAndInstance map[string]map[string][]int
