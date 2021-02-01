@@ -23,9 +23,5 @@ func StreamToSlice(ctx context.Context, f func(context.Context, EventStream) err
 		events = append(events, event)
 	}
 
-	if err := group.Wait(); err != nil {
-		return nil, err
-	}
-
-	return events, nil
+	return events, group.Wait()
 }

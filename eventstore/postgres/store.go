@@ -13,7 +13,7 @@ import (
 	"github.com/eventually-rs/eventually-go"
 	"github.com/eventually-rs/eventually-go/eventstore"
 	"github.com/eventually-rs/eventually-go/eventstore/postgres/migrations"
-	"github.com/eventually-rs/eventually-go/subscription"
+	"github.com/eventually-rs/eventually-go/subscription/checkpoint"
 
 	"github.com/golang-migrate/migrate"
 	_ "github.com/golang-migrate/migrate/database/postgres" // postgres driver for migrate
@@ -29,8 +29,8 @@ const (
 )
 
 var (
-	_ eventstore.Store          = &EventStore{}
-	_ subscription.Checkpointer = &EventStore{}
+	_ eventstore.Store        = &EventStore{}
+	_ checkpoint.Checkpointer = &EventStore{}
 )
 
 type EventStore struct {
@@ -82,7 +82,7 @@ func (st *EventStore) Close() error {
 	return st.db.Close()
 }
 
-func (st *EventStore) Get(ctx context.Context, subscriptionName string) (int64, error) {
+func (st *EventStore) Read(ctx context.Context, subscriptionName string) (int64, error) {
 	row := st.db.QueryRowContext(
 		ctx,
 		"SELECT get_or_create_subscription_checkpoint($1)",
@@ -91,13 +91,13 @@ func (st *EventStore) Get(ctx context.Context, subscriptionName string) (int64, 
 
 	var lastSequenceNumber int64
 	if err := row.Scan(&lastSequenceNumber); err != nil {
-		return 0, fmt.Errorf("postgres.EventStore: failed to get subscription checkpoint: %w", err)
+		return 0, fmt.Errorf("postgres.EventStore: failed to read subscription checkpoint: %w", err)
 	}
 
 	return lastSequenceNumber, nil
 }
 
-func (st *EventStore) Store(ctx context.Context, subscriptionName string, sequenceNumber int64) error {
+func (st *EventStore) Write(ctx context.Context, subscriptionName string, sequenceNumber int64) error {
 	_, err := st.db.ExecContext(
 		ctx,
 		`UPDATE subscriptions_checkpoints
@@ -108,7 +108,7 @@ func (st *EventStore) Store(ctx context.Context, subscriptionName string, sequen
 	)
 
 	if err != nil {
-		return fmt.Errorf("postgres.EventStore: failed to store subscription checkpoint: %w", err)
+		return fmt.Errorf("postgres.EventStore: failed to write subscription checkpoint: %w", err)
 	}
 
 	return nil
