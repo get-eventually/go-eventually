@@ -21,7 +21,7 @@ func TestEventStoreWrapper(t *testing.T) {
 	generator := func() string {
 		s := make([]rune, randomStringSize)
 		for i := range s {
-			s[i] = alphabet[rand.Intn(len(alphabet))]
+			s[i] = alphabet[rand.Intn(len(alphabet))] //nolint:gosec
 		}
 
 		return string(s)

@@ -17,8 +17,10 @@ type applierFunc func(context.Context, eventstore.Event) error
 func (f applierFunc) Apply(ctx context.Context, event eventstore.Event) error { return f(ctx, event) }
 
 func TestProjectionWrapper(t *testing.T) {
-	const typeName = "my-type"
-	const correlationID = "fantastic-id"
+	const (
+		typeName      = "my-type"
+		correlationID = "fantastic-id"
+	)
 
 	ctx := context.Background()
 	eventStore := inmemory.NewEventStore()
