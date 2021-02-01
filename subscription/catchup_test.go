@@ -77,7 +77,7 @@ func TestCatchUp(t *testing.T) {
 
 		catchupSubscription := subscription.CatchUp{
 			SubscriptionName: t.Name(),
-			Checkpointer:     checkpoint.NopCheckpointer{},
+			Checkpointer:     checkpoint.NopCheckpointer,
 			EventStore:       typedEventStore,
 		}
 
