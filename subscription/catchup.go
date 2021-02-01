@@ -108,26 +108,38 @@ func (s CatchUp) stream(
 	stream eventstore.EventStream,
 	source <-chan eventstore.Event,
 ) error {
-	for event := range source {
-		sn, ok := event.GlobalSequenceNumber()
-		if ok && *lastSequenceNumber >= sn {
-			continue
-		}
+	for {
+		select {
+		case event, ok := <-source:
+			if !ok {
+				return nil
+			}
 
-		stream <- event
+			sn, ok := event.GlobalSequenceNumber()
+			if ok && *lastSequenceNumber >= sn {
+				continue
+			}
 
-		// Skip sequence number checkpointing if the event does not have a
-		// global sequence number recorded.
-		if !ok {
-			continue
-		}
+			stream <- event
 
-		*lastSequenceNumber = sn
+			// Skip sequence number checkpointing if the event does not have a
+			// global sequence number recorded.
+			if !ok {
+				continue
+			}
 
-		if err := s.Checkpointer.Write(ctx, s.Name(), *lastSequenceNumber); err != nil {
-			return fmt.Errorf("subscription.CatchUp: failed to write checkpoint: %w", err)
+			*lastSequenceNumber = sn
+
+			if err := s.Checkpointer.Write(ctx, s.Name(), *lastSequenceNumber); err != nil {
+				return fmt.Errorf("subscription.CatchUp: failed to write checkpoint: %w", err)
+			}
+
+		case <-ctx.Done():
+			if err := ctx.Err(); err != nil {
+				return fmt.Errorf("subscription.CatchUp: context done: %w", err)
+			}
+
+			return nil
 		}
 	}
-
-	return nil
 }

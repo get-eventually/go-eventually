@@ -3,6 +3,7 @@ package subscription_test
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -80,8 +81,13 @@ func TestCatchUp(t *testing.T) {
 			EventStore:       typedEventStore,
 		}
 
+		wg := new(sync.WaitGroup)
+		wg.Add(1)
+
 		go func() {
 			defer cancel()
+
+			wg.Wait()
 
 			_, err = typedEventStore.
 				Instance(myInstance).
@@ -96,7 +102,12 @@ func TestCatchUp(t *testing.T) {
 			<-time.After(100 * time.Millisecond)
 		}()
 
-		received, err := eventstore.StreamToSlice(ctx, catchupSubscription.Start)
+		received, err := eventstore.StreamToSlice(ctx, func(ctx context.Context, es eventstore.EventStream) error {
+			// This kinda helps with starting the Subscription first,
+			// then wake up the WaitGroup, which will unlock the write goroutine.
+			go func() { wg.Done() }()
+			return catchupSubscription.Start(ctx, es)
+		})
 
 		assert.True(t, errors.Is(err, context.Canceled), "err", err)
 		assert.Equal(t, events, received)

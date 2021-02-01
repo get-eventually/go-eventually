@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"testing"
-	"time"
 
 	"github.com/eventually-rs/eventually-go"
 	"github.com/eventually-rs/eventually-go/eventstore"
@@ -75,8 +75,12 @@ func TestVolatile(t *testing.T) {
 		},
 	}
 
+	wg := new(sync.WaitGroup)
+	wg.Add(1)
+
 	go func() {
 		defer cancel()
+		wg.Wait()
 
 		for i := 0; i < 3; i++ {
 			_, err = typedEventStore.
@@ -89,15 +93,15 @@ func TestVolatile(t *testing.T) {
 				return
 			}
 		}
-
-		// NOTE: this is bad, I know, and it makes the test kinda unreliable,
-		// but in order to ensure that the subscription has consumed
-		// all the events committed before closing the context we gotta wait
-		// a little bit...
-		<-time.After(100 * time.Millisecond)
 	}()
 
-	events, err := eventstore.StreamToSlice(ctx, volatileSubscription.Start)
+	events, err := eventstore.StreamToSlice(ctx, func(ctx context.Context, es eventstore.EventStream) error {
+		// This kinda helps with starting the Subscription first,
+		// then wake up the WaitGroup, which will unlock the write goroutine.
+		go func() { wg.Done() }()
+		return volatileSubscription.Start(ctx, es)
+	})
+
 	assert.True(t, errors.Is(err, context.Canceled), "err", err)
 	assert.Equal(t, expectedEvents, events)
 }
