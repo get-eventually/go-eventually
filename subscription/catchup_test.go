@@ -1,0 +1,104 @@
+package subscription_test
+
+import (
+	"context"
+	"errors"
+	"testing"
+	"time"
+
+	"github.com/eventually-rs/eventually-go"
+	"github.com/eventually-rs/eventually-go/eventstore"
+	"github.com/eventually-rs/eventually-go/eventstore/inmemory"
+	"github.com/eventually-rs/eventually-go/subscription"
+	"github.com/eventually-rs/eventually-go/subscription/checkpoint"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestCatchUp(t *testing.T) {
+	t.Run("catch-up subscriptions will receive events from before the subscription has started", func(t *testing.T) {
+		const (
+			myType     = "my-type"
+			myInstance = "my-instance"
+		)
+
+		ctx := context.Background()
+		eventStore := inmemory.NewEventStore()
+
+		if err := eventStore.Register(ctx, myType, nil); !assert.NoError(t, err) {
+			return
+		}
+
+		typedEventStore, err := eventStore.Type(ctx, myType)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		events := []eventstore.Event{
+			{
+				StreamType: myType,
+				StreamName: myInstance,
+				Version:    1,
+				Event:      eventually.Event{Payload: 1}.WithGlobalSequenceNumber(1),
+			},
+			{
+				StreamType: myType,
+				StreamName: myInstance,
+				Version:    2,
+				Event:      eventually.Event{Payload: 2}.WithGlobalSequenceNumber(2),
+			},
+			{
+				StreamType: myType,
+				StreamName: myInstance,
+				Version:    3,
+				Event:      eventually.Event{Payload: 3}.WithGlobalSequenceNumber(3),
+			},
+			{
+				StreamType: myType,
+				StreamName: myInstance,
+				Version:    4,
+				Event:      eventually.Event{Payload: 4}.WithGlobalSequenceNumber(4),
+			},
+		}
+
+		// Append events before starting the subscription
+		_, err = typedEventStore.
+			Instance(myInstance).
+			Append(ctx, 0, events[0].Event, events[1].Event)
+
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		// Start the subscription and listen to incoming events
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		catchupSubscription := subscription.CatchUp{
+			SubscriptionName: t.Name(),
+			Checkpointer:     checkpoint.NopCheckpointer{},
+			EventStore:       typedEventStore,
+		}
+
+		go func() {
+			defer cancel()
+
+			_, err = typedEventStore.
+				Instance(myInstance).
+				Append(ctx, 2, events[2].Event, events[3].Event)
+
+			assert.NoError(t, err)
+
+			// NOTE: this is bad, I know, and it makes the test kinda unreliable,
+			// but in order to ensure that the subscription has consumed
+			// all the events committed before closing the context we gotta wait
+			// a little bit...
+			<-time.After(100 * time.Millisecond)
+		}()
+
+		received, err := eventstore.StreamToSlice(ctx, catchupSubscription.Start)
+
+		assert.True(t, errors.Is(err, context.Canceled), "err", err)
+		assert.Equal(t, events, received)
+	})
+}

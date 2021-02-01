@@ -9,23 +9,26 @@ import (
 
 var _ Subscription = Volatile{}
 
+// Volatile is a Subscription type that does not keep state of
+// the last Event processed or received, nor survives the Subscription
+// checkpoint between restarts.
+//
+// Use this Subscription type for volatile processes, such as projecting
+// realtime metrics, or when you're only interested in newer events
+// committed to the Event Store.
 type Volatile struct {
-	name       string
-	subscriber eventstore.Subscriber
+	SubscriptionName string
+	EventSubscriber  eventstore.Subscriber
 }
 
-func NewVolatile(name string, subscriber eventstore.Subscriber) Volatile {
-	return Volatile{
-		name:       name,
-		subscriber: subscriber,
-	}
-}
+// Name is the name of the subscription.
+func (v Volatile) Name() string { return v.SubscriptionName }
 
-func (v Volatile) Name() string { return v.name }
-
+// Start starts the Subscription by opening a subscribing Event Stream
+// using the subscription's Subscriber instance.
 func (v Volatile) Start(ctx context.Context, stream eventstore.EventStream) error {
-	if err := v.subscriber.Subscribe(ctx, stream); err != nil {
-		return fmt.Errorf("subscription.Volatile: subscriber exited with error: %w", err)
+	if err := v.EventSubscriber.Subscribe(ctx, stream); err != nil {
+		return fmt.Errorf("subscription.Volatile: event subscriber exited with error: %w", err)
 	}
 
 	return nil
