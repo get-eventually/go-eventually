@@ -1,3 +1,8 @@
+run:
+  # Avoid false positives on .github configuration files.
+  skip-dirs:
+    - .github
+
 linters-settings:
   dupl:
     threshold: 100

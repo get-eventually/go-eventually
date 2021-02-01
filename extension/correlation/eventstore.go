@@ -80,12 +80,12 @@ func (is instancedEventStoreWrapper) Append(ctx context.Context, version int64, 
 
 	// Use correlation id from the context.
 	// If the context doesn't provide a correlation id, then use the causation id.
-	correlationID, ok := ctx.Value(correlationCtxKey{}).(string)
+	correlationID, ok := IDContext(ctx)
 	if !ok || correlationID == "" {
 		correlationID = causeID
 	}
 
-	causationID, ok := ctx.Value(causationCtxKey{}).(string)
+	causationID, ok := CausationIDContext(ctx)
 	if !ok || causationID == "" {
 		causationID = causeID
 	}
