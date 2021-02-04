@@ -2,15 +2,19 @@ package postgres_test
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"os"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/eventually-rs/eventually-go"
 	"github.com/eventually-rs/eventually-go/eventstore"
 	"github.com/eventually-rs/eventually-go/eventstore/postgres"
 
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/sync/errgroup"
 )
 
 const defaultPostgresURL = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
@@ -119,7 +123,37 @@ func obtainEventStore(t *testing.T) *postgres.EventStore {
 		t.FailNow()
 	}
 
+	// Close connection on test exit
 	t.Cleanup(func() { assert.NoError(t, store.Close()) })
+
+	// Clean-up database on exit
+	t.Cleanup(func() {
+		handleError := func(err error) {
+			if !assert.NoError(t, err) {
+				t.FailNow()
+			}
+		}
+
+		db, err := sql.Open("postgres", url)
+		handleError(err)
+
+		tx, err := db.Begin()
+		handleError(err)
+
+		// Reset checkpoints for subscriptions.
+		_, err = tx.Exec("DELETE FROM subscriptions_checkpoints")
+		handleError(err)
+
+		// Reset committed events and streams.
+		_, err = tx.Exec("DELETE FROM streams")
+		handleError(err)
+
+		// Reset the global sequence number to 1.
+		_, err = tx.Exec("ALTER SEQUENCE events_global_sequence_number_seq RESTART WITH 1")
+		handleError(err)
+
+		handleError(tx.Commit())
+	})
 
 	return store
 }
@@ -250,10 +284,115 @@ func TestEventStore_Stream(t *testing.T) {
 	assert.Equal(t, expectedStreamMyOtherType, keepGlobalSequenceNumberOnly(streamMyOtherType))
 }
 
+func TestEventStore_Subscribe(t *testing.T) {
+	store := obtainEventStore(t)
+
+	// To stop a Subscription, we need to explicitly cancel the context.
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Register the stream types first.
+	err := store.Register(ctx, myType, map[string]interface{}{
+		"test_payload": int(0),
+	})
+
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	err = store.Register(ctx, myOtherType, map[string]interface{}{
+		"test_other_payload": int(0),
+	})
+
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	// Get a typed access from the Event Store.
+	myTypeStore, err := store.Type(ctx, myType)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	myOtherTypeStore, err := store.Type(ctx, myOtherType)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	// Open subscriptions for all interested Event Streams.
+	// Channels are buffered with the same length as the length of the Event Stream,
+	// optional only to avoid deadlocks in the test setting.
+	streamAll := make(chan eventstore.Event, 6)
+	streamMyType := make(chan eventstore.Event, 3)
+	streamMyOtherType := make(chan eventstore.Event, 3)
+
+	// Using a WaitGroup to synchronize writes only after all Subscriptions
+	// have been opened.
+	wg := new(sync.WaitGroup)
+	wg.Add(3)
+
+	subscribeTo := func(ctx context.Context, sub eventstore.Subscriber, es eventstore.EventStream) func() error {
+		return func() error {
+			wg.Done()
+			return sub.Subscribe(ctx, es)
+		}
+	}
+
+	group, ctx := errgroup.WithContext(ctx)
+	group.Go(subscribeTo(ctx, store, streamAll))
+	group.Go(subscribeTo(ctx, myTypeStore, streamMyType))
+	group.Go(subscribeTo(ctx, myOtherTypeStore, streamMyOtherType))
+
+	// Append events in the Event Strems and then close the Subscriptions
+	// by canceling the context.
+	go func() {
+		defer cancel()
+		wg.Wait()
+
+		for i := 1; i < 4; i++ {
+			_, err := myTypeStore.
+				Instance(testInstance).
+				Append(ctx, int64(i-1), eventually.Event{Payload: i})
+
+			assert.NoError(t, err)
+
+			_, err = myOtherTypeStore.
+				Instance(testInstance).
+				Append(ctx, int64(i-1), eventually.Event{Payload: i})
+
+			assert.NoError(t, err)
+		}
+
+		// NOTE: this is bad, I know, but we need to give time to the database
+		// to send all the notifications to the subscriber.
+		<-time.After(1 * time.Second)
+	}()
+
+	// Sink events from the Event Streams into slices for expectations comparison.
+	streamedAll := keepGlobalSequenceNumberOnly(sinkToSlice(streamAll))
+	streamedMyType := keepGlobalSequenceNumberOnly(sinkToSlice(streamMyType))
+	streamedMyOtherType := keepGlobalSequenceNumberOnly(sinkToSlice(streamMyOtherType))
+
+	assert.True(t, errors.Is(group.Wait(), context.Canceled))
+	assert.Equal(t, expectedStreamAll, streamedAll)
+	assert.Equal(t, expectedStreamMyType, streamedMyType)
+	assert.Equal(t, expectedStreamMyOtherType, streamedMyOtherType)
+}
+
 func streamFromBeginning(streamer eventstore.Streamer) func(context.Context, eventstore.EventStream) error {
 	return func(ctx context.Context, es eventstore.EventStream) error {
 		return streamer.Stream(ctx, es, 0)
 	}
+}
+
+func sinkToSlice(es <-chan eventstore.Event) []eventstore.Event {
+	var events []eventstore.Event
+
+	for event := range es {
+		events = append(events, event)
+	}
+
+	return events
 }
 
 func keepGlobalSequenceNumberOnly(events []eventstore.Event) []eventstore.Event {
