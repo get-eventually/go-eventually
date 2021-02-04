@@ -24,8 +24,20 @@ import (
 const (
 	streamAllName = "$all"
 
+	// DefaultNotifyChannelTimeout is the default refresh timeout for each
+	// notifications received through LISTEN.
 	DefaultNotifyChannelTimeout = 10 * time.Second
-	DefaultReconnectionTimeout  = 10 * time.Second
+
+	// DefaultReconnectionTimeout is the minimum timeout value the database driver
+	// uses before re-establishing a connection with the database when
+	// the previous one had been closed.
+	DefaultReconnectionTimeout = 10 * time.Second
+)
+
+var (
+	// ErrEmptyEventsMap occurs during a call to Register where a nil or empty Events map
+	// is provided, which would mean no events would be registered for the desired type.
+	ErrEmptyEventsMap = fmt.Errorf("postgres.EventStore: empty events map provided for type")
 )
 
 var (
@@ -33,6 +45,8 @@ var (
 	_ checkpoint.Checkpointer = &EventStore{}
 )
 
+// EventStore is an eventstore.Store implementation which uses
+// PostgreSQL as backend datastore.
 type EventStore struct {
 	dsn             string
 	db              *sql.DB
@@ -40,6 +54,8 @@ type EventStore struct {
 	eventTypeToName map[reflect.Type]string
 }
 
+// OpenEventStore opens a connection with the PostgreSQL identified by the
+// provided DSN and run migrations for the Event Store functionalities.
 func OpenEventStore(dsn string) (*EventStore, error) {
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
@@ -78,10 +94,12 @@ func runMigrations(dsn string) (err error) {
 	return nil
 }
 
+// Close closes the Event Store database connection.
 func (st *EventStore) Close() error {
 	return st.db.Close()
 }
 
+// Read reads the latest checkpointed sequence number of the subscription specified.
 func (st *EventStore) Read(ctx context.Context, subscriptionName string) (int64, error) {
 	row := st.db.QueryRowContext(
 		ctx,
@@ -97,6 +115,7 @@ func (st *EventStore) Read(ctx context.Context, subscriptionName string) (int64,
 	return lastSequenceNumber, nil
 }
 
+// Write checkpoints the sequence number value provided for the specified subscription.
 func (st *EventStore) Write(ctx context.Context, subscriptionName string, sequenceNumber int64) error {
 	_, err := st.db.ExecContext(
 		ctx,
@@ -114,7 +133,16 @@ func (st *EventStore) Write(ctx context.Context, subscriptionName string, sequen
 	return nil
 }
 
+// Register adds a mapping between the Stream Type identifier and the Events Map provided,
+// which is necessary to decode the Event payloads written to the database.
+//
+// The Event Map should use an unique identifier for the event, and a zero-valued instance
+// of the Event type it corresponds to.
 func (st *EventStore) Register(ctx context.Context, typ string, events map[string]interface{}) error {
+	if len(events) == 0 {
+		return ErrEmptyEventsMap
+	}
+
 	if err := st.registerEventsToType(events); err != nil {
 		return fmt.Errorf("postgres.EventStore: failed to register types: %w", err)
 	}
@@ -137,6 +165,8 @@ func (st *EventStore) registerEventsToType(events map[string]interface{}) error 
 	return nil
 }
 
+// Type returns an eventstore.Typed access instance of the specified Stream Type,
+// if previously registered.
 func (st *EventStore) Type(ctx context.Context, typ string) (eventstore.Typed, error) {
 	// TODO: query the database to check stream_types
 	return &typedEventStore{
@@ -145,6 +175,8 @@ func (st *EventStore) Type(ctx context.Context, typ string) (eventstore.Typed, e
 	}, nil
 }
 
+// Stream opens an Event Stream and sinks all the events in the Event Store in the provided
+// channel, skipping those events with a sequence number lower than the provided bound.
 func (st *EventStore) Stream(ctx context.Context, es eventstore.EventStream, from int64) error {
 	defer close(es)
 
@@ -172,6 +204,8 @@ type rawNotificationEvent struct {
 	Metadata   eventually.Metadata `json:"metadata"`
 }
 
+// Subscribe subscribes to all the new Events committed to the Event Store
+// and sinks them in the provided channel.
 func (st *EventStore) Subscribe(ctx context.Context, es eventstore.EventStream) error {
 	return st.subscribe(ctx, streamAllName, es)
 }

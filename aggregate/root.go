@@ -83,6 +83,7 @@ func (br *BaseRoot) recordThat(aggregate Applier, events ...eventually.Event) er
 		}
 
 		br.recordedEvents = append(br.recordedEvents, event)
+		br.version++
 	}
 
 	return nil

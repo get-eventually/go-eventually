@@ -35,15 +35,19 @@ func NewRepository(aggregateType Type, eventStore eventstore.Typed) *Repository 
 // Aggregate's events.
 func (r *Repository) Add(ctx context.Context, root Root) error {
 	events := root.flushRecordedEvents()
-	newVersion, err := r.eventStore.
+	if len(events) == 0 {
+		return nil
+	}
+
+	expectedVersion := root.Version() - int64(len(events))
+
+	_, err := r.eventStore.
 		Instance(root.AggregateID().String()).
-		Append(ctx, root.Version(), events...)
+		Append(ctx, expectedVersion, events...)
 
 	if err != nil {
 		return fmt.Errorf("aggregate.Repository: failed to commit recorded events: %w", err)
 	}
-
-	root.updateVersion(newVersion)
 
 	return nil
 }
@@ -72,11 +76,11 @@ func (r Repository) Get(ctx context.Context, id ID) (Root, error) {
 	})
 
 	for event := range stream {
+		isEmpty = false
+
 		if err := root.Apply(event.Event); err != nil {
 			return nil, fmt.Errorf("aggregate.Repository: failed to apply event while rehydrating aggregate: %w", err)
 		}
-
-		isEmpty = false
 
 		root.updateVersion(event.Version)
 	}

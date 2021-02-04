@@ -7,6 +7,20 @@ on:
 
 jobs:
   tests:
+    services:
+      db:
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        image: postgres:12
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     name: Tests
     runs-on: ubuntu-latest
     steps:
@@ -19,13 +33,13 @@ jobs:
       with:
         # Disabling shallow clone is recommended for improving relevancy of reporting
         fetch-depth: 0
-    - name: Run unit tests
-      run: make unit-tests
+    - name: Run tests
+      run: make tests
     - name: Archive code coverage results
       uses: actions/upload-artifact@v2
       with:
         name: code-coverage-report
-        path: unitcov.out
+        path: cov.out
     - name: Analyze with SonarCloud
       uses: sonarsource/sonarcloud-github-action@master
       env:
