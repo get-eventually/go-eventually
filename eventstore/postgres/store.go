@@ -29,6 +29,12 @@ const (
 )
 
 var (
+	// ErrEmptyEventsMap occurs during a call to Register where a nil or empty Events map
+	// is provided, which would mean no events would be registered for the desired type.
+	ErrEmptyEventsMap = fmt.Errorf("postgres.EventStore: empty events map provided for type")
+)
+
+var (
 	_ eventstore.Store        = &EventStore{}
 	_ checkpoint.Checkpointer = &EventStore{}
 )
@@ -115,6 +121,10 @@ func (st *EventStore) Write(ctx context.Context, subscriptionName string, sequen
 }
 
 func (st *EventStore) Register(ctx context.Context, typ string, events map[string]interface{}) error {
+	if len(events) == 0 {
+		return ErrEmptyEventsMap
+	}
+
 	if err := st.registerEventsToType(events); err != nil {
 		return fmt.Errorf("postgres.EventStore: failed to register types: %w", err)
 	}
