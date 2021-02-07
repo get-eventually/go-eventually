@@ -237,7 +237,10 @@ func (s instanceEventStoreAccess) Append(ctx context.Context, version int64, eve
 
 	currentVersion := int64(len(s.byTypeAndInstance[s.typ][s.id]))
 	if version != -1 && currentVersion != version {
-		return 0, fmt.Errorf("inmemory: invalid version check, expected %d", currentVersion)
+		return 0, fmt.Errorf("inmemory: failed to append events: %w", eventstore.ErrConflict{
+			Expected: version,
+			Actual:   currentVersion,
+		})
 	}
 
 	nextOffset := int64(len(s.events))
