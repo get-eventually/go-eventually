@@ -33,3 +33,9 @@ func (v Volatile) Start(ctx context.Context, stream eventstore.EventStream) erro
 
 	return nil
 }
+
+// Checkpoint is a no-op operation, since the transient nature of the
+// Subscription does not require to persist its current state.
+func (Volatile) Checkpoint(ctx context.Context, event eventstore.Event) error {
+	return nil
+}

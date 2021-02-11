@@ -130,10 +130,6 @@ func (s CatchUp) stream(
 
 			*lastSequenceNumber = sn
 
-			if err := s.Checkpointer.Write(ctx, s.Name(), *lastSequenceNumber); err != nil {
-				return fmt.Errorf("subscription.CatchUp: failed to write checkpoint: %w", err)
-			}
-
 		case <-ctx.Done():
 			if err := ctx.Err(); err != nil {
 				return fmt.Errorf("subscription.CatchUp: context done: %w", err)
@@ -142,4 +138,20 @@ func (s CatchUp) stream(
 			return nil
 		}
 	}
+}
+
+// Checkpoint uses the Subscription Checkpointer instance to save
+// the Global Sequence Number of the Event specified.
+func (s CatchUp) Checkpoint(ctx context.Context, event eventstore.Event) error {
+	sn, ok := event.GlobalSequenceNumber()
+	if !ok {
+		// Skip checkpointing if the Event has no Sequence Number
+		return nil
+	}
+
+	if err := s.Checkpointer.Write(ctx, s.Name(), sn); err != nil {
+		return fmt.Errorf("subscription.CatchUp: failed to checkpoint subscription: %w", err)
+	}
+
+	return nil
 }
