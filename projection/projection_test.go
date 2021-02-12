@@ -109,7 +109,7 @@ func TestRunner(t *testing.T) {
 	<-time.After(100 * time.Millisecond)
 	cancel()
 
-	if !assert.NoError(t, group.Wait()) {
+	if !assert.ErrorIs(t, group.Wait(), context.Canceled) {
 		return
 	}
 
