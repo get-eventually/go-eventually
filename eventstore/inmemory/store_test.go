@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/eventually-rs/eventually-go"
 	"github.com/eventually-rs/eventually-go/eventstore"
@@ -247,7 +248,7 @@ func TestEventStore_Subscribe(t *testing.T) {
 
 	subscribeTo := func(ctx context.Context, sub eventstore.Subscriber, es eventstore.EventStream) func() error {
 		return func() error {
-			wg.Done()
+			go func() { wg.Done() }()
 			return sub.Subscribe(ctx, es)
 		}
 	}
@@ -276,6 +277,8 @@ func TestEventStore_Subscribe(t *testing.T) {
 
 			assert.NoError(t, err)
 		}
+
+		<-time.After(100 * time.Millisecond)
 	}()
 
 	// Sink events from the Event Streams into slices for expectations comparison.
