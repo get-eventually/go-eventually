@@ -56,8 +56,8 @@ type Root interface {
 //
 // An error is typically returned if applying the Domain Event on the Aggregate
 // Root instance fails with an error.
-func RecordThat(root Root, event eventually.Event) error {
-	return root.recordThat(root, event)
+func RecordThat(root Root, event ...eventually.Event) error {
+	return root.recordThat(root, event...)
 }
 
 // BaseRoot segregates and completes the aggregate.Root interface implementation
