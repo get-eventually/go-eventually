@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"reflect"
 	"time"
 
@@ -75,6 +76,20 @@ func OpenEventStore(dsn string) (*EventStore, error) {
 }
 
 func runMigrations(dsn string) (err error) {
+	u, err := url.Parse(dsn)
+	if err != nil {
+		return fmt.Errorf("postgres.EventStore: invalid dsn format: %w", err)
+	}
+
+	// go-migrate allows to specify a different migration table
+	// than the default 'schema_migrations'. In this case, we want to use
+	// a dedicated table to avoid potential clashing with the same tool running
+	// on the same PostgreSQL database instance that is being used as
+	// an Event Store.
+	q := u.Query()
+	q.Add("x-migrations-table", "eventually_schema_migrations")
+	u.RawQuery = q.Encode()
+
 	src := bindata.Resource(migrations.AssetNames(), migrations.Asset)
 
 	driver, err := bindata.WithInstance(src)
@@ -82,7 +97,7 @@ func runMigrations(dsn string) (err error) {
 		return fmt.Errorf("postgres.EventStore: failed to access migrations: %w", err)
 	}
 
-	m, err := migrate.NewWithSourceInstance("go-bindata", driver, dsn)
+	m, err := migrate.NewWithSourceInstance("go-bindata", driver, u.String())
 	if err != nil {
 		return fmt.Errorf("postgres.EventStore: failed to create migrate instance: %w", err)
 	}
