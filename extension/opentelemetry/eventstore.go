@@ -2,45 +2,21 @@ package opentelemetry
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/eventually-rs/eventually-go"
 	"github.com/eventually-rs/eventually-go/eventstore"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 )
 
-const instrumentationName = "github.com/eventually-rs/eventually-go/extension/opentelemetry"
-
-// Names of the OpenTelemetry spans created by the package.
-const (
-	StreamSpanName = "EventStore.Stream"
-	AppendSpanName = "EventStore.Append"
-)
-
-var (
-	// StreamNameLabel is the label identifier that contains the Stream name,
-	// or Stream instance id, when using an eventstore.Instanced.
-	StreamNameLabel = label.Key("eventually.event_store.stream.name")
-
-	// StreamTypeLabel is the label identifier that contains the Stream type,
-	// when using an eventstore.Typed.
-	StreamTypeLabel = label.Key("eventually.event_store.stream.type")
-
-	// StreamFromLabel is the label identifier that contains the version or
-	// sequence number lower bound used for Stream calls.
-	StreamFromLabel = label.Key("eventually.event_store.stream.from")
-
-	// VersionCheckLabel is the label identifier that contains the expected
-	// version provided when using Append to add new events to the Event Store.
-	VersionCheckLabel = label.Key("eventually.event_store.append.version.check")
-
-	// VersionNewLabel is the label identifier that contains the new version
-	// returned by the Event Store on Append calls.
-	VersionNewLabel = label.Key("eventually.event_store.append.version.new")
-)
-
 var _ eventstore.Store = EventStoreWrapper{}
+
+type eventStoreTelemetry struct {
+	tracer       trace.Tracer
+	appendMetric metric.Int64UpDownCounter
+}
 
 // EventStoreWrapper is a wrapper to provide OpenTelemetry instrumentation
 // for eventstore.Store compatible implementations, and compatible
@@ -49,16 +25,30 @@ var _ eventstore.Store = EventStoreWrapper{}
 // Use WrapEventStore to create new instance of this type.
 type EventStoreWrapper struct {
 	eventstore.Store
-	tracer trace.Tracer
+	eventStoreTelemetry
 }
 
 // WrapEventStore creates a new EventStoreWrapper instance, using the provided
-// TracerProvider to collect metrics.
-func WrapEventStore(es eventstore.Store, tracerProvider trace.TracerProvider) EventStoreWrapper {
-	return EventStoreWrapper{
-		Store:  es,
-		tracer: tracerProvider.Tracer(instrumentationName),
+// TracerProvider and MeterProvider to collect traces and metrics.
+func WrapEventStore(
+	es eventstore.Store,
+	tracerProvider trace.TracerProvider,
+	meterProvider metric.MeterProvider,
+) (EventStoreWrapper, error) {
+	meter := meterProvider.Meter(instrumentationName)
+
+	appendMetric, err := meter.NewInt64UpDownCounter(AppendMetric)
+	if err != nil {
+		return EventStoreWrapper{}, fmt.Errorf("opentelemetry.WrapEventStore: failed to create append metric: %w", err)
 	}
+
+	return EventStoreWrapper{
+		Store: es,
+		eventStoreTelemetry: eventStoreTelemetry{
+			tracer:       tracerProvider.Tracer(instrumentationName),
+			appendMetric: appendMetric,
+		},
+	}, nil
 }
 
 // Stream delegates the call to the underlying Event Store and records
@@ -87,16 +77,17 @@ func (sw EventStoreWrapper) Type(ctx context.Context, typ string) (eventstore.Ty
 	}
 
 	return typedEventStoreWrapper{
-		Typed:      tsw,
-		streamType: typ,
-		tracer:     sw.tracer,
+		Typed:               tsw,
+		eventStoreTelemetry: sw.eventStoreTelemetry,
+		streamType:          typ,
 	}, nil
 }
 
 type typedEventStoreWrapper struct {
 	eventstore.Typed
+	eventStoreTelemetry
+
 	streamType string
-	tracer     trace.Tracer
 }
 
 func (tsw typedEventStoreWrapper) Stream(ctx context.Context, es eventstore.EventStream, from int64) error {
@@ -116,18 +107,19 @@ func (tsw typedEventStoreWrapper) Stream(ctx context.Context, es eventstore.Even
 
 func (tsw typedEventStoreWrapper) Instance(id string) eventstore.Instanced {
 	return instancedEventStoreWrapper{
-		Instanced:  tsw.Typed.Instance(id),
-		streamType: tsw.streamType,
-		streamName: id,
-		tracer:     tsw.tracer,
+		Instanced:           tsw.Typed.Instance(id),
+		eventStoreTelemetry: tsw.eventStoreTelemetry,
+		streamType:          tsw.streamType,
+		streamName:          id,
 	}
 }
 
 type instancedEventStoreWrapper struct {
 	eventstore.Instanced
+	eventStoreTelemetry
+
 	streamType string
 	streamName string
-	tracer     trace.Tracer
 }
 
 func (isw instancedEventStoreWrapper) Stream(ctx context.Context, es eventstore.EventStream, from int64) error {
@@ -161,5 +153,14 @@ func (isw instancedEventStoreWrapper) Append(ctx context.Context, version int64,
 		span.SetAttributes(VersionNewLabel.Int64(newVersion))
 	}
 
+	isw.reportAppendMetrics(ctx, events...)
+
 	return newVersion, err
+}
+
+func (isw instancedEventStoreWrapper) reportAppendMetrics(ctx context.Context, events ...eventually.Event) {
+	for _, event := range events {
+		isw.appendMetric.
+			Add(ctx, 1, EventTypeLabel.String(event.Payload.Name()))
+	}
 }
