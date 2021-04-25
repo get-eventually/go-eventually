@@ -43,7 +43,7 @@ func TestProjectionWrapper(t *testing.T) {
 
 		_, err := typedStore.
 			Instance(myInstance).
-			Append(ctx, 0, eventually.Event{Payload: "uncorrelated-test"})
+			Append(ctx, 0, eventually.Event{Payload: stringPayload("uncorrelated-test")})
 
 		if !assert.NoError(t, err) {
 			return
@@ -76,7 +76,7 @@ func TestProjectionWrapper(t *testing.T) {
 
 		_, err := correlatedTypedStore.
 			Instance(myInstance).
-			Append(ctx, 0, eventually.Event{Payload: "correlated-test"})
+			Append(ctx, 0, eventually.Event{Payload: stringPayload("correlated-test")})
 
 		if !assert.NoError(t, err) {
 			return

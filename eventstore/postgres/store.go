@@ -153,20 +153,21 @@ func (st *EventStore) Write(ctx context.Context, subscriptionName string, sequen
 //
 // The Event Map should use an unique identifier for the event, and a zero-valued instance
 // of the Event type it corresponds to.
-func (st *EventStore) Register(ctx context.Context, typ string, events map[string]interface{}) error {
+func (st *EventStore) Register(ctx context.Context, typ string, events ...eventually.Payload) error {
 	if len(events) == 0 {
 		return ErrEmptyEventsMap
 	}
 
-	if err := st.registerEventsToType(events); err != nil {
+	if err := st.registerEventsToType(events...); err != nil {
 		return fmt.Errorf("postgres.EventStore: failed to register types: %w", err)
 	}
 
 	return nil
 }
 
-func (st *EventStore) registerEventsToType(events map[string]interface{}) error {
-	for eventName, event := range events {
+func (st *EventStore) registerEventsToType(events ...eventually.Payload) error {
+	for _, event := range events {
+		eventName := event.Name()
 		eventType := reflect.TypeOf(event)
 
 		if _, ok := st.eventNameToType[eventName]; ok {
@@ -283,7 +284,7 @@ func (st *EventStore) subscribe(ctx context.Context, name string, es eventstore.
 				StreamName: rawEvent.StreamID,
 				Version:    rawEvent.Version,
 				Event: eventually.Event{
-					Payload:  vp.Elem().Interface(),
+					Payload:  vp.Elem().Interface().(eventually.Payload),
 					Metadata: rawEvent.Metadata,
 				},
 			}
@@ -467,7 +468,7 @@ func (st *EventStore) rowsToStream(rows *sql.Rows, es eventstore.EventStream) (e
 			return fmt.Errorf("postgres.EventStore: failed to unmarshal event metadata from json: %w", err)
 		}
 
-		event.Payload = vp.Elem().Interface()
+		event.Payload = vp.Elem().Interface().(eventually.Payload)
 		event.Metadata = metadata
 		event.Event = event.WithGlobalSequenceNumber(globalSequenceNumber)
 

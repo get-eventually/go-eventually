@@ -31,37 +31,37 @@ var (
 			StreamType: myType,
 			StreamName: testInstance,
 			Version:    1,
-			Event:      eventually.Event{Payload: 1}.WithGlobalSequenceNumber(1),
+			Event:      eventually.Event{Payload: intPayload(1)}.WithGlobalSequenceNumber(1),
 		},
 		{
 			StreamType: myOtherType,
 			StreamName: testInstance,
 			Version:    1,
-			Event:      eventually.Event{Payload: 1}.WithGlobalSequenceNumber(2),
+			Event:      eventually.Event{Payload: intPayload(1)}.WithGlobalSequenceNumber(2),
 		},
 		{
 			StreamType: myType,
 			StreamName: testInstance,
 			Version:    2,
-			Event:      eventually.Event{Payload: 2}.WithGlobalSequenceNumber(3),
+			Event:      eventually.Event{Payload: intPayload(2)}.WithGlobalSequenceNumber(3),
 		},
 		{
 			StreamType: myOtherType,
 			StreamName: testInstance,
 			Version:    2,
-			Event:      eventually.Event{Payload: 2}.WithGlobalSequenceNumber(4),
+			Event:      eventually.Event{Payload: intPayload(2)}.WithGlobalSequenceNumber(4),
 		},
 		{
 			StreamType: myType,
 			StreamName: testInstance,
 			Version:    3,
-			Event:      eventually.Event{Payload: 3}.WithGlobalSequenceNumber(5),
+			Event:      eventually.Event{Payload: intPayload(3)}.WithGlobalSequenceNumber(5),
 		},
 		{
 			StreamType: myOtherType,
 			StreamName: testInstance,
 			Version:    3,
-			Event:      eventually.Event{Payload: 3}.WithGlobalSequenceNumber(6),
+			Event:      eventually.Event{Payload: intPayload(3)}.WithGlobalSequenceNumber(6),
 		},
 	}
 
@@ -70,19 +70,19 @@ var (
 			StreamType: myType,
 			StreamName: testInstance,
 			Version:    1,
-			Event:      eventually.Event{Payload: 1}.WithGlobalSequenceNumber(1),
+			Event:      eventually.Event{Payload: intPayload(1)}.WithGlobalSequenceNumber(1),
 		},
 		{
 			StreamType: myType,
 			StreamName: testInstance,
 			Version:    2,
-			Event:      eventually.Event{Payload: 2}.WithGlobalSequenceNumber(3),
+			Event:      eventually.Event{Payload: intPayload(2)}.WithGlobalSequenceNumber(3),
 		},
 		{
 			StreamType: myType,
 			StreamName: testInstance,
 			Version:    3,
-			Event:      eventually.Event{Payload: 3}.WithGlobalSequenceNumber(5),
+			Event:      eventually.Event{Payload: intPayload(3)}.WithGlobalSequenceNumber(5),
 		},
 	}
 
@@ -91,22 +91,26 @@ var (
 			StreamType: myOtherType,
 			StreamName: testInstance,
 			Version:    1,
-			Event:      eventually.Event{Payload: 1}.WithGlobalSequenceNumber(2),
+			Event:      eventually.Event{Payload: intPayload(1)}.WithGlobalSequenceNumber(2),
 		},
 		{
 			StreamType: myOtherType,
 			StreamName: testInstance,
 			Version:    2,
-			Event:      eventually.Event{Payload: 2}.WithGlobalSequenceNumber(4),
+			Event:      eventually.Event{Payload: intPayload(2)}.WithGlobalSequenceNumber(4),
 		},
 		{
 			StreamType: myOtherType,
 			StreamName: testInstance,
 			Version:    3,
-			Event:      eventually.Event{Payload: 3}.WithGlobalSequenceNumber(6),
+			Event:      eventually.Event{Payload: intPayload(3)}.WithGlobalSequenceNumber(6),
 		},
 	}
 )
+
+type intPayload int64
+
+func (intPayload) Name() string { return "int_payload" }
 
 func obtainEventStore(t *testing.T) *postgres.EventStore {
 	if testing.Short() {
@@ -162,6 +166,8 @@ type testEvent struct {
 	Value int64 `json:"value"`
 }
 
+func (testEvent) Name() string { return "test_event" }
+
 func TestRegister(t *testing.T) {
 	store := obtainEventStore(t)
 
@@ -172,9 +178,7 @@ func TestRegister(t *testing.T) {
 
 	t.Run("registering a type with event map shold be successful", func(t *testing.T) {
 		assert.NoError(t,
-			store.Register(context.Background(), "register-succes-type", map[string]interface{}{
-				"test_event": testEvent{},
-			}),
+			store.Register(context.Background(), "register-succes-type", testEvent{}),
 		)
 	})
 }
@@ -203,18 +207,12 @@ func TestEventStore_Stream(t *testing.T) {
 	ctx := context.Background()
 
 	// Register the stream types first.
-	err := store.Register(ctx, myType, map[string]interface{}{
-		"test_payload": int(0),
-	})
-
+	err := store.Register(ctx, myType, intPayload(0))
 	if !assert.NoError(t, err) {
 		return
 	}
 
-	err = store.Register(ctx, myOtherType, map[string]interface{}{
-		"test_other_payload": int(0),
-	})
-
+	err = store.Register(ctx, myOtherType, intPayload(0))
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -247,13 +245,13 @@ func TestEventStore_Stream(t *testing.T) {
 	for i := 1; i < 4; i++ {
 		_, err = myTypeStore.
 			Instance(testInstance).
-			Append(ctx, int64(i-1), eventually.Event{Payload: i})
+			Append(ctx, int64(i-1), eventually.Event{Payload: intPayload(i)})
 
 		assert.NoError(t, err)
 
 		_, err = myOtherTypeStore.
 			Instance(testInstance).
-			Append(ctx, int64(i-1), eventually.Event{Payload: i})
+			Append(ctx, int64(i-1), eventually.Event{Payload: intPayload(i)})
 
 		assert.NoError(t, err)
 	}
@@ -292,18 +290,12 @@ func TestEventStore_Subscribe(t *testing.T) {
 	defer cancel()
 
 	// Register the stream types first.
-	err := store.Register(ctx, myType, map[string]interface{}{
-		"test_payload": int(0),
-	})
-
+	err := store.Register(ctx, myType, intPayload(0))
 	if !assert.NoError(t, err) {
 		return
 	}
 
-	err = store.Register(ctx, myOtherType, map[string]interface{}{
-		"test_other_payload": int(0),
-	})
-
+	err = store.Register(ctx, myOtherType, intPayload(0))
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -352,13 +344,13 @@ func TestEventStore_Subscribe(t *testing.T) {
 		for i := 1; i < 4; i++ {
 			_, err := myTypeStore.
 				Instance(testInstance).
-				Append(ctx, int64(i-1), eventually.Event{Payload: i})
+				Append(ctx, int64(i-1), eventually.Event{Payload: intPayload(i)})
 
 			assert.NoError(t, err)
 
 			_, err = myOtherTypeStore.
 				Instance(testInstance).
-				Append(ctx, int64(i-1), eventually.Event{Payload: i})
+				Append(ctx, int64(i-1), eventually.Event{Payload: intPayload(i)})
 
 			assert.NoError(t, err)
 		}

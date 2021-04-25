@@ -11,6 +11,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type stringPayload string
+
+func (stringPayload) Name() string { return "string_payload" }
+
 func TestTrackingEventStore(t *testing.T) {
 	t.Run("no events recorded when no events are appended", func(t *testing.T) {
 		eventStore := inmemory.NewEventStore()
@@ -39,7 +43,10 @@ func TestTrackingEventStore(t *testing.T) {
 
 		_, err = trackingTypedStore.
 			Instance(testInstance).
-			Append(ctx, 0, eventually.Event{Payload: "hello"}, eventually.Event{Payload: "world"})
+			Append(ctx, 0,
+				eventually.Event{Payload: stringPayload("hello")},
+				eventually.Event{Payload: stringPayload("world")},
+			)
 
 		if !assert.NoError(t, err) {
 			return

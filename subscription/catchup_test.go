@@ -16,6 +16,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type intPayload int64
+
+func (intPayload) Name() string { return "int_payload" }
+
 func TestCatchUp(t *testing.T) {
 	t.Run("catch-up subscriptions will receive events from before the subscription has started", func(t *testing.T) {
 		const (
@@ -40,25 +44,25 @@ func TestCatchUp(t *testing.T) {
 				StreamType: myType,
 				StreamName: myInstance,
 				Version:    1,
-				Event:      eventually.Event{Payload: 1}.WithGlobalSequenceNumber(1),
+				Event:      eventually.Event{Payload: intPayload(1)}.WithGlobalSequenceNumber(1),
 			},
 			{
 				StreamType: myType,
 				StreamName: myInstance,
 				Version:    2,
-				Event:      eventually.Event{Payload: 2}.WithGlobalSequenceNumber(2),
+				Event:      eventually.Event{Payload: intPayload(2)}.WithGlobalSequenceNumber(2),
 			},
 			{
 				StreamType: myType,
 				StreamName: myInstance,
 				Version:    3,
-				Event:      eventually.Event{Payload: 3}.WithGlobalSequenceNumber(3),
+				Event:      eventually.Event{Payload: intPayload(3)}.WithGlobalSequenceNumber(3),
 			},
 			{
 				StreamType: myType,
 				StreamName: myInstance,
 				Version:    4,
-				Event:      eventually.Event{Payload: 4}.WithGlobalSequenceNumber(4),
+				Event:      eventually.Event{Payload: intPayload(4)}.WithGlobalSequenceNumber(4),
 			},
 		}
 

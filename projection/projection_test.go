@@ -22,24 +22,28 @@ const (
 	streamInstance = "runner-instance"
 )
 
+type intPayload int64
+
+func (intPayload) Name() string { return "int_payload" }
+
 var expectedEvents = []eventstore.Event{
 	{
 		StreamType: streamType,
 		StreamName: streamInstance,
 		Version:    1,
-		Event:      eventually.Event{Payload: 1}.WithGlobalSequenceNumber(1),
+		Event:      eventually.Event{Payload: intPayload(1)}.WithGlobalSequenceNumber(1),
 	},
 	{
 		StreamType: streamType,
 		StreamName: streamInstance,
 		Version:    2,
-		Event:      eventually.Event{Payload: 2}.WithGlobalSequenceNumber(2),
+		Event:      eventually.Event{Payload: intPayload(2)}.WithGlobalSequenceNumber(2),
 	},
 	{
 		StreamType: streamType,
 		StreamName: streamInstance,
 		Version:    3,
-		Event:      eventually.Event{Payload: 3}.WithGlobalSequenceNumber(3),
+		Event:      eventually.Event{Payload: intPayload(3)}.WithGlobalSequenceNumber(3),
 	},
 }
 

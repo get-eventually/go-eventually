@@ -17,6 +17,10 @@ const randomStringSize = 12
 
 var alphabet = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 
+type stringPayload string
+
+func (stringPayload) Name() string { return "string_payload" }
+
 func TestEventStoreWrapper(t *testing.T) {
 	generator := func() string {
 		s := make([]rune, randomStringSize)
@@ -45,8 +49,8 @@ func TestEventStoreWrapper(t *testing.T) {
 	}
 
 	_, err = typedStore.Instance(instanceName).Append(ctx, 0, []eventually.Event{
-		{Payload: "my-first-event"},
-		{Payload: "my-second-event"},
+		{Payload: stringPayload("my-first-event")},
+		{Payload: stringPayload("my-second-event")},
 	}...)
 
 	if !assert.NoError(t, err) {
