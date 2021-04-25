@@ -68,7 +68,7 @@ type Store interface {
 	// Register registers a new Type identifier, using the provided map of
 	// Event identifiers to types needed for deserializing Events from the
 	// Event Store to the application.
-	Register(ctx context.Context, typ string, events map[string]interface{}) error
+	Register(ctx context.Context, typ string, events ...eventually.Payload) error
 
 	// Type returns access to a Typed Event Store instance related
 	// to the type identifier provided.
