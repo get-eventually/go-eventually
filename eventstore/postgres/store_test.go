@@ -168,9 +168,14 @@ func (testEvent) Name() string { return "test_event" }
 func TestRegister(t *testing.T) {
 	store := obtainEventStore(t)
 
-	t.Run("registering a type with empty event map fails", func(t *testing.T) {
-		err := store.Register(context.Background(), "register-fail-type", nil)
+	t.Run("registering a type with no events fails", func(t *testing.T) {
+		err := store.Register(context.Background(), "register-fail-type")
 		assert.True(t, errors.Is(err, postgres.ErrEmptyEventsMap), "err", err)
+	})
+
+	t.Run("registering a type with a nil event type fails", func(t *testing.T) {
+		err := store.Register(context.Background(), "register-fail-type", nil)
+		assert.Error(t, err)
 	})
 
 	t.Run("registering a type with event map shold be successful", func(t *testing.T) {

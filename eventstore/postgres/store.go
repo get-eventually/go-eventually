@@ -167,6 +167,10 @@ func (st *EventStore) Register(ctx context.Context, typ string, events ...eventu
 
 func (st *EventStore) registerEventsToType(events ...eventually.Payload) error {
 	for _, event := range events {
+		if event == nil {
+			return fmt.Errorf("postgres.EventStore: expected event type, nil was provided instead")
+		}
+
 		eventName := event.Name()
 		eventType := reflect.TypeOf(event)
 
