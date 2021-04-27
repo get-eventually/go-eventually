@@ -8,6 +8,7 @@ import (
 	"github.com/eventually-rs/eventually-go/eventstore"
 	"github.com/eventually-rs/eventually-go/eventstore/inmemory"
 	"github.com/eventually-rs/eventually-go/extension/correlation"
+	"github.com/eventually-rs/eventually-go/internal"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -43,7 +44,7 @@ func TestProjectionWrapper(t *testing.T) {
 
 		_, err := typedStore.
 			Instance(myInstance).
-			Append(ctx, 0, eventually.Event{Payload: stringPayload("uncorrelated-test")})
+			Append(ctx, 0, eventually.Event{Payload: internal.StringPayload("uncorrelated-test")})
 
 		if !assert.NoError(t, err) {
 			return
@@ -76,7 +77,7 @@ func TestProjectionWrapper(t *testing.T) {
 
 		_, err := correlatedTypedStore.
 			Instance(myInstance).
-			Append(ctx, 0, eventually.Event{Payload: stringPayload("correlated-test")})
+			Append(ctx, 0, eventually.Event{Payload: internal.StringPayload("correlated-test")})
 
 		if !assert.NoError(t, err) {
 			return

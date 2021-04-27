@@ -9,6 +9,7 @@ import (
 	"github.com/eventually-rs/eventually-go/eventstore"
 	"github.com/eventually-rs/eventually-go/eventstore/inmemory"
 	"github.com/eventually-rs/eventually-go/extension/correlation"
+	"github.com/eventually-rs/eventually-go/internal"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -16,10 +17,6 @@ import (
 const randomStringSize = 12
 
 var alphabet = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
-
-type stringPayload string
-
-func (stringPayload) Name() string { return "string_payload" }
 
 func TestEventStoreWrapper(t *testing.T) {
 	generator := func() string {
@@ -49,8 +46,8 @@ func TestEventStoreWrapper(t *testing.T) {
 	}
 
 	_, err = typedStore.Instance(instanceName).Append(ctx, 0, []eventually.Event{
-		{Payload: stringPayload("my-first-event")},
-		{Payload: stringPayload("my-second-event")},
+		{Payload: internal.StringPayload("my-first-event")},
+		{Payload: internal.StringPayload("my-second-event")},
 	}...)
 
 	if !assert.NoError(t, err) {

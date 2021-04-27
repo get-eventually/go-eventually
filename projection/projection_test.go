@@ -9,6 +9,7 @@ import (
 	"github.com/eventually-rs/eventually-go"
 	"github.com/eventually-rs/eventually-go/eventstore"
 	"github.com/eventually-rs/eventually-go/eventstore/inmemory"
+	"github.com/eventually-rs/eventually-go/internal"
 	"github.com/eventually-rs/eventually-go/projection"
 	"github.com/eventually-rs/eventually-go/subscription"
 	"github.com/eventually-rs/eventually-go/subscription/checkpoint"
@@ -22,28 +23,24 @@ const (
 	streamInstance = "runner-instance"
 )
 
-type intPayload int64
-
-func (intPayload) Name() string { return "int_payload" }
-
 var expectedEvents = []eventstore.Event{
 	{
 		StreamType: streamType,
 		StreamName: streamInstance,
 		Version:    1,
-		Event:      eventually.Event{Payload: intPayload(1)}.WithGlobalSequenceNumber(1),
+		Event:      eventually.Event{Payload: internal.IntPayload(1)}.WithGlobalSequenceNumber(1),
 	},
 	{
 		StreamType: streamType,
 		StreamName: streamInstance,
 		Version:    2,
-		Event:      eventually.Event{Payload: intPayload(2)}.WithGlobalSequenceNumber(2),
+		Event:      eventually.Event{Payload: internal.IntPayload(2)}.WithGlobalSequenceNumber(2),
 	},
 	{
 		StreamType: streamType,
 		StreamName: streamInstance,
 		Version:    3,
-		Event:      eventually.Event{Payload: intPayload(3)}.WithGlobalSequenceNumber(3),
+		Event:      eventually.Event{Payload: internal.IntPayload(3)}.WithGlobalSequenceNumber(3),
 	},
 }
 

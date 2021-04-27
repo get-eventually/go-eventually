@@ -7,13 +7,10 @@ import (
 	"github.com/eventually-rs/eventually-go"
 	"github.com/eventually-rs/eventually-go/eventstore"
 	"github.com/eventually-rs/eventually-go/eventstore/inmemory"
+	"github.com/eventually-rs/eventually-go/internal"
 
 	"github.com/stretchr/testify/assert"
 )
-
-type stringPayload string
-
-func (stringPayload) Name() string { return "string_payload" }
 
 func TestTrackingEventStore(t *testing.T) {
 	t.Run("no events recorded when no events are appended", func(t *testing.T) {
@@ -44,8 +41,8 @@ func TestTrackingEventStore(t *testing.T) {
 		_, err = trackingTypedStore.
 			Instance(testInstance).
 			Append(ctx, 0,
-				eventually.Event{Payload: stringPayload("hello")},
-				eventually.Event{Payload: stringPayload("world")},
+				eventually.Event{Payload: internal.StringPayload("hello")},
+				eventually.Event{Payload: internal.StringPayload("world")},
 			)
 
 		if !assert.NoError(t, err) {
