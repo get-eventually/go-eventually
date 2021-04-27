@@ -174,8 +174,19 @@ func (st *EventStore) registerEventsToType(events ...eventually.Payload) error {
 		eventName := event.Name()
 		eventType := reflect.TypeOf(event)
 
-		if _, ok := st.eventNameToType[eventName]; ok {
-			return fmt.Errorf("postgres.EventStore: event '%s' already registered", eventName)
+		if registeredType, ok := st.eventNameToType[eventName]; ok {
+			// TODO(ar3s3ru): this is a clear code smell for the current Event Store API.
+			// We can find a different way of registering events.
+			if registeredType == eventType {
+				// Type is already registered and the new one is the same as the
+				// one already registered, so we can continue with the other event types.
+				continue
+			}
+
+			return fmt.Errorf(
+				"postgres.EventStore: event '%s' has been already registered with a different type",
+				eventName,
+			)
 		}
 
 		st.eventNameToType[eventName] = eventType
