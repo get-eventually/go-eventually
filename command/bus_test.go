@@ -12,6 +12,8 @@ import (
 
 type cmd struct{}
 
+func (cmd) Name() string { return "cmd" }
+
 type handler struct {
 	t *testing.T
 }

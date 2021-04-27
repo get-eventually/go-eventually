@@ -1,11 +1,19 @@
 package eventually
 
+// Payload is a Message payload.
+//
+// Each payload should have a unique name identifier, that can be used
+// to uniquely route a message to its type.
+type Payload interface {
+	Name() string
+}
+
 // Message represents any kind of information that can be carried around.
 //
 // Usually, a Message only contains a payload, but it could optionally
 // include some metadata. (e.g. some debug identifiers)
 type Message struct {
-	Payload  interface{}
+	Payload  Payload
 	Metadata Metadata
 }
 

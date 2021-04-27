@@ -32,9 +32,13 @@ type AggregateCreated struct {
 	AggregateID string
 }
 
+func (AggregateCreated) Name() string { return "aggregate_created" }
+
 type AggregateEventRecorded struct {
 	AggregateID string
 }
+
+func (AggregateEventRecorded) Name() string { return "aggregate_event_recorded" }
 
 func (a *Aggregate) Apply(evt eventually.Event) error {
 	switch event := evt.Payload.(type) {

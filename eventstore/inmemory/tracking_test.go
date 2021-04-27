@@ -7,6 +7,7 @@ import (
 	"github.com/eventually-rs/eventually-go"
 	"github.com/eventually-rs/eventually-go/eventstore"
 	"github.com/eventually-rs/eventually-go/eventstore/inmemory"
+	"github.com/eventually-rs/eventually-go/internal"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -39,7 +40,10 @@ func TestTrackingEventStore(t *testing.T) {
 
 		_, err = trackingTypedStore.
 			Instance(testInstance).
-			Append(ctx, 0, eventually.Event{Payload: "hello"}, eventually.Event{Payload: "world"})
+			Append(ctx, 0,
+				eventually.Event{Payload: internal.StringPayload("hello")},
+				eventually.Event{Payload: internal.StringPayload("world")},
+			)
 
 		if !assert.NoError(t, err) {
 			return

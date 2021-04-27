@@ -12,6 +12,7 @@ import (
 	"github.com/eventually-rs/eventually-go"
 	"github.com/eventually-rs/eventually-go/eventstore"
 	"github.com/eventually-rs/eventually-go/eventstore/postgres"
+	"github.com/eventually-rs/eventually-go/internal"
 
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/sync/errgroup"
@@ -31,37 +32,37 @@ var (
 			StreamType: myType,
 			StreamName: testInstance,
 			Version:    1,
-			Event:      eventually.Event{Payload: 1}.WithGlobalSequenceNumber(1),
+			Event:      eventually.Event{Payload: internal.IntPayload(1)}.WithGlobalSequenceNumber(1),
 		},
 		{
 			StreamType: myOtherType,
 			StreamName: testInstance,
 			Version:    1,
-			Event:      eventually.Event{Payload: 1}.WithGlobalSequenceNumber(2),
+			Event:      eventually.Event{Payload: internal.IntPayload(1)}.WithGlobalSequenceNumber(2),
 		},
 		{
 			StreamType: myType,
 			StreamName: testInstance,
 			Version:    2,
-			Event:      eventually.Event{Payload: 2}.WithGlobalSequenceNumber(3),
+			Event:      eventually.Event{Payload: internal.IntPayload(2)}.WithGlobalSequenceNumber(3),
 		},
 		{
 			StreamType: myOtherType,
 			StreamName: testInstance,
 			Version:    2,
-			Event:      eventually.Event{Payload: 2}.WithGlobalSequenceNumber(4),
+			Event:      eventually.Event{Payload: internal.IntPayload(2)}.WithGlobalSequenceNumber(4),
 		},
 		{
 			StreamType: myType,
 			StreamName: testInstance,
 			Version:    3,
-			Event:      eventually.Event{Payload: 3}.WithGlobalSequenceNumber(5),
+			Event:      eventually.Event{Payload: internal.IntPayload(3)}.WithGlobalSequenceNumber(5),
 		},
 		{
 			StreamType: myOtherType,
 			StreamName: testInstance,
 			Version:    3,
-			Event:      eventually.Event{Payload: 3}.WithGlobalSequenceNumber(6),
+			Event:      eventually.Event{Payload: internal.IntPayload(3)}.WithGlobalSequenceNumber(6),
 		},
 	}
 
@@ -70,19 +71,19 @@ var (
 			StreamType: myType,
 			StreamName: testInstance,
 			Version:    1,
-			Event:      eventually.Event{Payload: 1}.WithGlobalSequenceNumber(1),
+			Event:      eventually.Event{Payload: internal.IntPayload(1)}.WithGlobalSequenceNumber(1),
 		},
 		{
 			StreamType: myType,
 			StreamName: testInstance,
 			Version:    2,
-			Event:      eventually.Event{Payload: 2}.WithGlobalSequenceNumber(3),
+			Event:      eventually.Event{Payload: internal.IntPayload(2)}.WithGlobalSequenceNumber(3),
 		},
 		{
 			StreamType: myType,
 			StreamName: testInstance,
 			Version:    3,
-			Event:      eventually.Event{Payload: 3}.WithGlobalSequenceNumber(5),
+			Event:      eventually.Event{Payload: internal.IntPayload(3)}.WithGlobalSequenceNumber(5),
 		},
 	}
 
@@ -91,19 +92,19 @@ var (
 			StreamType: myOtherType,
 			StreamName: testInstance,
 			Version:    1,
-			Event:      eventually.Event{Payload: 1}.WithGlobalSequenceNumber(2),
+			Event:      eventually.Event{Payload: internal.IntPayload(1)}.WithGlobalSequenceNumber(2),
 		},
 		{
 			StreamType: myOtherType,
 			StreamName: testInstance,
 			Version:    2,
-			Event:      eventually.Event{Payload: 2}.WithGlobalSequenceNumber(4),
+			Event:      eventually.Event{Payload: internal.IntPayload(2)}.WithGlobalSequenceNumber(4),
 		},
 		{
 			StreamType: myOtherType,
 			StreamName: testInstance,
 			Version:    3,
-			Event:      eventually.Event{Payload: 3}.WithGlobalSequenceNumber(6),
+			Event:      eventually.Event{Payload: internal.IntPayload(3)}.WithGlobalSequenceNumber(6),
 		},
 	}
 )
@@ -162,19 +163,24 @@ type testEvent struct {
 	Value int64 `json:"value"`
 }
 
+func (testEvent) Name() string { return "test_event" }
+
 func TestRegister(t *testing.T) {
 	store := obtainEventStore(t)
 
-	t.Run("registering a type with empty event map fails", func(t *testing.T) {
-		err := store.Register(context.Background(), "register-fail-type", nil)
+	t.Run("registering a type with no events fails", func(t *testing.T) {
+		err := store.Register(context.Background(), "register-fail-type")
 		assert.True(t, errors.Is(err, postgres.ErrEmptyEventsMap), "err", err)
+	})
+
+	t.Run("registering a type with a nil event type fails", func(t *testing.T) {
+		err := store.Register(context.Background(), "register-fail-type", nil)
+		assert.Error(t, err)
 	})
 
 	t.Run("registering a type with event map shold be successful", func(t *testing.T) {
 		assert.NoError(t,
-			store.Register(context.Background(), "register-succes-type", map[string]interface{}{
-				"test_event": testEvent{},
-			}),
+			store.Register(context.Background(), "register-succes-type", testEvent{}),
 		)
 	})
 }
@@ -203,18 +209,12 @@ func TestEventStore_Stream(t *testing.T) {
 	ctx := context.Background()
 
 	// Register the stream types first.
-	err := store.Register(ctx, myType, map[string]interface{}{
-		"test_payload": int(0),
-	})
-
+	err := store.Register(ctx, myType, internal.IntPayload(0))
 	if !assert.NoError(t, err) {
 		return
 	}
 
-	err = store.Register(ctx, myOtherType, map[string]interface{}{
-		"test_other_payload": int(0),
-	})
-
+	err = store.Register(ctx, myOtherType, internal.IntPayload(0))
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -247,13 +247,13 @@ func TestEventStore_Stream(t *testing.T) {
 	for i := 1; i < 4; i++ {
 		_, err = myTypeStore.
 			Instance(testInstance).
-			Append(ctx, int64(i-1), eventually.Event{Payload: i})
+			Append(ctx, int64(i-1), eventually.Event{Payload: internal.IntPayload(i)})
 
 		assert.NoError(t, err)
 
 		_, err = myOtherTypeStore.
 			Instance(testInstance).
-			Append(ctx, int64(i-1), eventually.Event{Payload: i})
+			Append(ctx, int64(i-1), eventually.Event{Payload: internal.IntPayload(i)})
 
 		assert.NoError(t, err)
 	}
@@ -292,18 +292,12 @@ func TestEventStore_Subscribe(t *testing.T) {
 	defer cancel()
 
 	// Register the stream types first.
-	err := store.Register(ctx, myType, map[string]interface{}{
-		"test_payload": int(0),
-	})
-
+	err := store.Register(ctx, myType, internal.IntPayload(0))
 	if !assert.NoError(t, err) {
 		return
 	}
 
-	err = store.Register(ctx, myOtherType, map[string]interface{}{
-		"test_other_payload": int(0),
-	})
-
+	err = store.Register(ctx, myOtherType, internal.IntPayload(0))
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -352,13 +346,13 @@ func TestEventStore_Subscribe(t *testing.T) {
 		for i := 1; i < 4; i++ {
 			_, err := myTypeStore.
 				Instance(testInstance).
-				Append(ctx, int64(i-1), eventually.Event{Payload: i})
+				Append(ctx, int64(i-1), eventually.Event{Payload: internal.IntPayload(i)})
 
 			assert.NoError(t, err)
 
 			_, err = myOtherTypeStore.
 				Instance(testInstance).
-				Append(ctx, int64(i-1), eventually.Event{Payload: i})
+				Append(ctx, int64(i-1), eventually.Event{Payload: internal.IntPayload(i)})
 
 			assert.NoError(t, err)
 		}

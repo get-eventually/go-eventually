@@ -10,6 +10,7 @@ import (
 	"github.com/eventually-rs/eventually-go"
 	"github.com/eventually-rs/eventually-go/eventstore"
 	"github.com/eventually-rs/eventually-go/eventstore/inmemory"
+	"github.com/eventually-rs/eventually-go/internal"
 	"github.com/eventually-rs/eventually-go/subscription"
 	"github.com/eventually-rs/eventually-go/subscription/checkpoint"
 
@@ -40,25 +41,25 @@ func TestCatchUp(t *testing.T) {
 				StreamType: myType,
 				StreamName: myInstance,
 				Version:    1,
-				Event:      eventually.Event{Payload: 1}.WithGlobalSequenceNumber(1),
+				Event:      eventually.Event{Payload: internal.IntPayload(1)}.WithGlobalSequenceNumber(1),
 			},
 			{
 				StreamType: myType,
 				StreamName: myInstance,
 				Version:    2,
-				Event:      eventually.Event{Payload: 2}.WithGlobalSequenceNumber(2),
+				Event:      eventually.Event{Payload: internal.IntPayload(2)}.WithGlobalSequenceNumber(2),
 			},
 			{
 				StreamType: myType,
 				StreamName: myInstance,
 				Version:    3,
-				Event:      eventually.Event{Payload: 3}.WithGlobalSequenceNumber(3),
+				Event:      eventually.Event{Payload: internal.IntPayload(3)}.WithGlobalSequenceNumber(3),
 			},
 			{
 				StreamType: myType,
 				StreamName: myInstance,
 				Version:    4,
-				Event:      eventually.Event{Payload: 4}.WithGlobalSequenceNumber(4),
+				Event:      eventually.Event{Payload: internal.IntPayload(4)}.WithGlobalSequenceNumber(4),
 			},
 		}
 

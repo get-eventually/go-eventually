@@ -51,7 +51,7 @@ func (s *EventStore) Type(ctx context.Context, typ string) (eventstore.Typed, er
 // for this particular Event Store mechanism to register Event types.
 //
 // This function never fails.
-func (s *EventStore) Register(ctx context.Context, typ string, events map[string]interface{}) error {
+func (s *EventStore) Register(ctx context.Context, typ string, events ...eventually.Payload) error {
 	if _, ok := s.byType[typ]; !ok {
 		s.byType[typ] = nil
 	}

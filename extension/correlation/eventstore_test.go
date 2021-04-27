@@ -9,6 +9,7 @@ import (
 	"github.com/eventually-rs/eventually-go/eventstore"
 	"github.com/eventually-rs/eventually-go/eventstore/inmemory"
 	"github.com/eventually-rs/eventually-go/extension/correlation"
+	"github.com/eventually-rs/eventually-go/internal"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -45,8 +46,8 @@ func TestEventStoreWrapper(t *testing.T) {
 	}
 
 	_, err = typedStore.Instance(instanceName).Append(ctx, 0, []eventually.Event{
-		{Payload: "my-first-event"},
-		{Payload: "my-second-event"},
+		{Payload: internal.StringPayload("my-first-event")},
+		{Payload: internal.StringPayload("my-second-event")},
 	}...)
 
 	if !assert.NoError(t, err) {

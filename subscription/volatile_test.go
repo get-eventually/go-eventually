@@ -10,6 +10,7 @@ import (
 	"github.com/eventually-rs/eventually-go"
 	"github.com/eventually-rs/eventually-go/eventstore"
 	"github.com/eventually-rs/eventually-go/eventstore/inmemory"
+	"github.com/eventually-rs/eventually-go/internal"
 	"github.com/eventually-rs/eventually-go/subscription"
 
 	"github.com/stretchr/testify/assert"
@@ -42,7 +43,7 @@ func TestVolatile(t *testing.T) {
 
 	_, err = typedEventStore.
 		Instance(instanceName).
-		Append(ctx, 0, eventually.Event{Payload: "test-event-should-not-be-received"})
+		Append(ctx, 0, eventually.Event{Payload: internal.StringPayload("test-event-should-not-be-received")})
 
 	if !assert.NoError(t, err) {
 		return
@@ -54,7 +55,7 @@ func TestVolatile(t *testing.T) {
 			StreamName: instanceName,
 			Version:    2,
 			Event: eventually.
-				Event{Payload: "test-event-should-be-received-0"}.
+				Event{Payload: internal.StringPayload("test-event-should-be-received-0")}.
 				WithGlobalSequenceNumber(2),
 		},
 		{
@@ -62,7 +63,7 @@ func TestVolatile(t *testing.T) {
 			StreamName: instanceName,
 			Version:    3,
 			Event: eventually.
-				Event{Payload: "test-event-should-be-received-1"}.
+				Event{Payload: internal.StringPayload("test-event-should-be-received-1")}.
 				WithGlobalSequenceNumber(3),
 		},
 		{
@@ -70,7 +71,7 @@ func TestVolatile(t *testing.T) {
 			StreamName: instanceName,
 			Version:    4,
 			Event: eventually.
-				Event{Payload: "test-event-should-be-received-2"}.
+				Event{Payload: internal.StringPayload("test-event-should-be-received-2")}.
 				WithGlobalSequenceNumber(4),
 		},
 	}
@@ -86,7 +87,7 @@ func TestVolatile(t *testing.T) {
 			_, err = typedEventStore.
 				Instance(instanceName).
 				Append(ctx, int64(i+1), eventually.Event{
-					Payload: fmt.Sprintf("test-event-should-be-received-%d", i),
+					Payload: internal.StringPayload(fmt.Sprintf("test-event-should-be-received-%d", i)),
 				})
 
 			if !assert.NoError(t, err) {
