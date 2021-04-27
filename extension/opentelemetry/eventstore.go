@@ -106,7 +106,7 @@ func (tsw typedEventStoreWrapper) Stream(ctx context.Context, es eventstore.Even
 }
 
 func (tsw typedEventStoreWrapper) Instance(id string) eventstore.Instanced {
-	return instancedEventStoreWrapper{
+	return &instancedEventStoreWrapper{
 		Instanced:           tsw.Typed.Instance(id),
 		eventStoreTelemetry: tsw.eventStoreTelemetry,
 		streamType:          tsw.streamType,
@@ -114,6 +114,8 @@ func (tsw typedEventStoreWrapper) Instance(id string) eventstore.Instanced {
 	}
 }
 
+// NOTE(ar3s3ru): this type uses pointer semantics to save up some memory,
+// since the gocritic linter complaints :D
 type instancedEventStoreWrapper struct {
 	eventstore.Instanced
 	eventStoreTelemetry
@@ -122,7 +124,7 @@ type instancedEventStoreWrapper struct {
 	streamName string
 }
 
-func (isw instancedEventStoreWrapper) Stream(ctx context.Context, es eventstore.EventStream, from int64) error {
+func (isw *instancedEventStoreWrapper) Stream(ctx context.Context, es eventstore.EventStream, from int64) error {
 	ctx, span := isw.tracer.Start(ctx, StreamSpanName, trace.WithAttributes(
 		StreamTypeLabel.String(isw.streamType),
 		StreamNameLabel.String(isw.streamName),
@@ -138,7 +140,7 @@ func (isw instancedEventStoreWrapper) Stream(ctx context.Context, es eventstore.
 	return err
 }
 
-func (isw instancedEventStoreWrapper) Append(ctx context.Context, version int64, events ...eventually.Event) (int64, error) {
+func (isw *instancedEventStoreWrapper) Append(ctx context.Context, version int64, events ...eventually.Event) (int64, error) {
 	ctx, span := isw.tracer.Start(ctx, AppendSpanName, trace.WithAttributes(
 		StreamTypeLabel.String(isw.streamType),
 		StreamNameLabel.String(isw.streamName),
@@ -158,7 +160,7 @@ func (isw instancedEventStoreWrapper) Append(ctx context.Context, version int64,
 	return newVersion, err
 }
 
-func (isw instancedEventStoreWrapper) reportAppendMetrics(ctx context.Context, events ...eventually.Event) {
+func (isw *instancedEventStoreWrapper) reportAppendMetrics(ctx context.Context, events ...eventually.Event) {
 	for _, event := range events {
 		isw.appendMetric.
 			Add(ctx, 1, EventTypeLabel.String(event.Payload.Name()))

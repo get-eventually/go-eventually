@@ -9,8 +9,11 @@ const (
 	ApplierSpanName = "Projection.Applier"
 )
 
-// AppendMetric is the metric name for append operations using an instrumented Event Store.
-const AppendMetric = "eventually.eventstore.append"
+// Metrics exported by this package.
+const (
+	AppendMetric          = "eventually.eventstore.append"
+	ProjectionApplyMetric = "eventually.projection.apply.duration.ms"
+)
 
 var (
 	// StreamNameLabel is the label identifier that contains the Stream name,
@@ -24,7 +27,7 @@ var (
 	// EventTypeLabel is the label identifier that contains the type of an Event.
 	EventTypeLabel = label.Key("event.type")
 
-	// EventVersion is the label identifier that contains the version of an Event.
+	// EventVersionLabel is the label identifier that contains the version of an Event.
 	EventVersionLabel = label.Key("event.version")
 
 	// StreamFromLabel is the label identifier that contains the version or
