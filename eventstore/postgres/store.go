@@ -148,12 +148,9 @@ func (st *EventStore) Write(ctx context.Context, subscriptionName string, sequen
 	return nil
 }
 
-// Register adds a mapping between the Stream Type identifier and the Events Map provided,
-// which is necessary to decode the Event payloads written to the database.
-//
-// The Event Map should use an unique identifier for the event, and a zero-valued instance
-// of the Event type it corresponds to.
-func (st *EventStore) Register(ctx context.Context, typ string, events ...eventually.Payload) error {
+// Register registers Domain Events used by the application in order to decode events
+// stored in the database by their name returned by the eventually.Payload trait.
+func (st *EventStore) Register(ctx context.Context, events ...eventually.Payload) error {
 	if len(events) == 0 {
 		return ErrEmptyEventsMap
 	}
@@ -196,19 +193,9 @@ func (st *EventStore) registerEventsToType(events ...eventually.Payload) error {
 	return nil
 }
 
-// Type returns an eventstore.Typed access instance of the specified Stream Type,
-// if previously registered.
-func (st *EventStore) Type(ctx context.Context, typ string) (eventstore.Typed, error) {
-	// TODO: query the database to check stream_types
-	return &typedEventStore{
-		parent:     st,
-		streamType: typ,
-	}, nil
-}
-
-// Stream opens an Event Stream and sinks all the events in the Event Store in the provided
+// StreamAll opens an Event Stream and sinks all the events in the Event Store in the provided
 // channel, skipping those events with a sequence number lower than the provided bound.
-func (st *EventStore) Stream(ctx context.Context, es eventstore.EventStream, from int64) error {
+func (st *EventStore) StreamAll(ctx context.Context, es eventstore.EventStream, selectt eventstore.Select) error {
 	defer close(es)
 
 	rows, err := st.db.QueryContext(
@@ -216,7 +203,56 @@ func (st *EventStore) Stream(ctx context.Context, es eventstore.EventStream, fro
 		`SELECT * FROM events
 			WHERE global_sequence_number >= $1
 			ORDER BY global_sequence_number ASC`,
-		from,
+		selectt.From,
+	)
+
+	if err != nil {
+		return fmt.Errorf("postgres.EventStore: failed to get events from store: %w", err)
+	}
+
+	return st.rowsToStream(rows, es)
+}
+
+func (st *EventStore) StreamByType(
+	ctx context.Context,
+	es eventstore.EventStream,
+	typ string,
+	selectt eventstore.Select,
+) error {
+	defer close(es)
+
+	rows, err := st.db.QueryContext(
+		ctx,
+		`SELECT * FROM events
+			WHERE stream_type = $1 AND global_sequence_number >= $2
+			ORDER BY global_sequence_number ASC`,
+		typ,
+		selectt.From,
+	)
+
+	if err != nil {
+		return fmt.Errorf("postgres.EventStore: failed to get events from store: %w", err)
+	}
+
+	return st.rowsToStream(rows, es)
+}
+
+func (st *EventStore) Stream(
+	ctx context.Context,
+	es eventstore.EventStream,
+	id eventstore.StreamID,
+	selectt eventstore.Select,
+) error {
+	defer close(es)
+
+	rows, err := st.db.QueryContext(
+		ctx,
+		`SELECT * FROM events
+			WHERE stream_type = $1 AND stream_id = $2 AND "version" >= $3
+			ORDER BY "version" ASC`,
+		id.Type,
+		id.Name,
+		selectt.From,
 	)
 
 	if err != nil {
@@ -235,10 +271,14 @@ type rawNotificationEvent struct {
 	Metadata   eventually.Metadata `json:"metadata"`
 }
 
-// Subscribe subscribes to all the new Events committed to the Event Store
+// SubscribeToAll subscribes to all the new Events committed to the Event Store
 // and sinks them in the provided channel.
-func (st *EventStore) Subscribe(ctx context.Context, es eventstore.EventStream) error {
+func (st *EventStore) SubscribeToAll(ctx context.Context, es eventstore.EventStream) error {
 	return st.subscribe(ctx, streamAllName, es)
+}
+
+func (st *EventStore) SubscribeToType(ctx context.Context, es eventstore.EventStream, typ string) error {
+	return st.subscribe(ctx, typ, es)
 }
 
 func (st *EventStore) subscribe(ctx context.Context, name string, es eventstore.EventStream) error {
@@ -295,9 +335,11 @@ func (st *EventStore) subscribe(ctx context.Context, name string, es eventstore.
 			}
 
 			es <- eventstore.Event{
-				StreamType: rawEvent.StreamType,
-				StreamName: rawEvent.StreamID,
-				Version:    rawEvent.Version,
+				StreamID: eventstore.StreamID{
+					Type: rawEvent.StreamType,
+					Name: rawEvent.StreamID,
+				},
+				Version: rawEvent.Version,
 				Event: eventually.Event{
 					Payload:  vp.Elem().Interface().(eventually.Payload),
 					Metadata: rawEvent.Metadata,
@@ -307,76 +349,13 @@ func (st *EventStore) subscribe(ctx context.Context, name string, es eventstore.
 	}
 }
 
-type typedEventStore struct {
-	parent     *EventStore
-	streamType string
-}
-
-func (st *typedEventStore) Stream(ctx context.Context, es eventstore.EventStream, from int64) error {
-	defer close(es)
-
-	db := st.parent.db
-
-	rows, err := db.QueryContext(
-		ctx,
-		`SELECT * FROM events
-			WHERE stream_type = $1 AND global_sequence_number >= $2
-			ORDER BY global_sequence_number ASC`,
-		st.streamType,
-		from,
-	)
-
-	if err != nil {
-		return fmt.Errorf("postgres.EventStore: failed to get events from store: %w", err)
-	}
-
-	return st.parent.rowsToStream(rows, es)
-}
-
-func (st *typedEventStore) Subscribe(ctx context.Context, es eventstore.EventStream) error {
-	return st.parent.subscribe(ctx, st.streamType, es)
-}
-
-func (st *typedEventStore) Instance(id string) eventstore.Instanced {
-	return &instancedEventStore{
-		parent:   st,
-		streamID: id,
-	}
-}
-
-type instancedEventStore struct {
-	parent   *typedEventStore
-	streamID string
-}
-
-func (st *instancedEventStore) Stream(ctx context.Context, es eventstore.EventStream, from int64) error {
-	defer close(es)
-
-	db := st.parent.parent.db
-	streamType := st.parent.streamType
-
-	rows, err := db.QueryContext(
-		ctx,
-		`SELECT * FROM events
-			WHERE stream_type = $1 AND stream_id = $2 AND "version" >= $3
-			ORDER BY "version" ASC`,
-		streamType,
-		st.streamID,
-		from,
-	)
-
-	if err != nil {
-		return fmt.Errorf("postgres.EventStore: failed to get events from store: %w", err)
-	}
-
-	return st.parent.parent.rowsToStream(rows, es)
-}
-
-func (st *instancedEventStore) Append(ctx context.Context, version int64, events ...eventually.Event) (v int64, err error) {
-	db := st.parent.parent.db
-	streamType := st.parent.streamType
-
-	tx, err := db.BeginTx(ctx, nil)
+func (st *EventStore) Append(
+	ctx context.Context,
+	id eventstore.StreamID,
+	expected eventstore.VersionCheck,
+	events ...eventually.Event,
+) (v int64, err error) {
+	tx, err := st.db.BeginTx(ctx, nil)
 	if err != nil {
 		return 0, fmt.Errorf("postgres.EventStore: failed to open a transaction to append: %w", err)
 	}
@@ -389,9 +368,11 @@ func (st *instancedEventStore) Append(ctx context.Context, version int64, events
 		}
 	}()
 
+	newVersion := int64(expected)
+
 	for _, event := range events {
 		eventType := reflect.TypeOf(event.Payload)
-		eventName, ok := st.parent.parent.eventTypeToName[eventType]
+		eventName, ok := st.eventTypeToName[eventType]
 
 		if !ok {
 			return 0, fmt.Errorf("postgres.EventStore: event type not registered: %s", eventType.Name())
@@ -415,13 +396,13 @@ func (st *instancedEventStore) Append(ctx context.Context, version int64, events
 		err = tx.QueryRowContext(
 			ctx,
 			"SELECT append_to_store($1, $2, $3, $4, $5, $6)",
-			streamType,
-			st.streamID,
-			version,
+			id.Type,
+			id.Name,
+			int64(expected),
 			eventName,
 			eventPayload,
 			metadata,
-		).Scan(&version)
+		).Scan(&newVersion)
 
 		if err != nil {
 			return 0, fmt.Errorf("postgres.EventStore: failed to append event: %w", err)
@@ -432,7 +413,7 @@ func (st *instancedEventStore) Append(ctx context.Context, version int64, events
 		return 0, fmt.Errorf("postgres.EventStore: failed to commit append transaction: %w", err)
 	}
 
-	return version, nil
+	return newVersion, nil
 }
 
 func (st *EventStore) rowsToStream(rows *sql.Rows, es eventstore.EventStream) (err error) {
@@ -456,8 +437,8 @@ func (st *EventStore) rowsToStream(rows *sql.Rows, es eventstore.EventStream) (e
 
 		err := rows.Scan(
 			&globalSequenceNumber,
-			&event.StreamType,
-			&event.StreamName,
+			&event.StreamID.Type,
+			&event.StreamID.Name,
 			&eventName,
 			&event.Version,
 			&rawPayload,
