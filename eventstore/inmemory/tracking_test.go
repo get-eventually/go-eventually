@@ -15,35 +15,27 @@ import (
 func TestTrackingEventStore(t *testing.T) {
 	t.Run("no events recorded when no events are appended", func(t *testing.T) {
 		eventStore := inmemory.NewEventStore()
-		trackingEventStore := &inmemory.TrackingEventStore{Store: eventStore}
+		trackingEventStore := inmemory.NewTrackingEventStore(eventStore)
 		assert.Empty(t, trackingEventStore.Recorded())
 	})
 
 	t.Run("events recorded successfully", func(t *testing.T) {
-		const testType = "test-type"
-		const testInstance = "test-instance"
-
 		ctx := context.Background()
 		eventStore := inmemory.NewEventStore()
-		trackingEventStore := &inmemory.TrackingEventStore{Store: eventStore}
+		trackingEventStore := inmemory.NewTrackingEventStore(eventStore)
 
-		// Register stream type for appending events.
-		// Must use the tracking event store to start recording committed events.
-		if err := trackingEventStore.Register(ctx, testType, nil); !assert.NoError(t, err) {
-			return
+		streamID := eventstore.StreamID{
+			Type: "test-type",
+			Name: "test-instance",
 		}
 
-		trackingTypedStore, err := trackingEventStore.Type(ctx, testType)
-		if !assert.NoError(t, err) {
-			return
-		}
-
-		_, err = trackingTypedStore.
-			Instance(testInstance).
-			Append(ctx, 0,
-				eventually.Event{Payload: internal.StringPayload("hello")},
-				eventually.Event{Payload: internal.StringPayload("world")},
-			)
+		_, err := trackingEventStore.Append(
+			ctx,
+			streamID,
+			eventstore.VersionCheck(0),
+			eventually.Event{Payload: internal.StringPayload("hello")},
+			eventually.Event{Payload: internal.StringPayload("world")},
+		)
 
 		if !assert.NoError(t, err) {
 			return
@@ -51,7 +43,7 @@ func TestTrackingEventStore(t *testing.T) {
 
 		// Compare events in the event store and recorded ones from the tracking store.
 		events, err := eventstore.StreamToSlice(ctx, func(ctx context.Context, es eventstore.EventStream) error {
-			return eventStore.Stream(ctx, es, 0)
+			return eventStore.Stream(ctx, es, streamID, eventstore.SelectFromBeginning)
 		})
 
 		assert.NoError(t, err)
