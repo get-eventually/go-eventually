@@ -18,29 +18,26 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const (
-	streamType     = "runner-type"
-	streamInstance = "runner-instance"
-)
+var streamID = eventstore.StreamID{
+	Type: "my-type",
+	Name: "my-instance",
+}
 
 var expectedEvents = []eventstore.Event{
 	{
-		StreamType: streamType,
-		StreamName: streamInstance,
-		Version:    1,
-		Event:      eventually.Event{Payload: internal.IntPayload(1)}.WithGlobalSequenceNumber(1),
+		StreamID: streamID,
+		Version:  1,
+		Event:    eventually.Event{Payload: internal.IntPayload(1)}.WithGlobalSequenceNumber(1),
 	},
 	{
-		StreamType: streamType,
-		StreamName: streamInstance,
-		Version:    2,
-		Event:      eventually.Event{Payload: internal.IntPayload(2)}.WithGlobalSequenceNumber(2),
+		StreamID: streamID,
+		Version:  2,
+		Event:    eventually.Event{Payload: internal.IntPayload(2)}.WithGlobalSequenceNumber(2),
 	},
 	{
-		StreamType: streamType,
-		StreamName: streamInstance,
-		Version:    3,
-		Event:      eventually.Event{Payload: internal.IntPayload(3)}.WithGlobalSequenceNumber(3),
+		StreamID: streamID,
+		Version:  3,
+		Event:    eventually.Event{Payload: internal.IntPayload(3)}.WithGlobalSequenceNumber(3),
 	},
 }
 
@@ -50,20 +47,11 @@ func TestRunner(t *testing.T) {
 
 	eventStore := inmemory.NewEventStore()
 
-	// Need to register the stream type before sending messages
-	if !assert.NoError(t, eventStore.Register(ctx, streamType, nil)) {
-		return
-	}
-
-	typedStore, err := eventStore.Type(ctx, streamType)
-	if !assert.NoError(t, err) {
-		return
-	}
-
 	// Create a new subscription to listen events from the event store
 	testSubscription := subscription.CatchUp{
 		SubscriptionName: "test-subscription",
-		EventStore:       typedStore,
+		Target:           subscription.TargetStreamAll{},
+		EventStore:       eventStore,
 		Checkpointer:     checkpoint.NopCheckpointer,
 	}
 
@@ -96,9 +84,12 @@ func TestRunner(t *testing.T) {
 	wg.Wait()
 
 	for _, event := range expectedEvents {
-		_, err := typedStore.
-			Instance(streamInstance).
-			Append(ctx, event.Version-1, event.Event)
+		_, err := eventStore.Append(
+			ctx,
+			streamID,
+			eventstore.VersionCheck(event.Version-1),
+			event.Event,
+		)
 
 		if !assert.NoError(t, err) {
 			return
