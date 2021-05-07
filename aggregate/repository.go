@@ -13,18 +13,23 @@ import (
 // specified Aggregate Root have been found.
 var ErrRootNotFound = fmt.Errorf("aggregate.Repository: aggregate root not found")
 
+type RepositoryEventStore interface {
+	eventstore.Appender
+	eventstore.Streamer
+}
+
 // Repository is an Event-sourced Repository implementation for retrieving
 // and saving Aggregate Roots, using an underlying Event Store instance.
 //
 // Use `NewRepository` to create a new instance of this type.
 type Repository struct {
-	eventStore    eventstore.Typed
+	eventStore    RepositoryEventStore
 	aggregateType Type
 }
 
 // NewRepository creates a new instance for retrieving and saving Aggregate Roots
 // of the Aggregate type specified in the supplied Type argument.
-func NewRepository(aggregateType Type, eventStore eventstore.Typed) *Repository {
+func NewRepository(aggregateType Type, eventStore RepositoryEventStore) *Repository {
 	return &Repository{aggregateType: aggregateType, eventStore: eventStore}
 }
 
@@ -39,12 +44,14 @@ func (r *Repository) Add(ctx context.Context, root Root) error {
 		return nil
 	}
 
-	expectedVersion := root.Version() - int64(len(events))
+	streamID := eventstore.StreamID{
+		Type: r.aggregateType.Name(),
+		Name: root.AggregateID().String(),
+	}
 
-	_, err := r.eventStore.
-		Instance(root.AggregateID().String()).
-		Append(ctx, expectedVersion, events...)
+	expectedVersion := eventstore.VersionCheck(root.Version() - int64(len(events)))
 
+	_, err := r.eventStore.Append(ctx, streamID, expectedVersion, events...)
 	if err != nil {
 		return fmt.Errorf("aggregate.Repository: failed to commit recorded events: %w", err)
 	}
@@ -66,9 +73,14 @@ func (r Repository) Get(ctx context.Context, id ID) (Root, error) {
 	root, isEmpty := r.aggregateType.instance(), true
 	stream := make(chan eventstore.Event, 1)
 
+	streamID := eventstore.StreamID{
+		Type: r.aggregateType.Name(),
+		Name: id.String(),
+	}
+
 	group, ctx := errgroup.WithContext(ctx)
 	group.Go(func() error {
-		if err := r.eventStore.Instance(id.String()).Stream(ctx, stream, 0); err != nil {
+		if err := r.eventStore.Stream(ctx, stream, streamID, eventstore.SelectFromBeginning); err != nil {
 			return fmt.Errorf("aggregate.Repository: failed while reading event from stream: %w", err)
 		}
 

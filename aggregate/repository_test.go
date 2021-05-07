@@ -78,17 +78,7 @@ func (a *Aggregate) RecordEvent() error {
 func TestRepository(t *testing.T) {
 	ctx := context.Background()
 	eventStore := inmemory.NewEventStore()
-
-	if err := eventStore.Register(ctx, AggregateType.Name(), nil); !assert.NoError(t, err) {
-		return
-	}
-
-	aggregateEventStore, err := eventStore.Type(ctx, AggregateType.Name())
-	if !assert.NoError(t, err) {
-		return
-	}
-
-	repository := aggregate.NewRepository(AggregateType, aggregateEventStore)
+	repository := aggregate.NewRepository(AggregateType, eventStore)
 
 	t.Run("no aggregate root found if no event has been recorded", func(t *testing.T) {
 		root, err := repository.Get(ctx, aggregate.StringID("test-aggregate-not-found"))
