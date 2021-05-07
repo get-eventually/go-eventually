@@ -13,11 +13,6 @@ import (
 
 var _ eventstore.Store = EventStoreWrapper{}
 
-type eventStoreTelemetry struct {
-	tracer       trace.Tracer
-	appendMetric metric.Int64UpDownCounter
-}
-
 // EventStoreWrapper is a wrapper to provide OpenTelemetry instrumentation
 // for eventstore.Store compatible implementations, and compatible
 // with the same interface to be used seamlessly in your pre-existing code.
@@ -25,7 +20,9 @@ type eventStoreTelemetry struct {
 // Use WrapEventStore to create new instance of this type.
 type EventStoreWrapper struct {
 	eventstore.Store
-	eventStoreTelemetry
+
+	tracer       trace.Tracer
+	appendMetric metric.Int64UpDownCounter
 }
 
 // WrapEventStore creates a new EventStoreWrapper instance, using the provided
@@ -43,24 +40,62 @@ func WrapEventStore(
 	}
 
 	return EventStoreWrapper{
-		Store: es,
-		eventStoreTelemetry: eventStoreTelemetry{
-			tracer:       tracerProvider.Tracer(instrumentationName),
-			appendMetric: appendMetric,
-		},
+		Store:        es,
+		tracer:       tracerProvider.Tracer(instrumentationName),
+		appendMetric: appendMetric,
 	}, nil
 }
 
 // Stream delegates the call to the underlying Event Store and records
 // a trace of the result.
-func (sw EventStoreWrapper) Stream(ctx context.Context, es eventstore.EventStream, from int64) error {
+func (sw EventStoreWrapper) StreamAll(ctx context.Context, es eventstore.EventStream, selectt eventstore.Select) error {
+	ctx, span := sw.tracer.Start(ctx, StreamAllSpanName, trace.WithAttributes(
+		SelectFromLabel.Int64(selectt.From),
+	))
+	defer span.End()
+
+	err := sw.Store.StreamAll(ctx, es, selectt)
+	if err != nil {
+		span.RecordError(err)
+	}
+
+	return err
+}
+
+func (sw EventStoreWrapper) StreamByType(
+	ctx context.Context,
+	es eventstore.EventStream,
+	typ string,
+	selectt eventstore.Select,
+) error {
+	ctx, span := sw.tracer.Start(ctx, StreamByTypeSpanName, trace.WithAttributes(
+		StreamTypeLabel.String(typ),
+		SelectFromLabel.Int64(selectt.From),
+	))
+	defer span.End()
+
+	err := sw.Store.StreamByType(ctx, es, typ, selectt)
+	if err != nil {
+		span.RecordError(err)
+	}
+
+	return err
+}
+
+func (sw EventStoreWrapper) Stream(
+	ctx context.Context,
+	es eventstore.EventStream,
+	id eventstore.StreamID,
+	selectt eventstore.Select,
+) error {
 	ctx, span := sw.tracer.Start(ctx, StreamSpanName, trace.WithAttributes(
-		StreamTypeLabel.String("*"),
-		StreamFromLabel.Int64(from),
+		StreamTypeLabel.String(id.Type),
+		StreamNameLabel.String(id.Name),
+		SelectFromLabel.Int64(selectt.From),
 	))
 	defer span.End()
 
-	err := sw.Store.Stream(ctx, es, from)
+	err := sw.Store.Stream(ctx, es, id, selectt)
 	if err != nil {
 		span.RecordError(err)
 	}
@@ -68,101 +103,34 @@ func (sw EventStoreWrapper) Stream(ctx context.Context, es eventstore.EventStrea
 	return err
 }
 
-// Type returns a evenstore.Typed access with tracing instrumentation,
-// using the underlying Event Store.
-func (sw EventStoreWrapper) Type(ctx context.Context, typ string) (eventstore.Typed, error) {
-	tsw, err := sw.Store.Type(ctx, typ)
-	if err != nil {
-		return nil, err
-	}
-
-	return typedEventStoreWrapper{
-		Typed:               tsw,
-		eventStoreTelemetry: sw.eventStoreTelemetry,
-		streamType:          typ,
-	}, nil
-}
-
-type typedEventStoreWrapper struct {
-	eventstore.Typed
-	eventStoreTelemetry
-
-	streamType string
-}
-
-func (tsw typedEventStoreWrapper) Stream(ctx context.Context, es eventstore.EventStream, from int64) error {
-	ctx, span := tsw.tracer.Start(ctx, StreamSpanName, trace.WithAttributes(
-		StreamTypeLabel.String(tsw.streamType),
-		StreamFromLabel.Int64(from),
+func (sw EventStoreWrapper) Append(
+	ctx context.Context,
+	id eventstore.StreamID,
+	expected eventstore.VersionCheck,
+	events ...eventually.Event,
+) (int64, error) {
+	ctx, span := sw.tracer.Start(ctx, AppendSpanName, trace.WithAttributes(
+		StreamTypeLabel.String(id.Type),
+		StreamNameLabel.String(id.Name),
+		VersionCheckLabel.Int64(int64(expected)),
 	))
 	defer span.End()
 
-	err := tsw.Typed.Stream(ctx, es, from)
-	if err != nil {
-		span.RecordError(err)
-	}
-
-	return err
-}
-
-func (tsw typedEventStoreWrapper) Instance(id string) eventstore.Instanced {
-	return &instancedEventStoreWrapper{
-		Instanced:           tsw.Typed.Instance(id),
-		eventStoreTelemetry: tsw.eventStoreTelemetry,
-		streamType:          tsw.streamType,
-		streamName:          id,
-	}
-}
-
-// NOTE(ar3s3ru): this type uses pointer semantics to save up some memory,
-// since the gocritic linter complaints :D
-type instancedEventStoreWrapper struct {
-	eventstore.Instanced
-	eventStoreTelemetry
-
-	streamType string
-	streamName string
-}
-
-func (isw *instancedEventStoreWrapper) Stream(ctx context.Context, es eventstore.EventStream, from int64) error {
-	ctx, span := isw.tracer.Start(ctx, StreamSpanName, trace.WithAttributes(
-		StreamTypeLabel.String(isw.streamType),
-		StreamNameLabel.String(isw.streamName),
-		StreamFromLabel.Int64(from),
-	))
-	defer span.End()
-
-	err := isw.Instanced.Stream(ctx, es, from)
-	if err != nil {
-		span.RecordError(err)
-	}
-
-	return err
-}
-
-func (isw *instancedEventStoreWrapper) Append(ctx context.Context, version int64, events ...eventually.Event) (int64, error) {
-	ctx, span := isw.tracer.Start(ctx, AppendSpanName, trace.WithAttributes(
-		StreamTypeLabel.String(isw.streamType),
-		StreamNameLabel.String(isw.streamName),
-		VersionCheckLabel.Int64(version),
-	))
-	defer span.End()
-
-	newVersion, err := isw.Instanced.Append(ctx, version, events...)
+	newVersion, err := sw.Store.Append(ctx, id, expected, events...)
 	if err != nil {
 		span.RecordError(err)
 	} else {
 		span.SetAttributes(VersionNewLabel.Int64(newVersion))
 	}
 
-	isw.reportAppendMetrics(ctx, events...)
+	sw.reportAppendMetrics(ctx, events...)
 
 	return newVersion, err
 }
 
-func (isw *instancedEventStoreWrapper) reportAppendMetrics(ctx context.Context, events ...eventually.Event) {
+func (sw EventStoreWrapper) reportAppendMetrics(ctx context.Context, events ...eventually.Event) {
 	for _, event := range events {
-		isw.appendMetric.
+		sw.appendMetric.
 			Add(ctx, 1, EventTypeLabel.String(event.Payload.Name()))
 	}
 }

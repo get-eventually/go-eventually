@@ -4,9 +4,11 @@ import "go.opentelemetry.io/otel/label"
 
 // Names of the OpenTelemetry spans created by the package.
 const (
-	StreamSpanName  = "EventStore.Stream"
-	AppendSpanName  = "EventStore.Append"
-	ApplierSpanName = "Projection.Applier"
+	StreamSpanName       = "EventStore.Stream"
+	StreamByTypeSpanName = "EventStore.StreamByType"
+	StreamAllSpanName    = "EventStore.StreamAll"
+	AppendSpanName       = "EventStore.Append"
+	ApplierSpanName      = "Projection.Applier"
 )
 
 // Metrics exported by this package.
@@ -30,9 +32,9 @@ var (
 	// EventVersionLabel is the label identifier that contains the version of an Event.
 	EventVersionLabel = label.Key("event.version")
 
-	// StreamFromLabel is the label identifier that contains the version or
+	// SelectFromLabel is the label identifier that contains the version or
 	// sequence number lower bound used for Stream calls.
-	StreamFromLabel = label.Key("stream.from")
+	SelectFromLabel = label.Key("select.from")
 
 	// VersionCheckLabel is the label identifier that contains the expected
 	// version provided when using Append to add new events to the Event Store.
