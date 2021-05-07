@@ -39,6 +39,7 @@ func (sc CommandHandlerGiven) When(cmd eventually.Command) CommandHandlerWhen {
 
 type CommandHandlerWhen struct {
 	CommandHandlerGiven
+
 	when eventually.Command
 }
 
@@ -66,6 +67,7 @@ func (sc CommandHandlerWhen) ThenFails() CommandHandlerThen {
 
 type CommandHandlerThen struct {
 	CommandHandlerWhen
+
 	then      []eventstore.Event
 	thenError error
 	wantError bool
@@ -80,40 +82,17 @@ func (sc CommandHandlerThen) Using( //nolint:gocritic
 	store := inmemory.NewEventStore()
 
 	for _, event := range sc.given {
-		if err := store.Register(ctx, event.StreamType, nil); !assert.NoError(t, err) {
-			return
-		}
-
-		typedStore, err := store.Type(ctx, event.StreamType)
-		if !assert.NoError(t, err) {
-			return
-		}
-
-		_, err = typedStore.
-			Instance(event.StreamName).
-			Append(context.Background(), -1, event.Event)
-
+		_, err := store.Append(ctx, event.StreamID, eventstore.VersionCheckAny, event.Event)
 		if !assert.NoError(t, err) {
 			return
 		}
 	}
 
-	// Register the target aggregate type.
-	if err := store.Register(ctx, aggregateType.Name(), nil); !assert.NoError(t, err) {
-		return
-	}
-
-	trackingStore := &inmemory.TrackingEventStore{Store: store}
-	typedStore, err := trackingStore.Type(ctx, aggregateType.Name())
-
-	if !assert.NoError(t, err) {
-		return
-	}
-
-	repository := aggregate.NewRepository(aggregateType, typedStore)
+	trackingStore := inmemory.NewTrackingEventStore(store)
+	repository := aggregate.NewRepository(aggregateType, trackingStore)
 
 	handler := handlerFactory(repository)
-	err = handler.Handle(context.Background(), sc.when)
+	err := handler.Handle(context.Background(), sc.when)
 
 	if !sc.wantError {
 		assert.NoError(t, err)

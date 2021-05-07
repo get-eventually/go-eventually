@@ -15,12 +15,12 @@ import (
 type TrackingEventStore struct {
 	sync.RWMutex
 
-	eventStore eventstore.Store
-	recorded   []eventstore.Event
+	eventstore.Store
+	recorded []eventstore.Event
 }
 
 func NewTrackingEventStore(store eventstore.Store) *TrackingEventStore {
-	return &TrackingEventStore{eventStore: store}
+	return &TrackingEventStore{Store: store}
 }
 
 func (es *TrackingEventStore) Recorded() []eventstore.Event {
@@ -39,7 +39,7 @@ func (es *TrackingEventStore) Append(
 	es.Lock()
 	defer es.Unlock()
 
-	v, err := es.eventStore.Append(ctx, id, expected, events...)
+	v, err := es.Store.Append(ctx, id, expected, events...)
 	if err != nil {
 		return v, err
 	}
