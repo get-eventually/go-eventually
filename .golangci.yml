@@ -110,6 +110,11 @@ issues:
         - gomnd
         - funlen
 
+    - path: eventstore/store_suite\.go
+      linters:
+        - gomnd
+        - funlen
+
     # https://github.com/go-critic/go-critic/issues/926
     - linters:
         - gocritic

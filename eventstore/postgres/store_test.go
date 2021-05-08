@@ -1,113 +1,84 @@
 package postgres_test
 
-// import (
-// 	"context"
-// 	"database/sql"
-// 	"errors"
-// 	"os"
-// 	"sync"
-// 	"testing"
-// 	"time"
+import (
+	"context"
+	"database/sql"
+	"os"
+	"testing"
 
-// 	"github.com/eventually-rs/eventually-go"
-// 	"github.com/eventually-rs/eventually-go/eventstore"
-// 	"github.com/eventually-rs/eventually-go/eventstore/postgres"
-// 	"github.com/eventually-rs/eventually-go/internal"
+	"github.com/eventually-rs/eventually-go/eventstore"
+	"github.com/eventually-rs/eventually-go/eventstore/postgres"
+	"github.com/eventually-rs/eventually-go/internal"
 
-// 	"github.com/stretchr/testify/assert"
-// 	"golang.org/x/sync/errgroup"
-// )
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
+)
 
-// const defaultPostgresURL = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
+const defaultPostgresURL = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
 
-// const (
-// 	myType       = "my-type"
-// 	myOtherType  = "my-other-type"
-// 	testInstance = "test-instance"
-// )
+type PostgresStoreSuite struct {
+	*eventstore.StoreSuite
 
-// var (
-// 	expectedStreamAll = []eventstore.Event{
-// 		{
-// 			StreamType: myType,
-// 			StreamName: testInstance,
-// 			Version:    1,
-// 			Event:      eventually.Event{Payload: internal.IntPayload(1)}.WithGlobalSequenceNumber(1),
-// 		},
-// 		{
-// 			StreamType: myOtherType,
-// 			StreamName: testInstance,
-// 			Version:    1,
-// 			Event:      eventually.Event{Payload: internal.IntPayload(1)}.WithGlobalSequenceNumber(2),
-// 		},
-// 		{
-// 			StreamType: myType,
-// 			StreamName: testInstance,
-// 			Version:    2,
-// 			Event:      eventually.Event{Payload: internal.IntPayload(2)}.WithGlobalSequenceNumber(3),
-// 		},
-// 		{
-// 			StreamType: myOtherType,
-// 			StreamName: testInstance,
-// 			Version:    2,
-// 			Event:      eventually.Event{Payload: internal.IntPayload(2)}.WithGlobalSequenceNumber(4),
-// 		},
-// 		{
-// 			StreamType: myType,
-// 			StreamName: testInstance,
-// 			Version:    3,
-// 			Event:      eventually.Event{Payload: internal.IntPayload(3)}.WithGlobalSequenceNumber(5),
-// 		},
-// 		{
-// 			StreamType: myOtherType,
-// 			StreamName: testInstance,
-// 			Version:    3,
-// 			Event:      eventually.Event{Payload: internal.IntPayload(3)}.WithGlobalSequenceNumber(6),
-// 		},
-// 	}
+	db *sql.DB
+}
 
-// 	expectedStreamMyType = []eventstore.Event{
-// 		{
-// 			StreamType: myType,
-// 			StreamName: testInstance,
-// 			Version:    1,
-// 			Event:      eventually.Event{Payload: internal.IntPayload(1)}.WithGlobalSequenceNumber(1),
-// 		},
-// 		{
-// 			StreamType: myType,
-// 			StreamName: testInstance,
-// 			Version:    2,
-// 			Event:      eventually.Event{Payload: internal.IntPayload(2)}.WithGlobalSequenceNumber(3),
-// 		},
-// 		{
-// 			StreamType: myType,
-// 			StreamName: testInstance,
-// 			Version:    3,
-// 			Event:      eventually.Event{Payload: internal.IntPayload(3)}.WithGlobalSequenceNumber(5),
-// 		},
-// 	}
+func (ps *PostgresStoreSuite) TearDownTestSuite() {
+	t := ps.T()
 
-// 	expectedStreamMyOtherType = []eventstore.Event{
-// 		{
-// 			StreamType: myOtherType,
-// 			StreamName: testInstance,
-// 			Version:    1,
-// 			Event:      eventually.Event{Payload: internal.IntPayload(1)}.WithGlobalSequenceNumber(2),
-// 		},
-// 		{
-// 			StreamType: myOtherType,
-// 			StreamName: testInstance,
-// 			Version:    2,
-// 			Event:      eventually.Event{Payload: internal.IntPayload(2)}.WithGlobalSequenceNumber(4),
-// 		},
-// 		{
-// 			StreamType: myOtherType,
-// 			StreamName: testInstance,
-// 			Version:    3,
-// 			Event:      eventually.Event{Payload: internal.IntPayload(3)}.WithGlobalSequenceNumber(6),
-// 		},
-// 	}
-// )
+	handleError := func(err error) {
+		if !assert.NoError(t, err) {
+			t.FailNow()
+		}
+	}
+
+	tx, err := ps.db.Begin()
+	handleError(err)
+
+	// Reset checkpoints for subscriptions.
+	_, err = tx.Exec("DELETE FROM subscriptions_checkpoints")
+	handleError(err)
+
+	// Reset committed events and streams.
+	_, err = tx.Exec("DELETE FROM streams")
+	handleError(err)
+
+	// Reset the global sequence number to 1.
+	_, err = tx.Exec("ALTER SEQUENCE events_global_sequence_number_seq RESTART WITH 1")
+	handleError(err)
+
+	handleError(tx.Commit())
+}
+
+func TestStoreSuite(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+
+	handleError := func(err error) {
+		if !assert.NoError(t, err) {
+			t.FailNow()
+		}
+	}
+
+	url, ok := os.LookupEnv("DATABASE_URL")
+	if !ok {
+		url = defaultPostgresURL
+	}
+
+	store, err := postgres.OpenEventStore(url)
+	handleError(err)
+
+	db, err := sql.Open("postgres", url)
+	handleError(err)
+
+	ctx := context.Background()
+	handleError(store.Register(ctx, internal.IntPayload(0)))
+
+	suite.Run(t, &PostgresStoreSuite{
+		StoreSuite: eventstore.NewStoreSuite(func() eventstore.Store { return store }),
+		db:         db,
+	})
+}
 
 // func obtainEventStore(t *testing.T) *postgres.EventStore {
 // 	if testing.Short() {
