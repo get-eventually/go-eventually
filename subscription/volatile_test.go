@@ -20,30 +20,25 @@ func TestVolatile(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	const (
-		typeName     = "my-type"
-		instanceName = "my-instance"
-	)
+	streamID := eventstore.StreamID{
+		Type: "my-type",
+		Name: "my-instance",
+	}
 
 	eventStore := inmemory.NewEventStore()
 
-	if err := eventStore.Register(ctx, typeName, nil); !assert.NoError(t, err) {
-		return
-	}
-
-	typedEventStore, err := eventStore.Type(ctx, typeName)
-	if !assert.NoError(t, err) {
-		return
-	}
-
 	volatileSubscription := subscription.Volatile{
 		SubscriptionName: "test-volatile-subscription",
-		EventSubscriber:  eventStore,
+		Target:           subscription.TargetStreamType{Type: streamID.Type},
+		EventStore:       eventStore,
 	}
 
-	_, err = typedEventStore.
-		Instance(instanceName).
-		Append(ctx, 0, eventually.Event{Payload: internal.StringPayload("test-event-should-not-be-received")})
+	_, err := eventStore.Append(
+		ctx,
+		streamID,
+		eventstore.VersionCheck(0),
+		eventually.Event{Payload: internal.StringPayload("test-event-should-not-be-received")},
+	)
 
 	if !assert.NoError(t, err) {
 		return
@@ -51,25 +46,22 @@ func TestVolatile(t *testing.T) {
 
 	expectedEvents := []eventstore.Event{
 		{
-			StreamType: typeName,
-			StreamName: instanceName,
-			Version:    2,
+			StreamID: streamID,
+			Version:  2,
 			Event: eventually.
 				Event{Payload: internal.StringPayload("test-event-should-be-received-0")}.
 				WithGlobalSequenceNumber(2),
 		},
 		{
-			StreamType: typeName,
-			StreamName: instanceName,
-			Version:    3,
+			StreamID: streamID,
+			Version:  3,
 			Event: eventually.
 				Event{Payload: internal.StringPayload("test-event-should-be-received-1")}.
 				WithGlobalSequenceNumber(3),
 		},
 		{
-			StreamType: typeName,
-			StreamName: instanceName,
-			Version:    4,
+			StreamID: streamID,
+			Version:  4,
 			Event: eventually.
 				Event{Payload: internal.StringPayload("test-event-should-be-received-2")}.
 				WithGlobalSequenceNumber(4),
@@ -84,11 +76,14 @@ func TestVolatile(t *testing.T) {
 		wg.Wait()
 
 		for i := 0; i < 3; i++ {
-			_, err = typedEventStore.
-				Instance(instanceName).
-				Append(ctx, int64(i+1), eventually.Event{
+			_, err = eventStore.Append(
+				ctx,
+				streamID,
+				eventstore.VersionCheck(i+1),
+				eventually.Event{
 					Payload: internal.StringPayload(fmt.Sprintf("test-event-should-be-received-%d", i)),
-				})
+				},
+			)
 
 			if !assert.NoError(t, err) {
 				return

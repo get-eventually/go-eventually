@@ -28,6 +28,7 @@ var _ Subscription = CatchUp{}
 // a Domain Read Model or a Process Manager.
 type CatchUp struct {
 	SubscriptionName string
+	Target           TargetStream
 	Checkpointer     checkpoint.Checkpointer
 	EventStore       interface {
 		eventstore.Streamer
@@ -75,12 +76,28 @@ func (s CatchUp) Start(ctx context.Context, stream eventstore.EventStream) error
 	// between the start of the Subscription and the last Event Stream state.
 	group.Go(func() error {
 		subscriptionOpened.Wait()
-		return s.EventStore.Stream(ctx, streamed, lastSequenceNumber)
+
+		switch t := s.Target.(type) {
+		case TargetStreamAll:
+			return s.EventStore.StreamAll(ctx, streamed, eventstore.Select{From: lastSequenceNumber})
+		case TargetStreamType:
+			return s.EventStore.StreamByType(ctx, streamed, t.Type, eventstore.Select{From: lastSequenceNumber})
+		default:
+			return fmt.Errorf("subscription.CatchUp: unexpected target type")
+		}
 	})
 
 	group.Go(func() error {
 		subscriptionOpened.Done()
-		return s.EventStore.Subscribe(ctx, subscribed)
+
+		switch t := s.Target.(type) {
+		case TargetStreamAll:
+			return s.EventStore.SubscribeToAll(ctx, subscribed)
+		case TargetStreamType:
+			return s.EventStore.SubscribeToType(ctx, subscribed, t.Type)
+		default:
+			return fmt.Errorf("subscription.CatchUp: unexpected target type")
+		}
 	})
 
 	if err := s.stream(ctx, &lastSequenceNumber, stream, streamed); err != nil {

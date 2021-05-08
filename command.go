@@ -4,5 +4,5 @@ package eventually
 // or somebody.
 //
 // In order to enforce this concept, it is suggested to name Command types
-// using "present tense."
+// using "present tense".
 type Command Message

@@ -18,7 +18,8 @@ var _ Subscription = Volatile{}
 // committed to the Event Store.
 type Volatile struct {
 	SubscriptionName string
-	EventSubscriber  eventstore.Subscriber
+	Target           TargetStream
+	EventStore       eventstore.Subscriber
 }
 
 // Name is the name of the subscription.
@@ -27,7 +28,18 @@ func (v Volatile) Name() string { return v.SubscriptionName }
 // Start starts the Subscription by opening a subscribing Event Stream
 // using the subscription's Subscriber instance.
 func (v Volatile) Start(ctx context.Context, stream eventstore.EventStream) error {
-	if err := v.EventSubscriber.Subscribe(ctx, stream); err != nil {
+	var err error
+
+	switch t := v.Target.(type) {
+	case TargetStreamAll:
+		err = v.EventStore.SubscribeToAll(ctx, stream)
+	case TargetStreamType:
+		err = v.EventStore.SubscribeToType(ctx, stream, t.Type)
+	default:
+		return fmt.Errorf("subscription.Volatile: unexpected target type")
+	}
+
+	if err != nil {
 		return fmt.Errorf("subscription.Volatile: event subscriber exited with error: %w", err)
 	}
 

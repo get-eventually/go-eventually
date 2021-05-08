@@ -29,29 +29,25 @@ func TestProjectionWrapper(t *testing.T) {
 		return correlationID
 	})
 
-	if err := eventStore.Register(ctx, typeName, nil); !assert.NoError(t, err) {
-		return
-	}
-
-	typedStore, err := eventStore.Type(ctx, typeName)
-	assert.NoError(t, err)
-
-	correlatedTypedStore, err := correlatedEventStore.Type(ctx, typeName)
-	assert.NoError(t, err)
-
 	t.Run("wrapped projector does not extend context if incoming event has no correlation data", func(t *testing.T) {
-		const myInstance = "my-instance"
+		streamID := eventstore.StreamID{
+			Type: typeName,
+			Name: "my-instance",
+		}
 
-		_, err := typedStore.
-			Instance(myInstance).
-			Append(ctx, 0, eventually.Event{Payload: internal.StringPayload("uncorrelated-test")})
+		_, err := eventStore.Append(
+			ctx,
+			streamID,
+			eventstore.VersionCheck(0),
+			eventually.Event{Payload: internal.StringPayload("uncorrelated-test")},
+		)
 
 		if !assert.NoError(t, err) {
 			return
 		}
 
 		events, err := eventstore.StreamToSlice(ctx, func(ctx context.Context, es eventstore.EventStream) error {
-			return typedStore.Instance(myInstance).Stream(ctx, es, 0)
+			return eventStore.Stream(ctx, es, streamID, eventstore.SelectFromBeginning)
 		})
 
 		assert.NoError(t, err)
@@ -73,18 +69,24 @@ func TestProjectionWrapper(t *testing.T) {
 	})
 
 	t.Run("wrapped projector extends context with incoming event correlation data", func(t *testing.T) {
-		const myInstance = "my-correlated-instance"
+		streamID := eventstore.StreamID{
+			Type: typeName,
+			Name: "my-correlated-instance",
+		}
 
-		_, err := correlatedTypedStore.
-			Instance(myInstance).
-			Append(ctx, 0, eventually.Event{Payload: internal.StringPayload("correlated-test")})
+		_, err := correlatedEventStore.Append(
+			ctx,
+			streamID,
+			eventstore.VersionCheck(0),
+			eventually.Event{Payload: internal.StringPayload("correlated-test")},
+		)
 
 		if !assert.NoError(t, err) {
 			return
 		}
 
 		events, err := eventstore.StreamToSlice(ctx, func(ctx context.Context, es eventstore.EventStream) error {
-			return typedStore.Instance(myInstance).Stream(ctx, es, 0)
+			return eventStore.Stream(ctx, es, streamID, eventstore.SelectFromBeginning)
 		})
 
 		assert.NoError(t, err)

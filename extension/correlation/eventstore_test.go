@@ -22,7 +22,8 @@ func TestEventStoreWrapper(t *testing.T) {
 	generator := func() string {
 		s := make([]rune, randomStringSize)
 		for i := range s {
-			s[i] = alphabet[rand.Intn(len(alphabet))] //nolint:gosec
+			//nolint:gosec // Weak RNG used for testing only.
+			s[i] = alphabet[rand.Intn(len(alphabet))]
 		}
 
 		return string(s)
@@ -32,23 +33,18 @@ func TestEventStoreWrapper(t *testing.T) {
 	eventStore = correlation.WrapEventStore(eventStore, generator)
 
 	ctx := context.Background()
-	typeName := "my-type"
-	instanceName := "my-instance"
-
-	// Register stream type and insert a couple of events to inspect later.
-	if err := eventStore.Register(ctx, typeName, nil); !assert.NoError(t, err) {
-		return
+	streamID := eventstore.StreamID{
+		Type: "my-type",
+		Name: "my-instance",
 	}
 
-	typedStore, err := eventStore.Type(ctx, typeName)
-	if !assert.NoError(t, err) {
-		return
-	}
-
-	_, err = typedStore.Instance(instanceName).Append(ctx, 0, []eventually.Event{
-		{Payload: internal.StringPayload("my-first-event")},
-		{Payload: internal.StringPayload("my-second-event")},
-	}...)
+	_, err := eventStore.Append(
+		ctx,
+		streamID,
+		eventstore.VersionCheck(0),
+		eventually.Event{Payload: internal.StringPayload("my-first-event")},
+		eventually.Event{Payload: internal.StringPayload("my-second-event")},
+	)
 
 	if !assert.NoError(t, err) {
 		return
@@ -56,7 +52,7 @@ func TestEventStoreWrapper(t *testing.T) {
 
 	// Make sure the new events have been recorded with correlation data.
 	events, err := eventstore.StreamToSlice(ctx, func(ctx context.Context, es eventstore.EventStream) error {
-		return typedStore.Stream(ctx, es, 0)
+		return eventStore.Stream(ctx, es, streamID, eventstore.SelectFromBeginning)
 	})
 
 	assert.NoError(t, err)

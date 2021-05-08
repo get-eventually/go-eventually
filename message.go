@@ -11,7 +11,7 @@ type Payload interface {
 // Message represents any kind of information that can be carried around.
 //
 // Usually, a Message only contains a payload, but it could optionally
-// include some metadata. (e.g. some debug identifiers)
+// include some metadata (e.g. some debug identifiers).
 type Message struct {
 	Payload  Payload
 	Metadata Metadata

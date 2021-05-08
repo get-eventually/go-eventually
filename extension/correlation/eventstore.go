@@ -10,10 +10,6 @@ import (
 // Generator is a string identifier generator.
 type Generator func() string
 
-type eventStoreWrapperAccessors struct {
-	idGenerator Generator
-}
-
 // EventStoreWrapper is an extension component that adds support for
 // Correlation, Causation and Event id recording in all Events committed
 // to the underlying EventStore.
@@ -21,7 +17,7 @@ type eventStoreWrapperAccessors struct {
 // Check WrapEventStore for more information.
 type EventStoreWrapper struct {
 	eventstore.Store
-	eventStoreWrapperAccessors
+	generateID Generator
 }
 
 // WrapEventStore wraps the provided eventstore.Store instance with
@@ -36,47 +32,21 @@ type EventStoreWrapper struct {
 // for more info.
 func WrapEventStore(es eventstore.Store, generator Generator) EventStoreWrapper {
 	return EventStoreWrapper{
-		Store: es,
-		eventStoreWrapperAccessors: eventStoreWrapperAccessors{
-			idGenerator: generator,
-		},
+		Store:      es,
+		generateID: generator,
 	}
 }
 
-// Type returns an eventstore.Typed instance for the specified stream type identifier,
-// with the EventStoreWrapper correlation extension.
-func (es EventStoreWrapper) Type(ctx context.Context, typ string) (eventstore.Typed, error) {
-	ts, err := es.Store.Type(ctx, typ)
-	if err != nil {
-		return nil, err
-	}
-
-	return typedEventStoreWrapper{
-		Typed:                      ts,
-		eventStoreWrapperAccessors: es.eventStoreWrapperAccessors,
-	}, nil
-}
-
-type typedEventStoreWrapper struct {
-	eventstore.Typed
-	eventStoreWrapperAccessors
-}
-
-func (ts typedEventStoreWrapper) Instance(id string) eventstore.Instanced {
-	return instancedEventStoreWrapper{
-		Instanced:                  ts.Typed.Instance(id),
-		eventStoreWrapperAccessors: ts.eventStoreWrapperAccessors,
-	}
-}
-
-type instancedEventStoreWrapper struct {
-	eventstore.Instanced
-	eventStoreWrapperAccessors
-}
-
-func (is instancedEventStoreWrapper) Append(ctx context.Context, version int64, events ...eventually.Event) (int64, error) {
+// Append extracts or creates an Event, Correlation and Causation id from the context,
+// applies it to all the Events provided and forwards it to the wrapped Event Store.
+func (esw EventStoreWrapper) Append(
+	ctx context.Context,
+	id eventstore.StreamID,
+	expected eventstore.VersionCheck,
+	events ...eventually.Event,
+) (int64, error) {
 	// if request id is here, use that; otherwise, build a new id
-	causeID := is.idGenerator()
+	causeID := esw.generateID()
 
 	// Use correlation id from the context.
 	// If the context doesn't provide a correlation id, then use the causation id.
@@ -91,7 +61,7 @@ func (is instancedEventStoreWrapper) Append(ctx context.Context, version int64, 
 	}
 
 	for i, event := range events {
-		eventID := is.idGenerator()
+		eventID := esw.generateID()
 
 		event.Metadata = event.Metadata.
 			With(EventIDKey, eventID).
@@ -101,5 +71,5 @@ func (is instancedEventStoreWrapper) Append(ctx context.Context, version int64, 
 		events[i] = event
 	}
 
-	return is.Instanced.Append(ctx, version, events...)
+	return esw.Store.Append(ctx, id, expected, events...)
 }

@@ -2,6 +2,7 @@ package inmemory
 
 import (
 	"context"
+	"sync"
 
 	"github.com/eventually-rs/eventually-go"
 	"github.com/eventually-rs/eventually-go/eventstore"
@@ -12,65 +13,50 @@ import (
 //
 // Useful for tests assertion.
 type TrackingEventStore struct {
+	sync.RWMutex
+
 	eventstore.Store
 	recorded []eventstore.Event
 }
 
-// Recorded returns the list of recorded Events.
-func (es *TrackingEventStore) Recorded() []eventstore.Event { return es.recorded }
-
-// Type returns an eventstore.Typed instance for the specified type identifier.
-func (es *TrackingEventStore) Type(ctx context.Context, typ string) (eventstore.Typed, error) {
-	typed, err := es.Store.Type(ctx, typ)
-	if err != nil {
-		return typed, err
-	}
-
-	return &typedTrackingEventStore{
-		parent:     es,
-		streamType: typ,
-		Typed:      typed,
-	}, nil
+// NewTrackingEventStore wraps an Event Store to capture events that get
+// appended to it.
+func NewTrackingEventStore(store eventstore.Store) *TrackingEventStore {
+	return &TrackingEventStore{Store: store}
 }
 
-type typedTrackingEventStore struct {
-	eventstore.Typed
-	streamType string
-	parent     *TrackingEventStore
+// Recorded returns the list of Events that have been appended
+// to the Event Store.
+func (es *TrackingEventStore) Recorded() []eventstore.Event {
+	es.RLock()
+	defer es.RUnlock()
+
+	return es.recorded
 }
 
-func (es *typedTrackingEventStore) Instance(id string) eventstore.Instanced {
-	return &instancedTrackingEventStore{
-		parent:     es.parent,
-		streamName: id,
-		streamType: es.streamType,
-		Instanced:  es.Typed.Instance(id),
-	}
-}
-
-type instancedTrackingEventStore struct {
-	eventstore.Instanced
-	streamType string
-	streamName string
-	parent     *TrackingEventStore
-}
-
-func (es *instancedTrackingEventStore) Append(
+// Append forwards the call to the wrapped Event Store instance and,
+// if the operation concludes successfully, records these events internally.
+//
+// The recorded events can be accessed by calling Recorded().
+func (es *TrackingEventStore) Append(
 	ctx context.Context,
-	version int64,
+	id eventstore.StreamID,
+	expected eventstore.VersionCheck,
 	events ...eventually.Event,
 ) (int64, error) {
-	v, err := es.Instanced.Append(ctx, version, events...)
+	es.Lock()
+	defer es.Unlock()
+
+	v, err := es.Store.Append(ctx, id, expected, events...)
 	if err != nil {
 		return v, err
 	}
 
 	for i, event := range events {
-		es.parent.recorded = append(es.parent.recorded, eventstore.Event{
-			StreamType: es.streamType,
-			StreamName: es.streamName,
-			Version:    version + int64(i) + 1,
-			Event:      event,
+		es.recorded = append(es.recorded, eventstore.Event{
+			StreamID: id,
+			Version:  int64(expected) + int64(i) + 1,
+			Event:    event,
 		})
 	}
 

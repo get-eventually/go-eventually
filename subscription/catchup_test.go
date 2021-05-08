@@ -19,54 +19,44 @@ import (
 
 func TestCatchUp(t *testing.T) {
 	t.Run("catch-up subscriptions will receive events from before the subscription has started", func(t *testing.T) {
-		const (
-			myType     = "my-type"
-			myInstance = "my-instance"
-		)
+		streamID := eventstore.StreamID{
+			Type: "my-type",
+			Name: "my-instance",
+		}
 
 		ctx := context.Background()
 		eventStore := inmemory.NewEventStore()
 
-		if err := eventStore.Register(ctx, myType, nil); !assert.NoError(t, err) {
-			return
-		}
-
-		typedEventStore, err := eventStore.Type(ctx, myType)
-		if !assert.NoError(t, err) {
-			return
-		}
-
 		events := []eventstore.Event{
 			{
-				StreamType: myType,
-				StreamName: myInstance,
-				Version:    1,
-				Event:      eventually.Event{Payload: internal.IntPayload(1)}.WithGlobalSequenceNumber(1),
+				StreamID: streamID,
+				Version:  1,
+				Event:    eventually.Event{Payload: internal.IntPayload(1)}.WithGlobalSequenceNumber(1),
 			},
 			{
-				StreamType: myType,
-				StreamName: myInstance,
-				Version:    2,
-				Event:      eventually.Event{Payload: internal.IntPayload(2)}.WithGlobalSequenceNumber(2),
+				StreamID: streamID,
+				Version:  2,
+				Event:    eventually.Event{Payload: internal.IntPayload(2)}.WithGlobalSequenceNumber(2),
 			},
 			{
-				StreamType: myType,
-				StreamName: myInstance,
-				Version:    3,
-				Event:      eventually.Event{Payload: internal.IntPayload(3)}.WithGlobalSequenceNumber(3),
+				StreamID: streamID,
+				Version:  3,
+				Event:    eventually.Event{Payload: internal.IntPayload(3)}.WithGlobalSequenceNumber(3),
 			},
 			{
-				StreamType: myType,
-				StreamName: myInstance,
-				Version:    4,
-				Event:      eventually.Event{Payload: internal.IntPayload(4)}.WithGlobalSequenceNumber(4),
+				StreamID: streamID,
+				Version:  4,
+				Event:    eventually.Event{Payload: internal.IntPayload(4)}.WithGlobalSequenceNumber(4),
 			},
 		}
 
 		// Append events before starting the subscription
-		_, err = typedEventStore.
-			Instance(myInstance).
-			Append(ctx, 0, events[0].Event, events[1].Event)
+		_, err := eventStore.Append(
+			ctx,
+			streamID,
+			eventstore.VersionCheck(0),
+			events[0].Event, events[1].Event,
+		)
 
 		if !assert.NoError(t, err) {
 			return
@@ -79,7 +69,8 @@ func TestCatchUp(t *testing.T) {
 		catchupSubscription := subscription.CatchUp{
 			SubscriptionName: t.Name(),
 			Checkpointer:     checkpoint.NopCheckpointer,
-			EventStore:       typedEventStore,
+			Target:           subscription.TargetStreamAll{}, // Using this just for coverage, lol
+			EventStore:       eventStore,
 		}
 
 		wg := new(sync.WaitGroup)
@@ -90,9 +81,14 @@ func TestCatchUp(t *testing.T) {
 
 			wg.Wait()
 
-			_, err = typedEventStore.
-				Instance(myInstance).
-				Append(ctx, 2, events[2].Event, events[3].Event)
+			//nolint:govet // The shadowing of this variable is meant to avoid updating the one
+			//                outside the goroutine function declaration.
+			_, err := eventStore.Append(
+				ctx,
+				streamID,
+				eventstore.VersionCheck(2),
+				events[2].Event, events[3].Event,
+			)
 
 			assert.NoError(t, err)
 

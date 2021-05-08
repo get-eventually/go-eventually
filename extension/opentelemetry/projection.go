@@ -55,8 +55,8 @@ func WrapProjection(
 func (pw ProjectionWrapper) Apply(ctx context.Context, event eventstore.Event) error {
 	ctx, span := pw.tracer.Start(ctx, ApplierSpanName, trace.WithAttributes(
 		ProjectionNameLabel.String(pw.name),
-		StreamTypeLabel.String(event.StreamType),
-		StreamNameLabel.String(event.StreamName),
+		StreamTypeLabel.String(event.StreamID.Type),
+		StreamNameLabel.String(event.StreamID.Name),
 		EventTypeLabel.String(event.Payload.Name()),
 		EventVersionLabel.Int64(event.Version),
 	))
