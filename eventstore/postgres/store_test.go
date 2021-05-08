@@ -37,7 +37,7 @@ func obtainEventStore(t *testing.T) *postgres.EventStore {
 
 func TestStoreSuite(t *testing.T) {
 	store := obtainEventStore(t)
-	defer store.Close()
+	defer func() { assert.NoError(t, store.Close()) }()
 
 	handleError := func(err error) {
 		if !assert.NoError(t, err) {
@@ -86,7 +86,7 @@ func TestStoreSuite(t *testing.T) {
 
 func TestCheckpointer(t *testing.T) {
 	store := obtainEventStore(t)
-	defer store.Close()
+	defer func() { assert.NoError(t, store.Close()) }()
 
 	ctx := context.Background()
 
@@ -107,7 +107,7 @@ func TestCheckpointer(t *testing.T) {
 
 func TestRegister(t *testing.T) {
 	store := obtainEventStore(t)
-	defer store.Close()
+	defer func() { assert.NoError(t, store.Close()) }()
 
 	t.Run("registering no events fails", func(t *testing.T) {
 		err := store.Register(context.Background())
