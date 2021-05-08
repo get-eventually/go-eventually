@@ -3,7 +3,9 @@ package eventstore
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
+	"time"
 
 	"github.com/eventually-rs/eventually-go"
 	"github.com/eventually-rs/eventually-go/internal"
@@ -251,17 +253,21 @@ func (ss *StoreSuite) TestSubscribe() {
 		return ss.eventStore.SubscribeToType(ctx, streamSecondInstance, secondInstance.Type)
 	})
 
+	wg.Wait()
+
 	group.Go(func() error {
 		defer cancel()
-		wg.Wait()
+
+		// NOTE: this is bad, I know, but we need to give time to the database
+		// to send all the notifications to the subscriber.
+		<-time.After(500 * time.Millisecond)
 
 		if err := ss.appendEvents(ctx); err != nil {
 			return err
 		}
 
-		// NOTE: this is bad, I know, but we need to give time to the database
-		// to send all the notifications to the subscriber.
-		// <-time.After(1 * time.Second)
+		// NOTE: this is also bad, but same reason as above :shrugs:
+		<-time.After(500 * time.Millisecond)
 
 		return nil
 	})
@@ -288,7 +294,7 @@ func (ss *StoreSuite) appendEvents(ctx context.Context) error {
 			VersionCheck(int64(i-1)),
 			eventually.Event{Payload: internal.IntPayload(i)},
 		); err != nil {
-			return err
+			return fmt.Errorf("appendEvents: failed on first instance, event %d: %w", i, err)
 		}
 
 		if _, err := ss.eventStore.Append(
@@ -297,7 +303,7 @@ func (ss *StoreSuite) appendEvents(ctx context.Context) error {
 			VersionCheck(int64(i-1)),
 			eventually.Event{Payload: internal.IntPayload(i)},
 		); err != nil {
-			return err
+			return fmt.Errorf("appendEvents: failed on second instance, event %d: %w", i, err)
 		}
 	}
 

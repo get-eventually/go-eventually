@@ -29,7 +29,7 @@ BEGIN
 
     -- Perform optimistic concurrency check.
     IF version_check <> -1 AND version_check <> last_stream_version THEN
-        RAISE EXCEPTION 'invalid stream version provided: %, expected: %', last_stream_version, version_check;
+        RAISE EXCEPTION 'stream version check failed, expected: %, current: %', version_check, last_stream_version;
     END IF;
 
     -- Increment the stream version prior to inserting the new event.
