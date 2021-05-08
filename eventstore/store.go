@@ -6,10 +6,19 @@ import (
 	"github.com/eventually-rs/eventually-go"
 )
 
+// VersionCheck is used to specify the expected version of an Event Stream
+// before Append-ing new Events. Useful for optimistic locking.
+//
+// Use VersionCheckAny if you're not interested in optimistic locking
+// and conflict resolution.
 type VersionCheck int64
 
+// VersionCheckAny can be used when calling Append() to disregard any
+// check on the Event Stream version, when you just want to insert some
+// events in the Event Store.
 const VersionCheckAny VersionCheck = iota - 1
 
+// StreamID represents the unique identifier for an Event Stream.
 type StreamID struct {
 	// Type is the type, or category, of the Event Stream to which this
 	// Event belong. Usually, this is the name of the Aggregate type.
@@ -20,11 +29,16 @@ type StreamID struct {
 	Name string
 }
 
-var SelectFromBeginning = Select{From: 0}
-
+// Select is used to effectively select a slice of the Event Stream,
+// by referencing to either the Event Stream version (in case of Stream)
+// or Event Store sequence number (for StreamByType and StreamAll).
 type Select struct {
 	From int64
 }
+
+// SelectFromBeginning is a Select operator instance that will select
+// the entirety of the desired Event Stream.
+var SelectFromBeginning = Select{From: 0}
 
 // Event represents an Event Message that has been persisted into the
 // Event Store.
@@ -48,11 +62,12 @@ type Store interface {
 	Subscriber
 }
 
-// Instanced represents and Event Store access type which focuses on
-// a very specific Event Stream.
+// Appender is an Event Store trait that provides the ability to append
+// new Domain Events to an Event Stream.
 //
-// An Instanced instance is always obtainable from a Typed instance,
-// using the Instance method.
+// Implementations of this interface should be synchronous, returning from
+// the call only when either the Events have been correctly saved on the Event Store,
+// or if an error occurred.
 type Appender interface {
 	// Append inserts the specified Domain Events into the Event Stream specified
 	// by the current instance, returning the new version of the Event Stream.
@@ -61,8 +76,11 @@ type Appender interface {
 	// on append, by using the expected version of the Event Stream prior
 	// to appending the new Events.
 	//
-	// Alternatively, -1 can be used if no Optimistic Concurrency check
+	// Alternatively, VersionCheckAny can be used if no Optimistic Concurrency check
 	// should be carried out.
+	//
+	// An instance of ErrConflict will be returned if the optimistic locking
+	// version check fails against the current version of the Event Stream.
 	Append(context.Context, StreamID, VersionCheck, ...eventually.Event) (int64, error)
 }
 
@@ -80,8 +98,17 @@ type Appender interface {
 // in order to allow to callers to choose the desired buffering on the channel,
 // matching the caller concurrency properties.
 type Streamer interface {
+	// Stream opens the specific Event Stream identified by the provided id.
 	Stream(context.Context, EventStream, StreamID, Select) error
+
+	// StreamByType opens a stream of all Event Streams grouped by the same Type,
+	// as specified in input.
+	//
+	// The stream will be ordered based on their Global Sequence Number.
 	StreamByType(context.Context, EventStream, string, Select) error
+
+	// StreamAll opens a stream of all Event Streams found in the Event Store.
+	// The stream will be ordered based on their Global Sequence Number.
 	StreamAll(context.Context, EventStream, Select) error
 }
 

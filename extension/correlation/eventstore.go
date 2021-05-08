@@ -37,6 +37,8 @@ func WrapEventStore(es eventstore.Store, generator Generator) EventStoreWrapper 
 	}
 }
 
+// Append extracts or creates an Event, Correlation and Causation id from the context,
+// applies it to all the Events provided and forwards it to the wrapped Event Store.
 func (esw EventStoreWrapper) Append(
 	ctx context.Context,
 	id eventstore.StreamID,

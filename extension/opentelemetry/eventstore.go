@@ -46,7 +46,7 @@ func WrapEventStore(
 	}, nil
 }
 
-// Stream delegates the call to the underlying Event Store and records
+// StreamAll delegates the call to the underlying Event Store and records
 // a trace of the result.
 func (sw EventStoreWrapper) StreamAll(ctx context.Context, es eventstore.EventStream, selectt eventstore.Select) error {
 	ctx, span := sw.tracer.Start(ctx, StreamAllSpanName, trace.WithAttributes(
@@ -62,6 +62,8 @@ func (sw EventStoreWrapper) StreamAll(ctx context.Context, es eventstore.EventSt
 	return err
 }
 
+// StreamByType delegates the call to the underlying Event Store and records
+// a trace of the result.
 func (sw EventStoreWrapper) StreamByType(
 	ctx context.Context,
 	es eventstore.EventStream,
@@ -82,6 +84,8 @@ func (sw EventStoreWrapper) StreamByType(
 	return err
 }
 
+// Stream delegates the call to the underlying Event Store and records
+// a trace of the result.
 func (sw EventStoreWrapper) Stream(
 	ctx context.Context,
 	es eventstore.EventStream,
@@ -103,6 +107,8 @@ func (sw EventStoreWrapper) Stream(
 	return err
 }
 
+// Append delegates the call to the underlying Event Store and records
+// a trace of the result and increments the metric referenced by AppendMetric.
 func (sw EventStoreWrapper) Append(
 	ctx context.Context,
 	id eventstore.StreamID,

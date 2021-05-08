@@ -38,7 +38,9 @@ type TargetStream interface {
 // TargetStreamAll opens a Subscription that listens to all Events in the Event Store.
 type TargetStreamAll struct{}
 
-func (TargetStreamAll) isTargetStream() {}
+func (TargetStreamAll) isTargetStream() {
+	// NOTE: this is a marker interface implementation.
+}
 
 // TargetStreamType opens a Subscription that listens to all Events of a certain
 // Stream type, the one specified in the Type field.
@@ -46,4 +48,6 @@ type TargetStreamType struct {
 	Type string
 }
 
-func (TargetStreamType) isTargetStream() {}
+func (TargetStreamType) isTargetStream() {
+	// NOTE: this is a marker interface implementation.
+}

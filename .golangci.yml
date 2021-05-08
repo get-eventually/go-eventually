@@ -67,7 +67,7 @@ linters:
     # - gofmt
     - gofumpt
     - goimports
-    - golint
+    # - golint
     - gomnd
     - goprintffuncname
     - gosec
@@ -83,6 +83,7 @@ linters:
     - nilerr
     - nolintlint
     - prealloc
+    - revive
     # These two linters are useful for the Postgres Event Store implementation.
     - rowserrcheck
     - sqlclosecheck
@@ -100,6 +101,8 @@ linters:
     - wsl
 
 issues:
+  exclude-use-default: false
+
   # Excluding configuration per-path, per-linter, per-text and per-source
   exclude-rules:
     - path: _test\.go
@@ -115,10 +118,3 @@ issues:
     - path: aggregate/root.go
       linters:
         - unused
-
-# golangci.com configuration
-# https://github.com/golangci/golangci/wiki/Configuration
-service:
-  golangci-lint-version: 1.35.x
-  prepare:
-    - echo "here I can run custom commands, but no preparation needed for this repo"

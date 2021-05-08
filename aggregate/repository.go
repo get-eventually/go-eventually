@@ -13,6 +13,7 @@ import (
 // specified Aggregate Root have been found.
 var ErrRootNotFound = fmt.Errorf("aggregate.Repository: aggregate root not found")
 
+// RepositoryEventStore is the Event Store interface used by the Repository.
 type RepositoryEventStore interface {
 	eventstore.Appender
 	eventstore.Streamer

@@ -19,10 +19,14 @@ type TrackingEventStore struct {
 	recorded []eventstore.Event
 }
 
+// NewTrackingEventStore wraps an Event Store to capture events that get
+// appended to it.
 func NewTrackingEventStore(store eventstore.Store) *TrackingEventStore {
 	return &TrackingEventStore{Store: store}
 }
 
+// Recorded returns the list of Events that have been appended
+// to the Event Store.
 func (es *TrackingEventStore) Recorded() []eventstore.Event {
 	es.RLock()
 	defer es.RUnlock()
@@ -30,6 +34,10 @@ func (es *TrackingEventStore) Recorded() []eventstore.Event {
 	return es.recorded
 }
 
+// Append forwards the call to the wrapped Event Store instance and,
+// if the operation concludes successfully, records these events internally.
+//
+// The recorded events can be accessed by calling Recorded().
 func (es *TrackingEventStore) Append(
 	ctx context.Context,
 	id eventstore.StreamID,

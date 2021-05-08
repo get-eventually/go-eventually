@@ -32,7 +32,7 @@ func NewEventStore() *EventStore {
 	}
 }
 
-// Stream streams all Event Store committed events onto the provided EventStream,
+// StreamAll streams all Event Store committed events onto the provided EventStream,
 // from the specified Global Sequence Number in `from`.
 //
 // Note: this call is synchronous, and will return when all the Events
@@ -67,6 +67,16 @@ func (s *EventStore) StreamAll(ctx context.Context, es eventstore.EventStream, s
 	return nil
 }
 
+// StreamByType streams all Event Store committed events of a specific Type (or Category)
+// onto the provided EventStream, from the specified Global Sequence Number in `from`.
+//
+// Note: this call is synchronous, and will return when all the Events
+// have been successfully written to the provided EventStream, or when
+// the context has been canceled.
+//
+// An error is returned if one Event in the Event Store does not have a
+// Global Sequence Number (which should never happen), or when the context
+// is done.
 func (s *EventStore) StreamByType(
 	ctx context.Context,
 	es eventstore.EventStream,
@@ -99,6 +109,14 @@ func (s *EventStore) StreamByType(
 	return nil
 }
 
+// Stream streams all Domain Events committed in a specific event stream
+// onto the provided EventStream channel, from the specified version in `from`.
+//
+// Note: this call is synchronous, and will return when all the Events
+// have been successfully written to the provided EventStream, or when
+// the context has been canceled.
+//
+// An error is returned when the context is done.
 func (s *EventStore) Stream(
 	ctx context.Context,
 	es eventstore.EventStream,
@@ -169,6 +187,14 @@ func (s *EventStore) SubscribeToAll(ctx context.Context, es eventstore.EventStre
 	return contextErr(ctx)
 }
 
+// SubscribeToType subscribes to all committed Events of the specified Type
+// in the Event Store and uses the provided EventStream to notify the callers
+// with such Events.
+//
+// Note: this call is synchronous, and returns to the caller
+// only when the context is closed.
+//
+// context.Canceled error is always returned.
 func (s *EventStore) SubscribeToType(ctx context.Context, es eventstore.EventStream, typ string) error {
 	defer close(es)
 
@@ -196,6 +222,18 @@ func (s *EventStore) SubscribeToType(ctx context.Context, es eventstore.EventStr
 	return ctx.Err()
 }
 
+// Append inserts the specified Domain Events into the Event Stream specified
+// by the current instance, returning the new version of the Event Stream.
+//
+// A version can be specified to enable an Optimistic Concurrency check
+// on append, by using the expected version of the Event Stream prior
+// to appending the new Events.
+//
+// Alternatively, -1 can be used if no Optimistic Concurrency check
+// should be carried out.
+//
+// An instance of ErrConflict will be returned if the optimistic locking
+// version check fails against the current version of the Event Stream.
 func (s *EventStore) Append(
 	ctx context.Context,
 	id eventstore.StreamID,

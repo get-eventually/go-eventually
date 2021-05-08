@@ -209,6 +209,10 @@ func (st *EventStore) StreamAll(ctx context.Context, es eventstore.EventStream, 
 	return st.rowsToStream(rows, es)
 }
 
+// StreamByType opens a stream of all Event Streams grouped by the same Type,
+// as specified in input.
+//
+// The stream will be ordered based on their Global Sequence Number.
 func (st *EventStore) StreamByType(
 	ctx context.Context,
 	es eventstore.EventStream,
@@ -232,6 +236,7 @@ func (st *EventStore) StreamByType(
 	return st.rowsToStream(rows, es)
 }
 
+// Stream opens the specific Event Stream identified by the provided id.
 func (st *EventStore) Stream(
 	ctx context.Context,
 	es eventstore.EventStream,
@@ -328,11 +333,13 @@ func (st *EventStore) SubscribeToAll(ctx context.Context, es eventstore.EventStr
 	return st.subscribe(ctx, streamAllName, es)
 }
 
+// SubscribeToType subscribes to all the new Events of the specified Stream Type
+// committed to the Event Store and sinks them in the provided channel.
 func (st *EventStore) SubscribeToType(ctx context.Context, es eventstore.EventStream, typ string) error {
 	return st.subscribe(ctx, typ, es)
 }
 
-func (st *EventStore) subscribe(ctx context.Context, name string, es eventstore.EventStream) error {
+func (st *EventStore) subscribe(ctx context.Context, name string, es eventstore.EventStream) (err error) {
 	defer close(es)
 
 	listener := pq.NewListener(
@@ -346,12 +353,16 @@ func (st *EventStore) subscribe(ctx context.Context, name string, es eventstore.
 		},
 	)
 
-	// TODO: proper error handling!
-	defer listener.Close()
-
-	if err := listener.Listen(name); err != nil {
+	if err = listener.Listen(name); err != nil {
 		return fmt.Errorf("postgres.EventStore: failed to listen on stream: %w", err)
 	}
+
+	// TODO: proper error handling!
+	defer func() {
+		//nolint:errcheck,gosec // Skipping proper error handling for now, as it would require
+		//                         logging and we haven't set that up yet in here.
+		listener.Close()
+	}()
 
 	for {
 		select {
@@ -359,7 +370,7 @@ func (st *EventStore) subscribe(ctx context.Context, name string, es eventstore.
 			return fmt.Errorf("postgres.EventStore: listener closed: %w", ctx.Err())
 
 		case <-time.After(DefaultNotifyChannelTimeout):
-			if err := listener.Ping(); err != nil {
+			if err = listener.Ping(); err != nil {
 				return fmt.Errorf("postgres.EventStore: failed to ping listener: %w", err)
 			}
 
@@ -418,6 +429,18 @@ func (st *EventStore) processNotification(notification *pq.Notification) (events
 	}, nil
 }
 
+// Append inserts the specified Domain Events into the Event Stream specified
+// by the current instance, returning the new version of the Event Stream.
+//
+// A version can be specified to enable an Optimistic Concurrency check
+// on append, by using the expected version of the Event Stream prior
+// to appending the new Events.
+//
+// Alternatively, VersionCheckAny can be used if no Optimistic Concurrency check
+// should be carried out.
+//
+// NOTE: this implementation is not returning yet eventstore.ErrConflict in case
+// of conflicting expectations with the provided VersionCheck value.
 func (st *EventStore) Append(
 	ctx context.Context,
 	id eventstore.StreamID,
@@ -453,6 +476,7 @@ func (st *EventStore) Append(
 	return v, nil
 }
 
+// TODO(ar3s3ru): add the ErrConflict error in case of optimistic concurrency issues.
 func (st *EventStore) appendEvent(
 	ctx context.Context,
 	tx *sql.Tx,
