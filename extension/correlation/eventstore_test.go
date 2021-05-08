@@ -22,7 +22,8 @@ func TestEventStoreWrapper(t *testing.T) {
 	generator := func() string {
 		s := make([]rune, randomStringSize)
 		for i := range s {
-			s[i] = alphabet[rand.Intn(len(alphabet))] //nolint:gosec
+			//nolint:gosec // Weak RNG used for testing only.
+			s[i] = alphabet[rand.Intn(len(alphabet))]
 		}
 
 		return string(s)

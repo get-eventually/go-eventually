@@ -2,18 +2,18 @@ run:
   # Avoid false positives on .github configuration files.
   skip-dirs:
     - .github
+    - resources
 
 linters-settings:
   dupl:
     threshold: 100
-  funlen:
-    lines: 100
-    statements: 50
   gci:
     local-prefixes: github.com/eventually-rs/eventually-go
   goconst:
     min-len: 2
     min-occurrences: 2
+  gocognit:
+    min-complexity: 20
   gocritic:
     enabled-tags:
       - diagnostic
@@ -23,27 +23,16 @@ linters-settings:
       - style
     disabled-checks:
       - dupImport # https://github.com/go-critic/go-critic/issues/845
-      - ifElseChain
-      - octalLiteral
-      - whyNoLint
-      - wrapperFunc
   gocyclo:
     min-complexity: 15
   goimports:
     local-prefixes: github.com/eventually-rs/eventually-go
   golint:
     min-confidence: 0
-  gomnd:
-    settings:
-      mnd:
-        # don't include the "operation" and "assign"
-        checks: argument,case,condition,return
   govet:
     check-shadowing: true
   lll:
-    line-length: 140
-  maligned:
-    suggest-new: true
+    line-length: 120
   misspell:
     locale: US
   nolintlint:
@@ -51,25 +40,32 @@ linters-settings:
     allow-unused: false # report any unused nolint directives
     require-explanation: false # don't require an explanation for nolint directives
     require-specific: false # don't require nolint directives to be specific about which linter is being skipped
+  prealloc:
+    # NOTE: since the codebase uses channels as streams pretty extensively, we are
+    # disabling the range-over-channel case for this linter.
+    range-loops: false
 
 linters:
-  # please, do not use `enable-all`: it's deprecated and will be removed soon.
-  # inverted configuration with `enable-all` and `disable` is not scalable during updates of golangci-lint
   disable-all: true
   enable:
     - bodyclose
     - deadcode
-    - depguard
     - dogsled
     - dupl
     - errcheck
     - exhaustive
+    # - exhaustivestruct
     - funlen
     - gochecknoinits
+    - gocognit
     - goconst
     - gocritic
     - gocyclo
-    - gofmt
+    - godot
+    # - godox
+    # - goerr113
+    # - gofmt
+    - gofumpt
     - goimports
     - golint
     - gomnd
@@ -77,37 +73,31 @@ linters:
     - gosec
     - gosimple
     - govet
+    - ifshort
     - ineffassign
-    - interfacer
     - lll
+    - makezero
     - misspell
     - nakedret
-    - noctx
+    - nestif
+    - nilerr
     - nolintlint
+    - prealloc
+    # These two linters are useful for the Postgres Event Store implementation.
     - rowserrcheck
-    - scopelint
+    - sqlclosecheck
     - staticcheck
     - structcheck
     - stylecheck
+    - testpackage
     - typecheck
     - unconvert
     - unparam
     - unused
     - varcheck
+    - wastedassign
     - whitespace
     - wsl
-
-  # don't enable:
-  # - asciicheck
-  # - gochecknoglobals
-  # - gocognit
-  # - godot
-  # - godox
-  # - goerr113
-  # - maligned
-  # - nestif
-  # - prealloc
-  # - testpackage
 
 issues:
   # Excluding configuration per-path, per-linter, per-text and per-source
@@ -115,6 +105,7 @@ issues:
     - path: _test\.go
       linters:
         - gomnd
+        - funlen
 
     # https://github.com/go-critic/go-critic/issues/926
     - linters:

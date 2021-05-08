@@ -9,7 +9,7 @@ const GlobalSequenceNumberKey = "Global-Sequence-Number"
 // in the past, which is of vital information to the Domain itself.
 //
 // Event type names should be phrased in the past tense, to enforce the notion
-// of "information happened in the past."
+// of "information happened in the past".
 type Event Message
 
 // GlobalSequenceNumber returns the global sequence number of the Event

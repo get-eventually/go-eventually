@@ -59,7 +59,6 @@ func NewAggregate(id string) (*Aggregate, error) {
 	err := aggregate.RecordThat(&a, eventually.Event{
 		Payload: AggregateCreated{AggregateID: id},
 	})
-
 	if err != nil {
 		return nil, fmt.Errorf("aggregate_test.Aggrgate: failed to record event: %w", err)
 	}

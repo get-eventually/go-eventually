@@ -35,11 +35,9 @@ const (
 	DefaultReconnectionTimeout = 10 * time.Second
 )
 
-var (
-	// ErrEmptyEventsMap occurs during a call to Register where a nil or empty Events map
-	// is provided, which would mean no events would be registered for the desired type.
-	ErrEmptyEventsMap = fmt.Errorf("postgres.EventStore: empty events map provided for type")
-)
+// ErrEmptyEventsMap occurs during a call to Register where a nil or empty Events map
+// is provided, which would mean no events would be registered for the desired type.
+var ErrEmptyEventsMap = fmt.Errorf("postgres.EventStore: empty events map provided for type")
 
 var (
 	_ eventstore.Store        = &EventStore{}
@@ -140,7 +138,6 @@ func (st *EventStore) Write(ctx context.Context, subscriptionName string, sequen
 		sequenceNumber,
 		subscriptionName,
 	)
-
 	if err != nil {
 		return fmt.Errorf("postgres.EventStore: failed to write subscription checkpoint: %w", err)
 	}
@@ -205,7 +202,6 @@ func (st *EventStore) StreamAll(ctx context.Context, es eventstore.EventStream, 
 			ORDER BY global_sequence_number ASC`,
 		selectt.From,
 	)
-
 	if err != nil {
 		return fmt.Errorf("postgres.EventStore: failed to get events from store: %w", err)
 	}
@@ -229,7 +225,6 @@ func (st *EventStore) StreamByType(
 		typ,
 		selectt.From,
 	)
-
 	if err != nil {
 		return fmt.Errorf("postgres.EventStore: failed to get events from store: %w", err)
 	}
@@ -254,12 +249,68 @@ func (st *EventStore) Stream(
 		id.Name,
 		selectt.From,
 	)
-
 	if err != nil {
 		return fmt.Errorf("postgres.EventStore: failed to get events from store: %w", err)
 	}
 
 	return st.rowsToStream(rows, es)
+}
+
+func (st *EventStore) rowsToStream(rows *sql.Rows, es eventstore.EventStream) (err error) {
+	defer func() {
+		if err != nil {
+			return
+		}
+
+		if closeErr := rows.Close(); closeErr != nil {
+			err = fmt.Errorf("postgres.EventStore: failed to close stream rows: %w", closeErr)
+		}
+	}()
+
+	for rows.Next() {
+		var (
+			globalSequenceNumber    int64
+			eventName               string
+			event                   eventstore.Event
+			rawPayload, rawMetadata json.RawMessage
+		)
+
+		err := rows.Scan(
+			&globalSequenceNumber,
+			&event.StreamID.Type,
+			&event.StreamID.Name,
+			&eventName,
+			&event.Version,
+			&rawPayload,
+			&rawMetadata,
+		)
+		if err != nil {
+			return fmt.Errorf("postgres.EventStore: failed to scan stream row into event struct: %w", err)
+		}
+
+		payload, ok := st.eventNameToType[eventName]
+		if !ok {
+			return fmt.Errorf("postgres.EventStore: received unregistered event '%s'", eventName)
+		}
+
+		vp := reflect.New(payload)
+		if err := json.Unmarshal(rawPayload, vp.Interface()); err != nil {
+			return fmt.Errorf("postgres.EventStore: failed to unmarshal event payload from json: %w", err)
+		}
+
+		var metadata eventually.Metadata
+		if err := json.Unmarshal(rawMetadata, &metadata); err != nil {
+			return fmt.Errorf("postgres.EventStore: failed to unmarshal event metadata from json: %w", err)
+		}
+
+		event.Payload = vp.Elem().Interface().(eventually.Payload)
+		event.Metadata = metadata
+		event.Event = event.WithGlobalSequenceNumber(globalSequenceNumber)
+
+		es <- event
+	}
+
+	return nil
 }
 
 type rawNotificationEvent struct {
@@ -317,36 +368,54 @@ func (st *EventStore) subscribe(ctx context.Context, name string, es eventstore.
 				continue
 			}
 
-			buffer := bytes.NewBufferString(notification.Extra)
-
-			var rawEvent rawNotificationEvent
-			if err := json.NewDecoder(buffer).Decode(&rawEvent); err != nil {
-				return fmt.Errorf("postgres.EventStore: failed to unmarshal notification payload into event; %w", err)
+			event, err := st.processNotification(notification)
+			if err != nil {
+				return err
 			}
 
-			payload, ok := st.eventNameToType[rawEvent.EventType]
-			if !ok {
-				return fmt.Errorf("postgres.EventStore: received unregistered event '%s'", rawEvent.EventType)
-			}
-
-			vp := reflect.New(payload)
-			if err := json.Unmarshal(rawEvent.Event, vp.Interface()); err != nil {
-				return fmt.Errorf("postgres.EventStore: failed to unmarshal event payload from json: %w", err)
-			}
-
-			es <- eventstore.Event{
-				StreamID: eventstore.StreamID{
-					Type: rawEvent.StreamType,
-					Name: rawEvent.StreamID,
-				},
-				Version: rawEvent.Version,
-				Event: eventually.Event{
-					Payload:  vp.Elem().Interface().(eventually.Payload),
-					Metadata: rawEvent.Metadata,
-				},
-			}
+			es <- event
 		}
 	}
+}
+
+func (st *EventStore) processNotification(notification *pq.Notification) (eventstore.Event, error) {
+	buffer := bytes.NewBufferString(notification.Extra)
+
+	var rawEvent rawNotificationEvent
+	if err := json.NewDecoder(buffer).Decode(&rawEvent); err != nil {
+		return eventstore.Event{}, fmt.Errorf(
+			"postgres.EventStore: failed to unmarshal notification payload into event: %w",
+			err,
+		)
+	}
+
+	payload, ok := st.eventNameToType[rawEvent.EventType]
+	if !ok {
+		return eventstore.Event{}, fmt.Errorf(
+			"postgres.EventStore: received unregistered event '%s'",
+			rawEvent.EventType,
+		)
+	}
+
+	vp := reflect.New(payload)
+	if err := json.Unmarshal(rawEvent.Event, vp.Interface()); err != nil {
+		return eventstore.Event{}, fmt.Errorf(
+			"postgres.EventStore: failed to unmarshal event payload from json: %w",
+			err,
+		)
+	}
+
+	return eventstore.Event{
+		StreamID: eventstore.StreamID{
+			Type: rawEvent.StreamType,
+			Name: rawEvent.StreamID,
+		},
+		Version: rawEvent.Version,
+		Event: eventually.Event{
+			Payload:  vp.Elem().Interface().(eventually.Payload),
+			Metadata: rawEvent.Metadata,
+		},
+	}, nil
 }
 
 func (st *EventStore) Append(
@@ -368,108 +437,67 @@ func (st *EventStore) Append(
 		}
 	}()
 
-	newVersion := int64(expected)
-
 	for _, event := range events {
-		eventType := reflect.TypeOf(event.Payload)
-		eventName, ok := st.eventTypeToName[eventType]
-
-		if !ok {
-			return 0, fmt.Errorf("postgres.EventStore: event type not registered: %s", eventType.Name())
+		if v, err = st.appendEvent(ctx, tx, id, expected, event); err != nil {
+			return 0, err
 		}
 
-		eventPayload, err := json.Marshal(event.Payload)
-		if err != nil {
-			return 0, fmt.Errorf("postgres.EventStore: failed to unmarshal event payload to json: %w", err)
-		}
-
-		// To avoid null or JSONB issues.
-		if event.Metadata == nil {
-			event.Metadata = map[string]interface{}{}
-		}
-
-		metadata, err := json.Marshal(event.Metadata)
-		if err != nil {
-			return 0, fmt.Errorf("postgres.EventStore: failed to unmarshal metadata to json: %w", err)
-		}
-
-		err = tx.QueryRowContext(
-			ctx,
-			"SELECT append_to_store($1, $2, $3, $4, $5, $6)",
-			id.Type,
-			id.Name,
-			int64(expected),
-			eventName,
-			eventPayload,
-			metadata,
-		).Scan(&newVersion)
-
-		if err != nil {
-			return 0, fmt.Errorf("postgres.EventStore: failed to append event: %w", err)
-		}
+		// Update the expected version for the next event with the new version.
+		expected = eventstore.VersionCheck(v)
 	}
 
 	if err := tx.Commit(); err != nil {
 		return 0, fmt.Errorf("postgres.EventStore: failed to commit append transaction: %w", err)
 	}
 
-	return newVersion, nil
+	return v, nil
 }
 
-func (st *EventStore) rowsToStream(rows *sql.Rows, es eventstore.EventStream) (err error) {
-	defer func() {
-		if err != nil {
-			return
-		}
+func (st *EventStore) appendEvent(
+	ctx context.Context,
+	tx *sql.Tx,
+	id eventstore.StreamID,
+	expected eventstore.VersionCheck,
+	event eventually.Event,
+) (int64, error) {
+	eventType := reflect.TypeOf(event.Payload)
+	eventName, ok := st.eventTypeToName[eventType]
 
-		if closeErr := rows.Close(); closeErr != nil {
-			err = fmt.Errorf("postgres.EventStore: failed to close stream rows: %w", closeErr)
-		}
-	}()
-
-	for rows.Next() {
-		var (
-			globalSequenceNumber    int64
-			eventName               string
-			event                   eventstore.Event
-			rawPayload, rawMetadata json.RawMessage
-		)
-
-		err := rows.Scan(
-			&globalSequenceNumber,
-			&event.StreamID.Type,
-			&event.StreamID.Name,
-			&eventName,
-			&event.Version,
-			&rawPayload,
-			&rawMetadata,
-		)
-
-		if err != nil {
-			return fmt.Errorf("postgres.EventStore: failed to scan stream row into event struct: %w", err)
-		}
-
-		payload, ok := st.eventNameToType[eventName]
-		if !ok {
-			return fmt.Errorf("postgres.EventStore: received unregistered event '%s'", eventName)
-		}
-
-		vp := reflect.New(payload)
-		if err := json.Unmarshal(rawPayload, vp.Interface()); err != nil {
-			return fmt.Errorf("postgres.EventStore: failed to unmarshal event payload from json: %w", err)
-		}
-
-		var metadata eventually.Metadata
-		if err := json.Unmarshal(rawMetadata, &metadata); err != nil {
-			return fmt.Errorf("postgres.EventStore: failed to unmarshal event metadata from json: %w", err)
-		}
-
-		event.Payload = vp.Elem().Interface().(eventually.Payload)
-		event.Metadata = metadata
-		event.Event = event.WithGlobalSequenceNumber(globalSequenceNumber)
-
-		es <- event
+	if !ok {
+		return 0, fmt.Errorf("postgres.EventStore: event type not registered: %s", eventType.Name())
 	}
 
-	return nil
+	eventPayload, err := json.Marshal(event.Payload)
+	if err != nil {
+		return 0, fmt.Errorf("postgres.EventStore: failed to unmarshal event payload to json: %w", err)
+	}
+
+	// To avoid null or JSONB issues.
+	if event.Metadata == nil {
+		event.Metadata = map[string]interface{}{}
+	}
+
+	metadata, err := json.Marshal(event.Metadata)
+	if err != nil {
+		return 0, fmt.Errorf("postgres.EventStore: failed to unmarshal metadata to json: %w", err)
+	}
+
+	var newVersion int64
+
+	err = tx.QueryRowContext(
+		ctx,
+		"SELECT append_to_store($1, $2, $3, $4, $5, $6)",
+		id.Type,
+		id.Name,
+		int64(expected),
+		eventName,
+		eventPayload,
+		metadata,
+	).Scan(&newVersion)
+
+	if err != nil {
+		return 0, fmt.Errorf("postgres.EventStore: failed to append event: %w", err)
+	}
+
+	return newVersion, nil
 }

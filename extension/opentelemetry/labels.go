@@ -49,6 +49,6 @@ var (
 	ProjectionNameLabel = label.Key("projection.name")
 
 	// SubscriptionNameLabel is the label identifier that contains
-	// the name of a subscription
+	// the name of a subscription.
 	SubscriptionNameLabel = label.Key("subscrption.name")
 )

@@ -81,6 +81,8 @@ func TestCatchUp(t *testing.T) {
 
 			wg.Wait()
 
+			//nolint:govet // The shadowing of this variable is meant to avoid updating the one
+			//                outside the goroutine function declaration.
 			_, err := eventStore.Append(
 				ctx,
 				streamID,

@@ -27,7 +27,7 @@ func (es *TrackingEventStore) Recorded() []eventstore.Event {
 	es.RLock()
 	defer es.RUnlock()
 
-	return es.recorded[:]
+	return es.recorded
 }
 
 func (es *TrackingEventStore) Append(
