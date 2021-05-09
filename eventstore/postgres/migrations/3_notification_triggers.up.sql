@@ -4,13 +4,13 @@ AS $$
 BEGIN
     PERFORM pg_notify('$all', ''
         || '{'
-        || '"stream_id": "'       || NEW.stream_id              || '" ,'
-        || '"stream_type": "'     || NEW.stream_type            || '" ,'
-        || '"event_type": "'      || NEW.event_type             || '" ,'
-        || '"sequence_number": "' || NEW.global_sequence_number || '" ,'
-        || '"version": '          || NEW."version"              || ', '
-        || '"event": '            || NEW."event"::TEXT          || ', '
-        || '"metadata": '         || NEW.metadata
+        || '"stream_id": "'      || NEW.stream_id              || '",'
+        || '"stream_type": "'    || NEW.stream_type            || '",'
+        || '"event_type": "'     || NEW.event_type             || '",'
+        || '"sequence_number": ' || NEW.global_sequence_number || ','
+        || '"version": '         || NEW."version"              || ','
+        || '"event": '           || NEW."event"::TEXT          || ','
+        || '"metadata": '        || NEW.metadata
         || '}');
 
     RETURN NEW;
@@ -23,13 +23,13 @@ AS $$
 BEGIN
     PERFORM pg_notify(NEW.stream_type, ''
         || '{'
-        || '"stream_id": "'       || NEW.stream_id              || '" ,'
-        || '"stream_type": "'     || NEW.stream_type            || '" ,'
-        || '"event_type": "'      || NEW.event_type             || '" ,'
-        || '"sequence_number": "' || NEW.global_sequence_number || '" ,'
-        || '"version": '          || NEW."version"              || ', '
-        || '"event": '            || NEW."event"::TEXT          || ', '
-        || '"metadata": '         || NEW.metadata
+        || '"stream_id": "'      || NEW.stream_id              || '",'
+        || '"stream_type": "'    || NEW.stream_type            || '",'
+        || '"event_type": "'     || NEW.event_type             || '",'
+        || '"sequence_number": ' || NEW.global_sequence_number || ','
+        || '"version": '         || NEW."version"              || ','
+        || '"event": '           || NEW."event"::TEXT          || ','
+        || '"metadata": '        || NEW.metadata
         || '}');
 
     RETURN NEW;

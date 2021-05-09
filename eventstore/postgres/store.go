@@ -321,7 +321,7 @@ type rawNotificationEvent struct {
 	StreamType     string              `json:"stream_type"`
 	EventType      string              `json:"event_type"`
 	Version        int64               `json:"version"`
-	SequenceNumber int64               `json:"sequencen_number"`
+	SequenceNumber int64               `json:"sequence_number"`
 	Event          json.RawMessage     `json:"event"`
 	Metadata       eventually.Metadata `json:"metadata"`
 }
