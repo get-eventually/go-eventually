@@ -74,47 +74,8 @@ func (s CatchUp) Start(ctx context.Context, stream eventstore.EventStream) error
 	// We need specific order that the volatile subscription needs to be open
 	// BEFORE the catch-up event stream is opened, so we can catch all events
 	// between the start of the Subscription and the last Event Stream state.
-	group.Go(func() error {
-		subscriptionOpened.Wait()
-
-		he := func(err error) error {
-			if err != nil {
-				return fmt.Errorf("subscription.CatchUp: failed while streaming: %w", err)
-			}
-
-			return nil
-		}
-
-		switch t := s.Target.(type) {
-		case TargetStreamAll:
-			return he(s.EventStore.StreamAll(ctx, streamed, eventstore.Select{From: lastSequenceNumber}))
-		case TargetStreamType:
-			return he(s.EventStore.StreamByType(ctx, streamed, t.Type, eventstore.Select{From: lastSequenceNumber}))
-		default:
-			return fmt.Errorf("subscription.CatchUp: unexpected target type")
-		}
-	})
-
-	group.Go(func() error {
-		subscriptionOpened.Done()
-
-		he := func(err error) error {
-			if err != nil {
-				return fmt.Errorf("subscription.CatchUp: failed while subscribing: %w", err)
-			}
-
-			return nil
-		}
-
-		switch t := s.Target.(type) {
-		case TargetStreamAll:
-			return he(s.EventStore.SubscribeToAll(ctx, subscribed))
-		case TargetStreamType:
-			return he(s.EventStore.SubscribeToType(ctx, subscribed, t.Type))
-		default:
-			return fmt.Errorf("subscription.CatchUp: unexpected target type")
-		}
-	})
+	group.Go(func() error { return s.startStreaming(ctx, streamed, subscriptionOpened, lastSequenceNumber) })
+	group.Go(func() error { return s.startSubscribing(ctx, subscribed, subscriptionOpened) })
 
 	if err := s.stream(ctx, &lastSequenceNumber, stream, streamed); err != nil {
 		return err
@@ -133,6 +94,53 @@ func (s CatchUp) bufferSize() int {
 	}
 
 	return DefaultCatchUpBufferSize
+}
+
+func (s CatchUp) startStreaming(
+	ctx context.Context,
+	streamed eventstore.EventStream,
+	wg *sync.WaitGroup,
+	lastSequenceNumber int64,
+) error {
+	wg.Wait()
+
+	he := func(err error) error {
+		if err != nil {
+			return fmt.Errorf("subscription.CatchUp: failed while streaming: %w", err)
+		}
+
+		return nil
+	}
+
+	switch t := s.Target.(type) {
+	case TargetStreamAll:
+		return he(s.EventStore.StreamAll(ctx, streamed, eventstore.Select{From: lastSequenceNumber}))
+	case TargetStreamType:
+		return he(s.EventStore.StreamByType(ctx, streamed, t.Type, eventstore.Select{From: lastSequenceNumber}))
+	default:
+		return fmt.Errorf("subscription.CatchUp: unexpected target type")
+	}
+}
+
+func (s CatchUp) startSubscribing(ctx context.Context, subscribed eventstore.EventStream, wg *sync.WaitGroup) error {
+	wg.Done()
+
+	he := func(err error) error {
+		if err != nil {
+			return fmt.Errorf("subscription.CatchUp: failed while subscribing: %w", err)
+		}
+
+		return nil
+	}
+
+	switch t := s.Target.(type) {
+	case TargetStreamAll:
+		return he(s.EventStore.SubscribeToAll(ctx, subscribed))
+	case TargetStreamType:
+		return he(s.EventStore.SubscribeToType(ctx, subscribed, t.Type))
+	default:
+		return fmt.Errorf("subscription.CatchUp: unexpected target type")
+	}
 }
 
 func (s CatchUp) stream(

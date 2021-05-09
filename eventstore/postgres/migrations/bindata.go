@@ -302,7 +302,7 @@ func bindataGo() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "bindata.go", size: 36864, mode: os.FileMode(420), modTime: time.Unix(1620554111, 0)}
+	info := bindataFileInfo{name: "bindata.go", size: 36864, mode: os.FileMode(420), modTime: time.Unix(1620554730, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
