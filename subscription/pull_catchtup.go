@@ -8,7 +8,7 @@ import (
 	"github.com/eventually-rs/eventually-go/eventstore"
 	"github.com/eventually-rs/eventually-go/subscription/checkpoint"
 
-	"github.com/jpillora/backoff"
+	"github.com/cenkalti/backoff/v4"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -36,18 +36,17 @@ func (s PullCatchUp) Start(ctx context.Context, stream eventstore.EventStream) e
 		return fmt.Errorf("subscription.PullCatchUp: failed to read checkpoint: %w", err)
 	}
 
-	b := &backoff.Backoff{
-		Jitter: true,
-		Min:    s.PullEvery,
-		Max:    s.MaxTimeout,
-	}
+	b := backoff.NewExponentialBackOff()
+	b.InitialInterval = s.PullEvery
+	b.MaxInterval = s.MaxTimeout
+	b.MaxElapsedTime = 0 // Don't stop the backoff!
 
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 
-		case <-time.After(b.Duration()):
+		case <-time.After(b.NextBackOff()):
 			sequenceNumber, err := s.streamFromStore(ctx, stream, lastSequenceNumber)
 			if err != nil {
 				return fmt.Errorf("subscription.PullCatchUp: failed while streaming: %w", err)

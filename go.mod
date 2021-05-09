@@ -4,6 +4,7 @@ go 1.15
 
 require (
 	github.com/Microsoft/go-winio v0.4.16 // indirect
+	github.com/cenkalti/backoff/v4 v4.1.0
 	github.com/containerd/containerd v1.4.3 // indirect
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v20.10.2+incompatible // indirect
@@ -12,7 +13,6 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-migrate/migrate v3.5.4+incompatible
 	github.com/gorilla/mux v1.8.0 // indirect
-	github.com/jpillora/backoff v1.0.0
 	github.com/lib/pq v1.9.0
 	github.com/moby/term v0.0.0-20201216013528-df9cb8a40635 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
