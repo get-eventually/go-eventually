@@ -132,8 +132,7 @@ func (s CatchUp) stream(
 				return nil
 			}
 
-			sn, ok := event.GlobalSequenceNumber()
-			if ok && *lastSequenceNumber >= sn {
+			if *lastSequenceNumber >= event.SequenceNumber {
 				continue
 			}
 
@@ -145,7 +144,7 @@ func (s CatchUp) stream(
 				continue
 			}
 
-			*lastSequenceNumber = sn
+			*lastSequenceNumber = event.SequenceNumber
 
 		case <-ctx.Done():
 			if err := ctx.Err(); err != nil {
@@ -160,13 +159,7 @@ func (s CatchUp) stream(
 // Checkpoint uses the Subscription Checkpointer instance to save
 // the Global Sequence Number of the Event specified.
 func (s CatchUp) Checkpoint(ctx context.Context, event eventstore.Event) error {
-	sn, ok := event.GlobalSequenceNumber()
-	if !ok {
-		// Skip checkpointing if the Event has no Sequence Number
-		return nil
-	}
-
-	if err := s.Checkpointer.Write(ctx, s.Name(), sn); err != nil {
+	if err := s.Checkpointer.Write(ctx, s.Name(), event.SequenceNumber); err != nil {
 		return fmt.Errorf("subscription.CatchUp: failed to checkpoint subscription: %w", err)
 	}
 

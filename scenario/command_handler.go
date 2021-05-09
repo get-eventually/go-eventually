@@ -82,7 +82,7 @@ func (sc CommandHandlerThen) Using( //nolint:gocritic
 	store := inmemory.NewEventStore()
 
 	for _, event := range sc.given {
-		_, err := store.Append(ctx, event.StreamID, eventstore.VersionCheckAny, event.Event)
+		_, err := store.Append(ctx, event.Stream, eventstore.VersionCheckAny, event.Event)
 		if !assert.NoError(t, err) {
 			return
 		}

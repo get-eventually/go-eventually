@@ -46,25 +46,28 @@ func TestVolatile(t *testing.T) {
 
 	expectedEvents := []eventstore.Event{
 		{
-			StreamID: streamID,
-			Version:  2,
-			Event: eventually.
-				Event{Payload: internal.StringPayload("test-event-should-be-received-0")}.
-				WithGlobalSequenceNumber(2),
+			Stream:         streamID,
+			Version:        2,
+			SequenceNumber: 2,
+			Event: eventually.Event{
+				Payload: internal.StringPayload("test-event-should-be-received-0"),
+			},
 		},
 		{
-			StreamID: streamID,
-			Version:  3,
-			Event: eventually.
-				Event{Payload: internal.StringPayload("test-event-should-be-received-1")}.
-				WithGlobalSequenceNumber(3),
+			Stream:         streamID,
+			Version:        3,
+			SequenceNumber: 3,
+			Event: eventually.Event{
+				Payload: internal.StringPayload("test-event-should-be-received-1"),
+			},
 		},
 		{
-			StreamID: streamID,
-			Version:  4,
-			Event: eventually.
-				Event{Payload: internal.StringPayload("test-event-should-be-received-2")}.
-				WithGlobalSequenceNumber(4),
+			Stream:         streamID,
+			Version:        4,
+			SequenceNumber: 4,
+			Event: eventually.Event{
+				Payload: internal.StringPayload("test-event-should-be-received-2"),
+			},
 		},
 	}
 

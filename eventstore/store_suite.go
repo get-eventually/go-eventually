@@ -28,70 +28,82 @@ var (
 
 	expectedStreamAll = []Event{
 		{
-			StreamID: firstInstance,
-			Version:  1,
-			Event:    eventually.Event{Payload: internal.IntPayload(1)}.WithGlobalSequenceNumber(1),
+			Stream:         firstInstance,
+			Version:        1,
+			SequenceNumber: 1,
+			Event:          eventually.Event{Payload: internal.IntPayload(1)},
 		},
 		{
-			StreamID: secondInstance,
-			Version:  1,
-			Event:    eventually.Event{Payload: internal.IntPayload(1)}.WithGlobalSequenceNumber(2),
+			Stream:         secondInstance,
+			Version:        1,
+			SequenceNumber: 2,
+			Event:          eventually.Event{Payload: internal.IntPayload(1)},
 		},
 		{
-			StreamID: firstInstance,
-			Version:  2,
-			Event:    eventually.Event{Payload: internal.IntPayload(2)}.WithGlobalSequenceNumber(3),
+			Stream:         firstInstance,
+			Version:        2,
+			SequenceNumber: 3,
+			Event:          eventually.Event{Payload: internal.IntPayload(2)},
 		},
 		{
-			StreamID: secondInstance,
-			Version:  2,
-			Event:    eventually.Event{Payload: internal.IntPayload(2)}.WithGlobalSequenceNumber(4),
+			Stream:         secondInstance,
+			Version:        2,
+			SequenceNumber: 4,
+			Event:          eventually.Event{Payload: internal.IntPayload(2)},
 		},
 		{
-			StreamID: firstInstance,
-			Version:  3,
-			Event:    eventually.Event{Payload: internal.IntPayload(3)}.WithGlobalSequenceNumber(5),
+			Stream:         firstInstance,
+			Version:        3,
+			SequenceNumber: 5,
+			Event:          eventually.Event{Payload: internal.IntPayload(3)},
 		},
 		{
-			StreamID: secondInstance,
-			Version:  3,
-			Event:    eventually.Event{Payload: internal.IntPayload(3)}.WithGlobalSequenceNumber(6),
+			Stream:         secondInstance,
+			Version:        3,
+			SequenceNumber: 6,
+			Event:          eventually.Event{Payload: internal.IntPayload(3)},
 		},
 	}
 
 	expectedStreamFirstInstance = []Event{
 		{
-			StreamID: firstInstance,
-			Version:  1,
-			Event:    eventually.Event{Payload: internal.IntPayload(1)}.WithGlobalSequenceNumber(1),
+			Stream:         firstInstance,
+			Version:        1,
+			SequenceNumber: 1,
+			Event:          eventually.Event{Payload: internal.IntPayload(1)},
 		},
 		{
-			StreamID: firstInstance,
-			Version:  2,
-			Event:    eventually.Event{Payload: internal.IntPayload(2)}.WithGlobalSequenceNumber(3),
+			Stream:         firstInstance,
+			Version:        2,
+			SequenceNumber: 3,
+			Event:          eventually.Event{Payload: internal.IntPayload(2)},
 		},
 		{
-			StreamID: firstInstance,
-			Version:  3,
-			Event:    eventually.Event{Payload: internal.IntPayload(3)}.WithGlobalSequenceNumber(5),
+			Stream:         firstInstance,
+			Version:        3,
+			SequenceNumber: 5,
+			Event:          eventually.Event{Payload: internal.IntPayload(3)},
 		},
 	}
 
 	expectedStreamSecondInstance = []Event{
 		{
-			StreamID: secondInstance,
-			Version:  1,
-			Event:    eventually.Event{Payload: internal.IntPayload(1)}.WithGlobalSequenceNumber(2),
+			Stream:         secondInstance,
+			Version:        1,
+			SequenceNumber: 2,
+			Event:          eventually.Event{Payload: internal.IntPayload(1)},
 		},
 		{
-			StreamID: secondInstance,
-			Version:  2,
-			Event:    eventually.Event{Payload: internal.IntPayload(2)}.WithGlobalSequenceNumber(4),
+			Stream:         secondInstance,
+			Version:        2,
+			SequenceNumber: 4,
+			Event:          eventually.Event{Payload: internal.IntPayload(2)},
 		},
 		{
-			StreamID: secondInstance,
-			Version:  3,
-			Event:    eventually.Event{Payload: internal.IntPayload(3)}.WithGlobalSequenceNumber(6),
+			Stream:         secondInstance,
+			Version:        3,
+			SequenceNumber: 6,
+			Event:          eventually.Event{Payload: internal.IntPayload(3)},
 		},
 	}
 )
@@ -171,11 +183,11 @@ func (ss *StoreSuite) TestStream() {
 
 	assert.NoError(t, err)
 
-	assert.Equal(t, expectedStreamAll, ss.keepSequenceNumberOnly(streamAll))
-	assert.Equal(t, expectedStreamFirstInstance, ss.keepSequenceNumberOnly(streamFirstType))
-	assert.Equal(t, expectedStreamFirstInstance, ss.keepSequenceNumberOnly(streamFirstInstance))
-	assert.Equal(t, expectedStreamSecondInstance, ss.keepSequenceNumberOnly(streamSecondType))
-	assert.Equal(t, expectedStreamSecondInstance, ss.keepSequenceNumberOnly(streamSecondInstance))
+	assert.Equal(t, expectedStreamAll, ss.skipMetadata(streamAll))
+	assert.Equal(t, expectedStreamFirstInstance, ss.skipMetadata(streamFirstType))
+	assert.Equal(t, expectedStreamFirstInstance, ss.skipMetadata(streamFirstInstance))
+	assert.Equal(t, expectedStreamSecondInstance, ss.skipMetadata(streamSecondType))
+	assert.Equal(t, expectedStreamSecondInstance, ss.skipMetadata(streamSecondInstance))
 
 	// Streaming with an out-of-bound Select will yield empty elements.
 	streamAll, err = StreamToSlice(ctx, func(ctx context.Context, es EventStream) error {
@@ -277,9 +289,9 @@ func (ss *StoreSuite) TestSubscribe() {
 	}
 
 	// Sink events from the Event Streams into slices for expectations comparison.
-	streamedAll := ss.keepSequenceNumberOnly(ss.sinkToSlice(streamAll))
-	streamedFirstInstance := ss.keepSequenceNumberOnly(ss.sinkToSlice(streamFirstInstance))
-	streamedSecondInstance := ss.keepSequenceNumberOnly(ss.sinkToSlice(streamSecondInstance))
+	streamedAll := ss.skipMetadata(ss.sinkToSlice(streamAll))
+	streamedFirstInstance := ss.skipMetadata(ss.sinkToSlice(streamFirstInstance))
+	streamedSecondInstance := ss.skipMetadata(ss.sinkToSlice(streamSecondInstance))
 
 	assert.Equal(t, expectedStreamAll, streamedAll)
 	assert.Equal(t, expectedStreamFirstInstance, streamedFirstInstance)
@@ -320,14 +332,12 @@ func (*StoreSuite) sinkToSlice(es <-chan Event) []Event {
 	return events
 }
 
-func (*StoreSuite) keepSequenceNumberOnly(events []Event) []Event {
+func (*StoreSuite) skipMetadata(events []Event) []Event {
 	mapped := make([]Event, 0, len(events))
 
 	for _, event := range events {
-		seqNum, _ := event.GlobalSequenceNumber()
 		newEvent := event
 		newEvent.Metadata = nil
-		newEvent.Event = newEvent.WithGlobalSequenceNumber(seqNum)
 		mapped = append(mapped, newEvent)
 	}
 
