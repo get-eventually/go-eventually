@@ -48,12 +48,7 @@ func (s *EventStore) StreamAll(ctx context.Context, es eventstore.EventStream, s
 	defer close(es)
 
 	for _, event := range s.events {
-		sequenceNumber, ok := event.GlobalSequenceNumber()
-		if !ok {
-			return fmt.Errorf("inmemory.EventStore: event does not have global sequence number")
-		}
-
-		if sequenceNumber < selectt.From {
+		if event.SequenceNumber < selectt.From {
 			continue
 		}
 
@@ -89,13 +84,8 @@ func (s *EventStore) StreamByType(
 
 	for _, eventIdx := range s.byType[typ] {
 		event := s.events[eventIdx]
-		sequenceNumber, ok := event.GlobalSequenceNumber()
 
-		if !ok {
-			return fmt.Errorf("inmemory: event does not have global sequence number")
-		}
-
-		if sequenceNumber < selectt.From {
+		if event.SequenceNumber < selectt.From {
 			continue
 		}
 
@@ -265,9 +255,10 @@ func (s *EventStore) Append(
 		// Sequence numbers and versions should all start from 1,
 		// hence why this block uses `+ 1`.
 		newPersistedEvents = append(newPersistedEvents, eventstore.Event{
-			StreamID: id,
-			Version:  int64(currentVersion) + int64(i) + 1,
-			Event:    event.WithGlobalSequenceNumber(int64(nextIndex) + 1),
+			Stream:         id,
+			Version:        int64(currentVersion) + int64(i) + 1,
+			SequenceNumber: int64(nextIndex) + 1,
+			Event:          event,
 		})
 
 		newIndexes = append(newIndexes, nextIndex)

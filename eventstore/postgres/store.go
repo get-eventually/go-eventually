@@ -274,16 +274,15 @@ func (st *EventStore) rowsToStream(rows *sql.Rows, es eventstore.EventStream) (e
 
 	for rows.Next() {
 		var (
-			globalSequenceNumber    int64
 			eventName               string
 			event                   eventstore.Event
 			rawPayload, rawMetadata json.RawMessage
 		)
 
 		err := rows.Scan(
-			&globalSequenceNumber,
-			&event.StreamID.Type,
-			&event.StreamID.Name,
+			&event.SequenceNumber,
+			&event.Stream.Type,
+			&event.Stream.Name,
 			&eventName,
 			&event.Version,
 			&rawPayload,
@@ -310,7 +309,6 @@ func (st *EventStore) rowsToStream(rows *sql.Rows, es eventstore.EventStream) (e
 
 		event.Payload = vp.Elem().Interface().(eventually.Payload)
 		event.Metadata = metadata
-		event.Event = event.WithGlobalSequenceNumber(globalSequenceNumber)
 
 		es <- event
 	}
@@ -319,12 +317,13 @@ func (st *EventStore) rowsToStream(rows *sql.Rows, es eventstore.EventStream) (e
 }
 
 type rawNotificationEvent struct {
-	StreamID   string              `json:"stream_id"`
-	StreamType string              `json:"stream_type"`
-	EventType  string              `json:"event_type"`
-	Version    int64               `json:"version"`
-	Event      json.RawMessage     `json:"event"`
-	Metadata   eventually.Metadata `json:"metadata"`
+	StreamID       string              `json:"stream_id"`
+	StreamType     string              `json:"stream_type"`
+	EventType      string              `json:"event_type"`
+	Version        int64               `json:"version"`
+	SequenceNumber int64               `json:"sequence_number"`
+	Event          json.RawMessage     `json:"event"`
+	Metadata       eventually.Metadata `json:"metadata"`
 }
 
 // SubscribeToAll subscribes to all the new Events committed to the Event Store
@@ -417,11 +416,12 @@ func (st *EventStore) processNotification(notification *pq.Notification) (events
 	}
 
 	return eventstore.Event{
-		StreamID: eventstore.StreamID{
+		Stream: eventstore.StreamID{
 			Type: rawEvent.StreamType,
 			Name: rawEvent.StreamID,
 		},
-		Version: rawEvent.Version,
+		Version:        rawEvent.Version,
+		SequenceNumber: rawEvent.SequenceNumber,
 		Event: eventually.Event{
 			Payload:  vp.Elem().Interface().(eventually.Payload),
 			Metadata: rawEvent.Metadata,

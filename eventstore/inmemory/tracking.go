@@ -27,6 +27,11 @@ func NewTrackingEventStore(store eventstore.Store) *TrackingEventStore {
 
 // Recorded returns the list of Events that have been appended
 // to the Event Store.
+//
+// Please note: these events do not record the Sequence Number assigned by
+// the Event Store. Usually you should not need it in test assertions, since
+// the order of Events in the returned slice always follows the global order
+// of the Event Stream (or the Event Store).
 func (es *TrackingEventStore) Recorded() []eventstore.Event {
 	es.RLock()
 	defer es.RUnlock()
@@ -54,9 +59,9 @@ func (es *TrackingEventStore) Append(
 
 	for i, event := range events {
 		es.recorded = append(es.recorded, eventstore.Event{
-			StreamID: id,
-			Version:  int64(expected) + int64(i) + 1,
-			Event:    event,
+			Stream:  id,
+			Version: int64(expected) + int64(i) + 1,
+			Event:   event,
 		})
 	}
 

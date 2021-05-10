@@ -44,11 +44,18 @@ var SelectFromBeginning = Select{From: 0}
 // Event Store.
 type Event struct {
 	eventually.Event
-	StreamID
+
+	// Stream is the identifier of the Event Stream this Event
+	// belongs to.
+	Stream StreamID
 
 	// Version is the version of this Event, used for Optimistic Locking
 	// and detecting or avoiding concurrency conflict scenarios.
 	Version int64
+
+	// Sequence Number is the index of the Event in the Event Store,
+	// used for ordered streaming.
+	SequenceNumber int64
 }
 
 // Store represents an Event Store.

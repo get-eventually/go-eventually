@@ -53,6 +53,7 @@ func TestTrackingEventStore(t *testing.T) {
 
 func stripMetadata(events []eventstore.Event) []eventstore.Event {
 	for i := range events {
+		events[i].SequenceNumber = 0
 		events[i].Metadata = nil
 	}
 
