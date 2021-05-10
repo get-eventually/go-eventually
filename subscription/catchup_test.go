@@ -15,17 +15,46 @@ import (
 	"github.com/eventually-rs/eventually-go/subscription/checkpoint"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
 func TestCatchUp(t *testing.T) {
-	t.Run("catch-up subscriptions will receive events from before the subscription has started", func(t *testing.T) {
+	s := new(CatchUpSuite)
+
+	s.makeSubscription = func(store eventstore.Store) subscription.Subscription {
+		return subscription.CatchUp{
+			SubscriptionName: t.Name(),
+			Checkpointer:     checkpoint.NopCheckpointer,
+			Target:           subscription.TargetStreamAll{},
+			EventStore:       store,
+		}
+	}
+
+	suite.Run(t, s)
+}
+
+type CatchUpSuite struct {
+	suite.Suite
+
+	makeSubscription func(eventstore.Store) subscription.Subscription
+	eventStore       eventstore.Store
+	subscription     subscription.Subscription
+}
+
+func (s *CatchUpSuite) SetupTest() {
+	s.eventStore = inmemory.NewEventStore()
+	s.subscription = s.makeSubscription(s.eventStore)
+}
+
+func (s *CatchUpSuite) TestCatchUp() {
+	s.Run("catch-up subscriptions will receive events from before the subscription has started", func() {
 		streamID := eventstore.StreamID{
 			Type: "my-type",
 			Name: "my-instance",
 		}
 
+		t := s.T()
 		ctx := context.Background()
-		eventStore := inmemory.NewEventStore()
 
 		events := []eventstore.Event{
 			{
@@ -55,7 +84,7 @@ func TestCatchUp(t *testing.T) {
 		}
 
 		// Append events before starting the subscription
-		_, err := eventStore.Append(
+		_, err := s.eventStore.Append(
 			ctx,
 			streamID,
 			eventstore.VersionCheck(0),
@@ -70,13 +99,6 @@ func TestCatchUp(t *testing.T) {
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
-		catchupSubscription := subscription.CatchUp{
-			SubscriptionName: t.Name(),
-			Checkpointer:     checkpoint.NopCheckpointer,
-			Target:           subscription.TargetStreamAll{}, // Using this just for coverage, lol
-			EventStore:       eventStore,
-		}
-
 		wg := new(sync.WaitGroup)
 		wg.Add(1)
 
@@ -87,7 +109,7 @@ func TestCatchUp(t *testing.T) {
 
 			//nolint:govet // The shadowing of this variable is meant to avoid updating the one
 			//                outside the goroutine function declaration.
-			_, err := eventStore.Append(
+			_, err := s.eventStore.Append(
 				ctx,
 				streamID,
 				eventstore.VersionCheck(2),
@@ -100,14 +122,14 @@ func TestCatchUp(t *testing.T) {
 			// but in order to ensure that the subscription has consumed
 			// all the events committed before closing the context we gotta wait
 			// a little bit...
-			<-time.After(100 * time.Millisecond)
+			<-time.After(800 * time.Millisecond)
 		}()
 
 		received, err := eventstore.StreamToSlice(ctx, func(ctx context.Context, es eventstore.EventStream) error {
 			// This kinda helps with starting the Subscription first,
 			// then wake up the WaitGroup, which will unlock the write goroutine.
 			go func() { wg.Done() }()
-			return catchupSubscription.Start(ctx, es)
+			return s.subscription.Start(ctx, es)
 		})
 
 		assert.True(t, errors.Is(err, context.Canceled), "err", err)

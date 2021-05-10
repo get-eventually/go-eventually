@@ -97,6 +97,10 @@ func (s *PullCatchUp) catchUp(
 ) (int64, error) {
 	es := make(chan eventstore.Event, s.bufferSize())
 
+	// NOTE: incrementing the sequence number by one so that we skip potential
+	// duplicates due to inclusive selecting operators.
+	lastSequenceNumber++
+
 	group, ctx := errgroup.WithContext(ctx)
 	group.Go(func() error {
 		switch t := s.Target.(type) {
