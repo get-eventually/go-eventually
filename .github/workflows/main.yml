@@ -33,13 +33,15 @@ jobs:
       with:
         # Disabling shallow clone is recommended for improving relevancy of reporting
         fetch-depth: 0
-    - name: Run tests
-      run: make tests
+    - name: Run tests (eventually)
+      run: make eventually-tests
+    - name: Run tests (postgres)
+      run: make postgres-tests
     - name: Archive code coverage results
       uses: actions/upload-artifact@v2
       with:
         name: code-coverage-report
-        path: cov.out
+        path: ./**/*.out
     - name: Analyze with SonarCloud
       uses: sonarsource/sonarcloud-github-action@master
       env:
