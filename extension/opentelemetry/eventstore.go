@@ -11,16 +11,21 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-var _ eventstore.Store = EventStoreWrapper{}
+var _ EventStore = EventStoreWrapper{}
+
+// EventStore is the Event Store interface this package decorates.
+type EventStore interface {
+	eventstore.Appender
+	eventstore.Streamer
+}
 
 // EventStoreWrapper is a wrapper to provide OpenTelemetry instrumentation
-// for eventstore.Store compatible implementations, and compatible
+// for EventStore compatible implementations, and compatible
 // with the same interface to be used seamlessly in your pre-existing code.
 //
 // Use WrapEventStore to create new instance of this type.
 type EventStoreWrapper struct {
-	eventstore.Store
-
+	eventStore   EventStore
 	tracer       trace.Tracer
 	appendMetric metric.Int64UpDownCounter
 }
@@ -28,7 +33,7 @@ type EventStoreWrapper struct {
 // WrapEventStore creates a new EventStoreWrapper instance, using the provided
 // TracerProvider and MeterProvider to collect traces and metrics.
 func WrapEventStore(
-	es eventstore.Store,
+	es EventStore,
 	tracerProvider trace.TracerProvider,
 	meterProvider metric.MeterProvider,
 ) (EventStoreWrapper, error) {
@@ -40,7 +45,7 @@ func WrapEventStore(
 	}
 
 	return EventStoreWrapper{
-		Store:        es,
+		eventStore:   es,
 		tracer:       tracerProvider.Tracer(instrumentationName),
 		appendMetric: appendMetric,
 	}, nil
@@ -54,7 +59,7 @@ func (sw EventStoreWrapper) StreamAll(ctx context.Context, es eventstore.EventSt
 	))
 	defer span.End()
 
-	err := sw.Store.StreamAll(ctx, es, selectt)
+	err := sw.eventStore.StreamAll(ctx, es, selectt)
 	if err != nil {
 		span.RecordError(err)
 	}
@@ -76,7 +81,7 @@ func (sw EventStoreWrapper) StreamByType(
 	))
 	defer span.End()
 
-	err := sw.Store.StreamByType(ctx, es, typ, selectt)
+	err := sw.eventStore.StreamByType(ctx, es, typ, selectt)
 	if err != nil {
 		span.RecordError(err)
 	}
@@ -99,7 +104,7 @@ func (sw EventStoreWrapper) Stream(
 	))
 	defer span.End()
 
-	err := sw.Store.Stream(ctx, es, id, selectt)
+	err := sw.eventStore.Stream(ctx, es, id, selectt)
 	if err != nil {
 		span.RecordError(err)
 	}
@@ -122,7 +127,7 @@ func (sw EventStoreWrapper) Append(
 	))
 	defer span.End()
 
-	newVersion, err := sw.Store.Append(ctx, id, expected, events...)
+	newVersion, err := sw.eventStore.Append(ctx, id, expected, events...)
 	if err != nil {
 		span.RecordError(err)
 	} else {
