@@ -29,8 +29,8 @@ func TestEventStoreWrapper(t *testing.T) {
 		return string(s)
 	}
 
-	eventStore := eventstore.Store(inmemory.NewEventStore())
-	eventStore = correlation.WrapEventStore(eventStore, generator)
+	eventStore := inmemory.NewEventStore()
+	correlatedEventStore := correlation.WrapEventStore(eventStore, generator)
 
 	ctx := context.Background()
 	streamID := eventstore.StreamID{
@@ -38,7 +38,7 @@ func TestEventStoreWrapper(t *testing.T) {
 		Name: "my-instance",
 	}
 
-	_, err := eventStore.Append(
+	_, err := correlatedEventStore.Append(
 		ctx,
 		streamID,
 		eventstore.VersionCheck(0),
