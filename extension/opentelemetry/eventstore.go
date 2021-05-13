@@ -11,16 +11,21 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-var _ eventstore.Store = EventStoreWrapper{}
+var _ EventStore = EventStoreWrapper{}
+
+// EventStore is the Event Store interface this package decorates.
+type EventStore interface {
+	eventstore.Appender
+	eventstore.Streamer
+}
 
 // EventStoreWrapper is a wrapper to provide OpenTelemetry instrumentation
-// for eventstore.Store compatible implementations, and compatible
+// for EventStore compatible implementations, and compatible
 // with the same interface to be used seamlessly in your pre-existing code.
 //
 // Use WrapEventStore to create new instance of this type.
 type EventStoreWrapper struct {
-	eventstore.Store
-
+	eventStore   EventStore
 	tracer       trace.Tracer
 	appendMetric metric.Int64UpDownCounter
 }
@@ -28,7 +33,7 @@ type EventStoreWrapper struct {
 // WrapEventStore creates a new EventStoreWrapper instance, using the provided
 // TracerProvider and MeterProvider to collect traces and metrics.
 func WrapEventStore(
-	es eventstore.Store,
+	es EventStore,
 	tracerProvider trace.TracerProvider,
 	meterProvider metric.MeterProvider,
 ) (EventStoreWrapper, error) {
@@ -40,7 +45,7 @@ func WrapEventStore(
 	}
 
 	return EventStoreWrapper{
-		Store:        es,
+		eventStore:   es,
 		tracer:       tracerProvider.Tracer(instrumentationName),
 		appendMetric: appendMetric,
 	}, nil
@@ -50,11 +55,11 @@ func WrapEventStore(
 // a trace of the result.
 func (sw EventStoreWrapper) StreamAll(ctx context.Context, es eventstore.EventStream, selectt eventstore.Select) error {
 	ctx, span := sw.tracer.Start(ctx, StreamAllSpanName, trace.WithAttributes(
-		SelectFromLabel.Int64(selectt.From),
+		SelectFromAttribute.Int64(selectt.From),
 	))
 	defer span.End()
 
-	err := sw.Store.StreamAll(ctx, es, selectt)
+	err := sw.eventStore.StreamAll(ctx, es, selectt)
 	if err != nil {
 		span.RecordError(err)
 	}
@@ -71,12 +76,12 @@ func (sw EventStoreWrapper) StreamByType(
 	selectt eventstore.Select,
 ) error {
 	ctx, span := sw.tracer.Start(ctx, StreamByTypeSpanName, trace.WithAttributes(
-		StreamTypeLabel.String(typ),
-		SelectFromLabel.Int64(selectt.From),
+		StreamTypeAttribute.String(typ),
+		SelectFromAttribute.Int64(selectt.From),
 	))
 	defer span.End()
 
-	err := sw.Store.StreamByType(ctx, es, typ, selectt)
+	err := sw.eventStore.StreamByType(ctx, es, typ, selectt)
 	if err != nil {
 		span.RecordError(err)
 	}
@@ -93,13 +98,13 @@ func (sw EventStoreWrapper) Stream(
 	selectt eventstore.Select,
 ) error {
 	ctx, span := sw.tracer.Start(ctx, StreamSpanName, trace.WithAttributes(
-		StreamTypeLabel.String(id.Type),
-		StreamNameLabel.String(id.Name),
-		SelectFromLabel.Int64(selectt.From),
+		StreamTypeAttribute.String(id.Type),
+		StreamNameAttribute.String(id.Name),
+		SelectFromAttribute.Int64(selectt.From),
 	))
 	defer span.End()
 
-	err := sw.Store.Stream(ctx, es, id, selectt)
+	err := sw.eventStore.Stream(ctx, es, id, selectt)
 	if err != nil {
 		span.RecordError(err)
 	}
@@ -116,17 +121,17 @@ func (sw EventStoreWrapper) Append(
 	events ...eventually.Event,
 ) (int64, error) {
 	ctx, span := sw.tracer.Start(ctx, AppendSpanName, trace.WithAttributes(
-		StreamTypeLabel.String(id.Type),
-		StreamNameLabel.String(id.Name),
-		VersionCheckLabel.Int64(int64(expected)),
+		StreamTypeAttribute.String(id.Type),
+		StreamNameAttribute.String(id.Name),
+		VersionCheckAttribute.Int64(int64(expected)),
 	))
 	defer span.End()
 
-	newVersion, err := sw.Store.Append(ctx, id, expected, events...)
+	newVersion, err := sw.eventStore.Append(ctx, id, expected, events...)
 	if err != nil {
 		span.RecordError(err)
 	} else {
-		span.SetAttributes(VersionNewLabel.Int64(newVersion))
+		span.SetAttributes(VersionNewAttribute.Int64(newVersion))
 	}
 
 	sw.reportAppendMetrics(ctx, events...)
@@ -137,6 +142,6 @@ func (sw EventStoreWrapper) Append(
 func (sw EventStoreWrapper) reportAppendMetrics(ctx context.Context, events ...eventually.Event) {
 	for _, event := range events {
 		sw.appendMetric.
-			Add(ctx, 1, EventTypeLabel.String(event.Payload.Name()))
+			Add(ctx, 1, EventTypeAttribute.String(event.Payload.Name()))
 	}
 }
