@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/eventually-rs/eventually-go/eventstore"
-	"github.com/eventually-rs/eventually-go/subscription"
-	"github.com/eventually-rs/eventually-go/subscription/checkpoint"
+	"github.com/get-eventually/go-eventually/eventstore"
+	"github.com/get-eventually/go-eventually/subscription"
+	"github.com/get-eventually/go-eventually/subscription/checkpoint"
 
 	"github.com/stretchr/testify/suite"
 )

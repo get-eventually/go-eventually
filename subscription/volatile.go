@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/eventually-rs/eventually-go/eventstore"
+	"github.com/get-eventually/go-eventually/eventstore"
 )
 
 var _ Subscription = Volatile{}

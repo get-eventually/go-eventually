@@ -7,9 +7,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/eventually-rs/eventually-go/eventstore"
-	"github.com/eventually-rs/eventually-go/eventstore/postgres"
-	"github.com/eventually-rs/eventually-go/internal"
+	"github.com/get-eventually/go-eventually/eventstore"
+	"github.com/get-eventually/go-eventually/eventstore/postgres"
+	"github.com/get-eventually/go-eventually/internal"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"

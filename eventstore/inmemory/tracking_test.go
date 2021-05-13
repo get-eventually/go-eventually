@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/eventually-rs/eventually-go"
-	"github.com/eventually-rs/eventually-go/eventstore"
-	"github.com/eventually-rs/eventually-go/eventstore/inmemory"
-	"github.com/eventually-rs/eventually-go/internal"
+	"github.com/get-eventually/go-eventually"
+	"github.com/get-eventually/go-eventually/eventstore"
+	"github.com/get-eventually/go-eventually/eventstore/inmemory"
+	"github.com/get-eventually/go-eventually/internal"
 
 	"github.com/stretchr/testify/assert"
 )

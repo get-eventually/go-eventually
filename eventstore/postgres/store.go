@@ -11,10 +11,10 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/eventually-rs/eventually-go"
-	"github.com/eventually-rs/eventually-go/eventstore"
-	"github.com/eventually-rs/eventually-go/eventstore/postgres/migrations"
-	"github.com/eventually-rs/eventually-go/subscription/checkpoint"
+	"github.com/get-eventually/go-eventually"
+	"github.com/get-eventually/go-eventually/eventstore"
+	"github.com/get-eventually/go-eventually/eventstore/postgres/migrations"
+	"github.com/get-eventually/go-eventually/subscription/checkpoint"
 
 	"github.com/golang-migrate/migrate"
 	_ "github.com/golang-migrate/migrate/database/postgres" // postgres driver for migrate

@@ -1,4 +1,4 @@
-module github.com/eventually-rs/eventually-go
+module github.com/get-eventually/go-eventually
 
 go 1.15
 

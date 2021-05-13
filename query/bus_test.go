@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/eventually-rs/eventually-go/query"
+	"github.com/get-eventually/go-eventually/query"
 
 	"github.com/stretchr/testify/assert"
 )

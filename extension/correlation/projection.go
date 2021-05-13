@@ -3,8 +3,8 @@ package correlation
 import (
 	"context"
 
-	"github.com/eventually-rs/eventually-go/eventstore"
-	"github.com/eventually-rs/eventually-go/projection"
+	"github.com/get-eventually/go-eventually/eventstore"
+	"github.com/get-eventually/go-eventually/projection"
 )
 
 var _ projection.Applier = ProjectionWrapper{}

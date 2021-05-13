@@ -4,8 +4,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/eventually-rs/eventually-go"
-	"github.com/eventually-rs/eventually-go/eventstore"
+	"github.com/get-eventually/go-eventually"
+	"github.com/get-eventually/go-eventually/eventstore"
 )
 
 // TrackingEventStore is an Event Store wrapper to track the Events

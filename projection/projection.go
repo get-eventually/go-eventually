@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/eventually-rs/eventually-go/eventstore"
-	"github.com/eventually-rs/eventually-go/query"
-	"github.com/eventually-rs/eventually-go/subscription"
+	"github.com/get-eventually/go-eventually/eventstore"
+	"github.com/get-eventually/go-eventually/query"
+	"github.com/get-eventually/go-eventually/subscription"
 
 	"golang.org/x/sync/errgroup"
 )
