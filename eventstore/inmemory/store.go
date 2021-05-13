@@ -283,6 +283,8 @@ func (s *EventStore) ensureMapsAreCreated(typ string) {
 }
 
 func (s *EventStore) notify(typ string, events ...eventstore.Event) {
+	//nolint:gocritic // This slice is supposed to be a combination of these two slices,
+	//                // with no modifications to the original ones.
 	subscribers := append(s.subscribers, s.subscribersByType[typ]...)
 
 	for _, event := range events {
