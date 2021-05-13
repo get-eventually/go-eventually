@@ -8,7 +8,7 @@ linters-settings:
   dupl:
     threshold: 100
   gci:
-    local-prefixes: github.com/eventually-rs/eventually-go
+    local-prefixes: github.com/get-eventually/go-eventually
   goconst:
     min-len: 2
     min-occurrences: 2
@@ -26,7 +26,7 @@ linters-settings:
   gocyclo:
     min-complexity: 15
   goimports:
-    local-prefixes: github.com/eventually-rs/eventually-go
+    local-prefixes: github.com/get-eventually/go-eventually
   golint:
     min-confidence: 0
   govet:

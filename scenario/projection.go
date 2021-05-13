@@ -5,9 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/eventually-rs/eventually-go/eventstore"
-	"github.com/eventually-rs/eventually-go/projection"
-	"github.com/eventually-rs/eventually-go/query"
+	"github.com/get-eventually/go-eventually/eventstore"
+	"github.com/get-eventually/go-eventually/projection"
+	"github.com/get-eventually/go-eventually/query"
 
 	"github.com/stretchr/testify/assert"
 )

@@ -3,7 +3,7 @@ package aggregate
 import (
 	"fmt"
 
-	"github.com/eventually-rs/eventually-go"
+	"github.com/get-eventually/go-eventually"
 )
 
 // ID represents an Aggregate ID type.

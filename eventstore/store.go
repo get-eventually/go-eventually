@@ -3,7 +3,7 @@ package eventstore
 import (
 	"context"
 
-	"github.com/eventually-rs/eventually-go"
+	"github.com/get-eventually/go-eventually"
 )
 
 // VersionCheck is used to specify the expected version of an Event Stream

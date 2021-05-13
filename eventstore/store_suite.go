@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/eventually-rs/eventually-go"
-	"github.com/eventually-rs/eventually-go/internal"
+	"github.com/get-eventually/go-eventually"
+	"github.com/get-eventually/go-eventually/internal"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"

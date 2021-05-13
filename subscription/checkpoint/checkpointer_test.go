@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/eventually-rs/eventually-go/subscription/checkpoint"
+	"github.com/get-eventually/go-eventually/subscription/checkpoint"
 
 	"github.com/stretchr/testify/assert"
 )

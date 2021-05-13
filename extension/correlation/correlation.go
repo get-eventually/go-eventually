@@ -3,7 +3,7 @@ package correlation
 import (
 	"context"
 
-	"github.com/eventually-rs/eventually-go"
+	"github.com/get-eventually/go-eventually"
 )
 
 // Metadata keys used by the package.

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/eventually-rs/eventually-go"
-	"github.com/eventually-rs/eventually-go/eventstore"
+	"github.com/get-eventually/go-eventually"
+	"github.com/get-eventually/go-eventually/eventstore"
 )
 
 var _ eventstore.Store = &EventStore{}

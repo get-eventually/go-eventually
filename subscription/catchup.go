@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/eventually-rs/eventually-go/eventstore"
-	"github.com/eventually-rs/eventually-go/subscription/checkpoint"
+	"github.com/get-eventually/go-eventually/eventstore"
+	"github.com/get-eventually/go-eventually/subscription/checkpoint"
 
 	"golang.org/x/sync/errgroup"
 )

@@ -3,8 +3,8 @@ package correlation
 import (
 	"context"
 
-	"github.com/eventually-rs/eventually-go"
-	"github.com/eventually-rs/eventually-go/eventstore"
+	"github.com/get-eventually/go-eventually"
+	"github.com/get-eventually/go-eventually/eventstore"
 )
 
 // Generator is a string identifier generator.

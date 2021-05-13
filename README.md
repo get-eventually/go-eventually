@@ -16,7 +16,7 @@
 
 <div align="center">
     <!-- Testing pipeline -->
-    <a href="https://github.com/eventually-rs/eventually-go/actions?query=workflow%3A%22Main+Workflow%22">
+    <a href="https://github.com/get-eventually/go-eventually/actions?query=workflow%3A%22Main+Workflow%22">
         <img alt="GitHub Workflow Status"
         src="https://img.shields.io/github/workflow/status/eventually-rs/eventually-go/Main%20Workflow?style=flat-square">
     </a>
@@ -26,9 +26,9 @@
         src="https://img.shields.io/sonar/coverage/eventually-rs_eventually-go?server=https%3A%2F%2Fsonarcloud.io&style=flat-square">
     </a>
     <!-- pkg.go.dev -->
-    <a href="https://pkg.go.dev/github.com/eventually-rs/eventually-go">
+    <a href="https://pkg.go.dev/github.com/get-eventually/go-eventually">
         <img alt="Go Reference"
-        src="https://pkg.go.dev/badge/github.com/eventually-rs/eventually-go.svg">
+        src="https://pkg.go.dev/badge/github.com/get-eventually/go-eventually.svg">
     </a>
     <!-- License -->
     <a href="./LICENSE">

@@ -3,7 +3,7 @@ package command
 import (
 	"context"
 
-	"github.com/eventually-rs/eventually-go"
+	"github.com/get-eventually/go-eventually"
 )
 
 // Command is a marker interface that represents a Domain Command.

@@ -5,11 +5,11 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/eventually-rs/eventually-go"
-	"github.com/eventually-rs/eventually-go/aggregate"
-	"github.com/eventually-rs/eventually-go/command"
-	"github.com/eventually-rs/eventually-go/eventstore"
-	"github.com/eventually-rs/eventually-go/eventstore/inmemory"
+	"github.com/get-eventually/go-eventually"
+	"github.com/get-eventually/go-eventually/aggregate"
+	"github.com/get-eventually/go-eventually/command"
+	"github.com/get-eventually/go-eventually/eventstore"
+	"github.com/get-eventually/go-eventually/eventstore/inmemory"
 
 	"github.com/stretchr/testify/assert"
 )

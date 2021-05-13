@@ -7,12 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/eventually-rs/eventually-go"
-	"github.com/eventually-rs/eventually-go/eventstore"
-	"github.com/eventually-rs/eventually-go/eventstore/inmemory"
-	"github.com/eventually-rs/eventually-go/internal"
-	"github.com/eventually-rs/eventually-go/subscription"
-	"github.com/eventually-rs/eventually-go/subscription/checkpoint"
+	"github.com/get-eventually/go-eventually"
+	"github.com/get-eventually/go-eventually/eventstore"
+	"github.com/get-eventually/go-eventually/eventstore/inmemory"
+	"github.com/get-eventually/go-eventually/internal"
+	"github.com/get-eventually/go-eventually/subscription"
+	"github.com/get-eventually/go-eventually/subscription/checkpoint"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"

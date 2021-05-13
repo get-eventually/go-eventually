@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/eventually-rs/eventually-go"
-	"github.com/eventually-rs/eventually-go/command"
+	"github.com/get-eventually/go-eventually"
+	"github.com/get-eventually/go-eventually/command"
 
 	"github.com/stretchr/testify/assert"
 )

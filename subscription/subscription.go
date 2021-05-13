@@ -3,7 +3,7 @@ package subscription
 import (
 	"context"
 
-	"github.com/eventually-rs/eventually-go/eventstore"
+	"github.com/get-eventually/go-eventually/eventstore"
 )
 
 // Subscription represents a named subscription to Events coming from

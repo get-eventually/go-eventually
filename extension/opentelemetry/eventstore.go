@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/eventually-rs/eventually-go"
-	"github.com/eventually-rs/eventually-go/eventstore"
+	"github.com/get-eventually/go-eventually"
+	"github.com/get-eventually/go-eventually/eventstore"
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"

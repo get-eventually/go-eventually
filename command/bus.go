@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/eventually-rs/eventually-go"
+	"github.com/get-eventually/go-eventually"
 )
 
 // Dispatcher represents a component that routes Domain Commands into
