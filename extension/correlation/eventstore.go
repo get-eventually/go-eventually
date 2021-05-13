@@ -16,23 +16,25 @@ type Generator func() string
 //
 // Check WrapEventStore for more information.
 type EventStoreWrapper struct {
-	eventstore.Store
+	eventStore eventstore.Appender
 	generateID Generator
 }
 
-// WrapEventStore wraps the provided eventstore.Store instance with
+// WrapEventStore wraps the provided eventstore.Appender instance with
 // an EventStoreWrapper extension.
 //
 // EventStoreWrapper will add an Event id for each Event committed through
-// this instance, using the specified Generator interface.
+// this instance, using the specified Generator interface. This is also
+// why this wrapper works on eventstore.Appender interface only, since
+// it's only extending the Append behavior of the Event Store.
 //
-// Also, it will add Correlation and Causation ids in the committed Events
+// What's more, it will add Correlation and Causation ids in the committed Events
 // Metadata, if present in the context. You can check correlation.WithCorrelationID
 // and correlation.WithCausationID functions, or correlation.ProjectionWrapper
 // for more info.
-func WrapEventStore(es eventstore.Store, generator Generator) EventStoreWrapper {
+func WrapEventStore(es eventstore.Appender, generator Generator) EventStoreWrapper {
 	return EventStoreWrapper{
-		Store:      es,
+		eventStore: es,
 		generateID: generator,
 	}
 }
@@ -71,5 +73,5 @@ func (esw EventStoreWrapper) Append(
 		events[i] = event
 	}
 
-	return esw.Store.Append(ctx, id, expected, events...)
+	return esw.eventStore.Append(ctx, id, expected, events...)
 }
