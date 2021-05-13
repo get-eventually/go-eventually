@@ -50,7 +50,7 @@ func WrapEventStore(
 // a trace of the result.
 func (sw EventStoreWrapper) StreamAll(ctx context.Context, es eventstore.EventStream, selectt eventstore.Select) error {
 	ctx, span := sw.tracer.Start(ctx, StreamAllSpanName, trace.WithAttributes(
-		SelectFromLabel.Int64(selectt.From),
+		SelectFromAttribute.Int64(selectt.From),
 	))
 	defer span.End()
 
@@ -71,8 +71,8 @@ func (sw EventStoreWrapper) StreamByType(
 	selectt eventstore.Select,
 ) error {
 	ctx, span := sw.tracer.Start(ctx, StreamByTypeSpanName, trace.WithAttributes(
-		StreamTypeLabel.String(typ),
-		SelectFromLabel.Int64(selectt.From),
+		StreamTypeAttribute.String(typ),
+		SelectFromAttribute.Int64(selectt.From),
 	))
 	defer span.End()
 
@@ -93,9 +93,9 @@ func (sw EventStoreWrapper) Stream(
 	selectt eventstore.Select,
 ) error {
 	ctx, span := sw.tracer.Start(ctx, StreamSpanName, trace.WithAttributes(
-		StreamTypeLabel.String(id.Type),
-		StreamNameLabel.String(id.Name),
-		SelectFromLabel.Int64(selectt.From),
+		StreamTypeAttribute.String(id.Type),
+		StreamNameAttribute.String(id.Name),
+		SelectFromAttribute.Int64(selectt.From),
 	))
 	defer span.End()
 
@@ -116,9 +116,9 @@ func (sw EventStoreWrapper) Append(
 	events ...eventually.Event,
 ) (int64, error) {
 	ctx, span := sw.tracer.Start(ctx, AppendSpanName, trace.WithAttributes(
-		StreamTypeLabel.String(id.Type),
-		StreamNameLabel.String(id.Name),
-		VersionCheckLabel.Int64(int64(expected)),
+		StreamTypeAttribute.String(id.Type),
+		StreamNameAttribute.String(id.Name),
+		VersionCheckAttribute.Int64(int64(expected)),
 	))
 	defer span.End()
 
@@ -126,7 +126,7 @@ func (sw EventStoreWrapper) Append(
 	if err != nil {
 		span.RecordError(err)
 	} else {
-		span.SetAttributes(VersionNewLabel.Int64(newVersion))
+		span.SetAttributes(VersionNewAttribute.Int64(newVersion))
 	}
 
 	sw.reportAppendMetrics(ctx, events...)
@@ -137,6 +137,6 @@ func (sw EventStoreWrapper) Append(
 func (sw EventStoreWrapper) reportAppendMetrics(ctx context.Context, events ...eventually.Event) {
 	for _, event := range events {
 		sw.appendMetric.
-			Add(ctx, 1, EventTypeLabel.String(event.Payload.Name()))
+			Add(ctx, 1, EventTypeAttribute.String(event.Payload.Name()))
 	}
 }

@@ -54,11 +54,11 @@ func WrapProjection(
 // implementation, and reports telemetry data on its execution.
 func (pw ProjectionWrapper) Apply(ctx context.Context, event eventstore.Event) error {
 	ctx, span := pw.tracer.Start(ctx, ApplierSpanName, trace.WithAttributes(
-		ProjectionNameLabel.String(pw.name),
-		StreamTypeLabel.String(event.Stream.Type),
-		StreamNameLabel.String(event.Stream.Name),
-		EventTypeLabel.String(event.Payload.Name()),
-		EventVersionLabel.Int64(event.Version),
+		ProjectionNameAttribute.String(pw.name),
+		StreamTypeAttribute.String(event.Stream.Type),
+		StreamNameAttribute.String(event.Stream.Name),
+		EventTypeAttribute.String(event.Payload.Name()),
+		EventVersionAttribute.Int64(event.Version),
 	))
 	defer span.End()
 
@@ -70,7 +70,7 @@ func (pw ProjectionWrapper) Apply(ctx context.Context, event eventstore.Event) e
 	}
 
 	pw.durationMetric.Record(ctx, time.Since(start).Milliseconds(),
-		ProjectionNameLabel.String(pw.name),
+		ProjectionNameAttribute.String(pw.name),
 	)
 
 	return err
