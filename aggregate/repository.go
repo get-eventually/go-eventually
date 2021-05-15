@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/get-eventually/go-eventually/aggregate/snapshot"
 	"github.com/get-eventually/go-eventually/eventstore"
 
 	"golang.org/x/sync/errgroup"
@@ -19,19 +20,59 @@ type RepositoryEventStore interface {
 	eventstore.Streamer
 }
 
+// RepositorySnapshotStore is the Snapshot Store interface used by the Repository.
+type RepositorySnapshotStore interface {
+	snapshot.Getter
+	snapshot.Recorder
+}
+
+// RepositoryOption is an optional argument to build a Repository interface
+// to extend its default functionality.
+type RepositoryOption interface {
+	apply(*Repository)
+}
+
+type repositoryOption func(*Repository)
+
+func (fn repositoryOption) apply(r *Repository) { fn(r) }
+
+// WithSnapshotStore uses the provided Snapshot store instance to retrieve
+// and save periodical Aggregate Root snapshots, following the Snapshot Policy
+// provided to the Repository.
+//
+// Remember to set a proper Snapshot Policy to make use of the Store,
+// as the default behavior from the Repository is to never perform one.
+func WithSnapshotStore(store RepositorySnapshotStore) RepositoryOption {
+	return repositoryOption(func(r *Repository) {
+		r.snapshotStore = store
+	})
+}
+
 // Repository is an Event-sourced Repository implementation for retrieving
 // and saving Aggregate Roots, using an underlying Event Store instance.
 //
 // Use `NewRepository` to create a new instance of this type.
 type Repository struct {
-	eventStore    RepositoryEventStore
 	aggregateType Type
+	eventStore    RepositoryEventStore
+	snapshotStore RepositorySnapshotStore
 }
 
 // NewRepository creates a new instance for retrieving and saving Aggregate Roots
 // of the Aggregate type specified in the supplied Type argument.
-func NewRepository(aggregateType Type, eventStore RepositoryEventStore) *Repository {
-	return &Repository{aggregateType: aggregateType, eventStore: eventStore}
+func NewRepository(aggregateType Type, eventStore RepositoryEventStore, options ...RepositoryOption) *Repository {
+	r := &Repository{
+		aggregateType: aggregateType,
+		eventStore:    eventStore,
+	}
+
+	for _, option := range options {
+		if option != nil {
+			option.apply(r)
+		}
+	}
+
+	return r
 }
 
 // Add saves the provided Aggregate Root instance into the Event Store,
