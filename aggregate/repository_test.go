@@ -8,6 +8,7 @@ import (
 
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/aggregate"
+	"github.com/get-eventually/go-eventually/aggregate/snapshot"
 	"github.com/get-eventually/go-eventually/eventstore/inmemory"
 
 	"github.com/stretchr/testify/assert"
@@ -22,11 +23,11 @@ var AggregateType = aggregate.NewType("aggregate", func() aggregate.Root {
 type Aggregate struct {
 	aggregate.BaseRoot
 
-	id             aggregate.StringID
-	eventsRecorded uint
+	ID             aggregate.StringID `json:"id"`
+	EventsRecorded uint               `json:"events_recorded"`
 }
 
-func (a Aggregate) AggregateID() aggregate.ID { return a.id }
+func (a Aggregate) AggregateID() aggregate.ID { return a.ID }
 
 type AggregateCreated struct {
 	AggregateID string
@@ -43,9 +44,9 @@ func (AggregateEventRecorded) Name() string { return "aggregate_event_recorded" 
 func (a *Aggregate) Apply(evt eventually.Event) error {
 	switch event := evt.Payload.(type) {
 	case AggregateCreated:
-		a.id = aggregate.StringID(event.AggregateID)
+		a.ID = aggregate.StringID(event.AggregateID)
 	case AggregateEventRecorded:
-		a.eventsRecorded++
+		a.EventsRecorded++
 	default:
 		return fmt.Errorf("aggregate_test.Aggregate: invalid event type")
 	}
@@ -68,7 +69,7 @@ func NewAggregate(id string) (*Aggregate, error) {
 
 func (a *Aggregate) RecordEvent() error {
 	return aggregate.RecordThat(a, eventually.Event{
-		Payload: AggregateEventRecorded{AggregateID: a.id.String()},
+		Payload: AggregateEventRecorded{AggregateID: a.ID.String()},
 	})
 }
 
@@ -77,12 +78,22 @@ func (a *Aggregate) RecordEvent() error {
 func TestRepository(t *testing.T) {
 	ctx := context.Background()
 	eventStore := inmemory.NewEventStore()
-	repository := aggregate.NewRepository(AggregateType, eventStore)
+	snapshotStore := snapshot.NewInMemoryStore()
+	repository := aggregate.NewRepository(AggregateType, eventStore,
+		aggregate.RepositoryWithSnapshotPolicy(snapshot.AlwaysPolicy{}),
+		aggregate.RepositoryWithSnapshotStore(snapshotStore),
+	)
 
 	t.Run("no aggregate root found if no event has been recorded", func(t *testing.T) {
-		root, err := repository.Get(ctx, aggregate.StringID("test-aggregate-not-found"))
+		id := aggregate.StringID("test-aggregate-not-found")
+
+		root, err := repository.Get(ctx, id)
 		assert.Nil(t, root)
 		assert.True(t, errors.Is(err, aggregate.ErrRootNotFound), "error", err.Error())
+
+		state, err := snapshotStore.Get(ctx, id.String())
+		assert.Zero(t, state)
+		assert.ErrorIs(t, err, snapshot.ErrNotFound)
 	})
 
 	t.Run("creating and adding an aggregate works", func(t *testing.T) {
@@ -90,11 +101,17 @@ func TestRepository(t *testing.T) {
 		root, err := NewAggregate(aggregateID.String())
 		assert.NoError(t, err)
 
-		err = repository.Add(ctx, root)
-		assert.NoError(t, err)
+		assert.NoError(t, root.RecordEvent())
+
+		assert.NoError(t, repository.Add(ctx, root))
 
 		againRoot, err := repository.Get(ctx, aggregateID)
 		assert.NoError(t, err)
 		assert.Equal(t, root, againRoot)
+
+		snapshotRoot, err := snapshotStore.Get(ctx, aggregateID.String())
+		assert.NoError(t, err)
+		assert.Equal(t, root.Version(), snapshotRoot.Version)
+		assert.Equal(t, root, snapshotRoot.State)
 	})
 }
