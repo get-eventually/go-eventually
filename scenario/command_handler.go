@@ -2,7 +2,6 @@ package scenario
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/get-eventually/go-eventually"
@@ -160,8 +159,7 @@ func (sc CommandHandlerThen) Using( //nolint:gocritic
 		return
 	}
 
-	if sc.thenError != nil && !assert.True(t, errors.Is(err, sc.thenError)) {
-		t.Log("Unexpected error received:", err)
-		return
+	if sc.thenError != nil {
+		assert.ErrorIs(t, err, sc.thenError)
 	}
 }

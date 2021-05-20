@@ -2,7 +2,6 @@ package scenario
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/get-eventually/go-eventually/eventstore"
@@ -33,7 +32,7 @@ func (s ProjectionInit) Given(events ...eventstore.Event) ProjectionGiven {
 }
 
 // ProjectionGiven is the state of the scenario once a set of Domain Events
-// have been provided using Give(), to represent the state of the Read Model/Projection
+// have been provided using Given(), to represent the state of the Read Model/Projection
 // at the time of evaluating a Domain Query.
 type ProjectionGiven struct {
 	given []eventstore.Event
@@ -120,8 +119,7 @@ func (s ProjectionThen) Using(t *testing.T, projectionFactory func() projection.
 		return
 	}
 
-	if s.thenError != nil && !assert.True(t, errors.Is(err, s.thenError)) {
-		t.Log("Unexpected error received:", err)
-		return
+	if s.thenError != nil {
+		assert.ErrorIs(t, err, s.thenError)
 	}
 }
