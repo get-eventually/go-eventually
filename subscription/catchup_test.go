@@ -7,15 +7,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
+
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/eventstore"
 	"github.com/get-eventually/go-eventually/eventstore/inmemory"
 	"github.com/get-eventually/go-eventually/internal"
 	"github.com/get-eventually/go-eventually/subscription"
 	"github.com/get-eventually/go-eventually/subscription/checkpoint"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/suite"
 )
 
 func TestCatchUp(t *testing.T) {

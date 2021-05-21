@@ -5,13 +5,13 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/eventstore"
 	"github.com/get-eventually/go-eventually/eventstore/inmemory"
 	"github.com/get-eventually/go-eventually/extension/correlation"
 	"github.com/get-eventually/go-eventually/internal"
-
-	"github.com/stretchr/testify/assert"
 )
 
 const randomStringSize = 12

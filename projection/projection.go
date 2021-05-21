@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/get-eventually/go-eventually/eventstore"
 	"github.com/get-eventually/go-eventually/query"
 	"github.com/get-eventually/go-eventually/subscription"
-
-	"golang.org/x/sync/errgroup"
 )
 
 // Applier is a segregated Projection interface that focuses on applying

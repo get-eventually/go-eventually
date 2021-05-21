@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/get-eventually/go-eventually/eventstore"
 	"github.com/get-eventually/go-eventually/projection"
 	"github.com/get-eventually/go-eventually/query"
-
-	"github.com/stretchr/testify/assert"
 )
 
 // ProjectionInit is the entrypoint of the Projection scenario API.

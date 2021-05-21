@@ -4,13 +4,13 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/aggregate"
 	"github.com/get-eventually/go-eventually/command"
 	"github.com/get-eventually/go-eventually/eventstore"
 	"github.com/get-eventually/go-eventually/eventstore/inmemory"
-
-	"github.com/stretchr/testify/assert"
 )
 
 // CommandHandlerInit is the entrypoint of the Command Handler scenario API.

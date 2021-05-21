@@ -3,10 +3,10 @@ package inmemory_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+
 	"github.com/get-eventually/go-eventually/eventstore"
 	"github.com/get-eventually/go-eventually/eventstore/inmemory"
-
-	"github.com/stretchr/testify/suite"
 )
 
 func TestStoreSuite(t *testing.T) {

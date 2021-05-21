@@ -4,13 +4,13 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/command"
 	"github.com/get-eventually/go-eventually/eventstore"
 	"github.com/get-eventually/go-eventually/internal"
 	"github.com/get-eventually/go-eventually/projection"
-
-	"github.com/stretchr/testify/assert"
 )
 
 // ProcessManagerInit is the entrypoint of the Process Manager scenario API.

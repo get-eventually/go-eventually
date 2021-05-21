@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/get-eventually/go-eventually/subscription/checkpoint"
-
 	"github.com/stretchr/testify/assert"
+
+	"github.com/get-eventually/go-eventually/subscription/checkpoint"
 )
 
 const subscriptionName = "test-subscription"

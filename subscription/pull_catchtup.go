@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/get-eventually/go-eventually/eventstore"
-	"github.com/get-eventually/go-eventually/subscription/checkpoint"
-
 	"github.com/cenkalti/backoff/v4"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/get-eventually/go-eventually/eventstore"
+	"github.com/get-eventually/go-eventually/subscription/checkpoint"
 )
 
 // Default values used by a PullCatchUp subscription.

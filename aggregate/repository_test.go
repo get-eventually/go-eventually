@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/aggregate"
 	"github.com/get-eventually/go-eventually/aggregate/snapshot"
 	"github.com/get-eventually/go-eventually/eventstore/inmemory"
-
-	"github.com/stretchr/testify/assert"
 )
 
 // Aggregate definition, used in the tests -------------------------------------

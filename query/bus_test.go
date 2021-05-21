@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/get-eventually/go-eventually/query"
-
 	"github.com/stretchr/testify/assert"
+
+	"github.com/get-eventually/go-eventually/query"
 )
 
 type domainQuery struct {

@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/command"
-
-	"github.com/stretchr/testify/assert"
 )
 
 type cmd struct{}

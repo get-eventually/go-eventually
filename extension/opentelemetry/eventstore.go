@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/get-eventually/go-eventually"
-	"github.com/get-eventually/go-eventually/eventstore"
-
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/get-eventually/go-eventually"
+	"github.com/get-eventually/go-eventually/eventstore"
 )
 
 var _ EventStore = EventStoreWrapper{}

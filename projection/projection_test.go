@@ -6,6 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/eventstore"
 	"github.com/get-eventually/go-eventually/eventstore/inmemory"
@@ -13,9 +16,6 @@ import (
 	"github.com/get-eventually/go-eventually/projection"
 	"github.com/get-eventually/go-eventually/subscription"
 	"github.com/get-eventually/go-eventually/subscription/checkpoint"
-
-	"github.com/stretchr/testify/assert"
-	"golang.org/x/sync/errgroup"
 )
 
 var streamID = eventstore.StreamID{

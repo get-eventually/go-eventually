@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/get-eventually/go-eventually/eventstore"
-	"github.com/get-eventually/go-eventually/projection"
-
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/get-eventually/go-eventually/eventstore"
+	"github.com/get-eventually/go-eventually/projection"
 )
 
 var _ projection.Applier = ProjectionWrapper{}

@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/get-eventually/go-eventually/aggregate/snapshot"
 	"github.com/get-eventually/go-eventually/eventstore"
-
-	"golang.org/x/sync/errgroup"
 )
 
 // ErrRootNotFound is returned by the Repository when no Events for the

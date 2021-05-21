@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"sync"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/get-eventually/go-eventually/eventstore"
 	"github.com/get-eventually/go-eventually/subscription/checkpoint"
-
-	"golang.org/x/sync/errgroup"
 )
 
 // DefaultCatchUpBufferSize is the default buffer size of each Event Stream

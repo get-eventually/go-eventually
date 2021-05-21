@@ -7,12 +7,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/get-eventually/go-eventually"
-	"github.com/get-eventually/go-eventually/internal"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/get-eventually/go-eventually"
+	"github.com/get-eventually/go-eventually/internal"
 )
 
 var (
