@@ -35,3 +35,8 @@ func (l *Logger) Info(msg string, fields ...logger.Field) {
 func (l *Logger) Error(msg string, fields ...logger.Field) {
 	(*zap.Logger)(l).Error(msg, adaptFields(fields)...)
 }
+
+// Wrap wraps a zap.Logger into a zaplogger.Logger instance.
+func Wrap(l *zap.Logger) *Logger {
+	return (*Logger)(l)
+}

@@ -9,6 +9,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/get-eventually/go-eventually/eventstore"
+	"github.com/get-eventually/go-eventually/logger"
 	"github.com/get-eventually/go-eventually/subscription/checkpoint"
 )
 
@@ -30,6 +31,7 @@ type PullCatchUp struct {
 	Target           TargetStream
 	EventStore       eventstore.Streamer
 	Checkpointer     checkpoint.Checkpointer
+	Logger           logger.Logger
 
 	// PullEvery is the minimum interval between each streaming call to the Event Store.
 	//
@@ -70,6 +72,12 @@ func (s *PullCatchUp) Start(ctx context.Context, stream eventstore.EventStream) 
 	b.MaxInterval = s.maxInterval()
 	b.MaxElapsedTime = 0 // Don't stop the backoff!
 
+	logger.Debug(s.Logger, "subscription is starting up",
+		logger.With("lastSequenceNumber", lastSequenceNumber),
+		logger.With("initialPullInterval", b.InitialInterval),
+		logger.With("maxPullInterval", b.MaxInterval),
+	)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -80,6 +88,10 @@ func (s *PullCatchUp) Start(ctx context.Context, stream eventstore.EventStream) 
 			if err != nil {
 				return fmt.Errorf("subscription.PullCatchUp: failed while streaming: %w", err)
 			}
+
+			logger.Debug(s.Logger, "next sequence number recorded",
+				logger.With("sequenceNumber", sequenceNumber),
+			)
 
 			if sequenceNumber > lastSequenceNumber {
 				b.Reset()
