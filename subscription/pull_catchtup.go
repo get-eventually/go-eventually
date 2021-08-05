@@ -111,15 +111,15 @@ func (s *PullCatchUp) catchUp(
 
 	// NOTE: incrementing the sequence number by one so that we skip potential
 	// duplicates due to inclusive selecting operators.
-	lastSequenceNumber++
+	selectFrom := eventstore.Select{From: lastSequenceNumber + 1}
 
 	group, ctx := errgroup.WithContext(ctx)
 	group.Go(func() error {
 		switch t := s.Target.(type) {
 		case TargetStreamAll:
-			return s.EventStore.StreamAll(ctx, es, eventstore.Select{From: lastSequenceNumber})
+			return s.EventStore.StreamAll(ctx, es, selectFrom)
 		case TargetStreamType:
-			return s.EventStore.StreamByType(ctx, es, t.Type, eventstore.Select{From: lastSequenceNumber})
+			return s.EventStore.StreamByType(ctx, es, t.Type, selectFrom)
 		default:
 			return fmt.Errorf("subscription.PullCatchUp: unexpected target type")
 		}
