@@ -126,6 +126,13 @@ func (s *PullCatchUp) catchUp(
 	})
 
 	for event := range es {
+		logger.Info(s.Logger, "event received",
+			logger.With("streamName", event.Stream.Name),
+			logger.With("streamType", event.Stream.Type),
+			logger.With("version", event.Version),
+			logger.With("sequenceNumber", event.SequenceNumber),
+		)
+
 		stream <- event
 		lastSequenceNumber = event.SequenceNumber
 	}
