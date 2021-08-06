@@ -3,7 +3,10 @@ package messagedb
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/get-eventually/go-eventually/extension/correlation"
 	"reflect"
 
 	"github.com/get-eventually/go-eventually"
@@ -28,19 +31,19 @@ type EventStore struct {
 
 // Register registers Domain Events used by the application in order to decode events
 // stored in the database by their name returned by the eventually.Payload trait.
-func (st *EventStore) Register(ctx context.Context, events ...eventually.Payload) error {
+func (s *EventStore) Register(ctx context.Context, events ...eventually.Payload) error {
 	if len(events) == 0 {
 		return ErrEmptyEventsMap
 	}
 
-	if err := st.registerEventsToType(events...); err != nil {
+	if err := s.registerEventsToType(events...); err != nil {
 		return fmt.Errorf("messagedb.EventStore: failed to register types: %w", err)
 	}
 
 	return nil
 }
 
-func (st *EventStore) registerEventsToType(events ...eventually.Payload) error {
+func (s *EventStore) registerEventsToType(events ...eventually.Payload) error {
 	for _, event := range events {
 		if event == nil {
 			return fmt.Errorf("messagedb.EventStore: expected event type, nil was provided instead")
@@ -49,7 +52,7 @@ func (st *EventStore) registerEventsToType(events ...eventually.Payload) error {
 		eventName := event.Name()
 		eventType := reflect.TypeOf(event)
 
-		if registeredType, ok := st.eventNameToType[eventName]; ok {
+		if registeredType, ok := s.eventNameToType[eventName]; ok {
 			// TODO(ar3s3ru): this is a clear code smell for the current Event Store API.
 			// We can find a different way of registering events.
 			if registeredType == eventType {
@@ -64,8 +67,8 @@ func (st *EventStore) registerEventsToType(events ...eventually.Payload) error {
 			)
 		}
 
-		st.eventNameToType[eventName] = eventType
-		st.eventTypeToName[eventType] = eventName
+		s.eventNameToType[eventName] = eventType
+		s.eventTypeToName[eventType] = eventName
 	}
 
 	return nil
@@ -77,7 +80,70 @@ func (s *EventStore) Append(
 	check eventstore.VersionCheck,
 	events ...eventually.Event,
 ) (int64, error) {
-	panic("implement me")
+	/*
+	write_message(
+	  id varchar,
+	  stream_name varchar,
+	  type varchar,
+	  data jsonb,
+	  metadata jsonb DEFAULT NULL,
+	  expected_version bigint DEFAULT NULL
+	)
+	 */
+
+	tx, err := s.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, fmt.Errorf("messagedb.EventStore: failed to start a transaction: %w", err)
+	}
+
+	streamName := fmt.Sprintf("%s-%s", id.Type, id.Name)
+
+	for _, e := range events {
+		eventId, ok := correlation.Message(e).EventID()
+		if !ok {
+			eventId = "todo"
+		}
+
+		payload, err := json.Marshal(e.Payload)
+		if err != nil {
+			return 0, fmt.Errorf("messagedb.EventStore: failed to serialize event payload: %w", err)
+		}
+
+		metadata, err := json.Marshal(e.Metadata)
+		if err != nil {
+			return 0, fmt.Errorf("messagedb.EventStore: failed to serialize event metadata: %w", err)
+		}
+
+		var expectedVersion interface{}
+
+		if check != eventstore.VersionCheckAny {
+			expectedVersion = int64(check)
+		}
+
+		rows, err := tx.QueryContext(ctx, "select write_message($1, $2, $3, $4, $5, $6)",
+			eventId,
+			streamName,
+			e.Payload.Name(),
+			payload,
+			metadata,
+			expectedVersion,
+		)
+		if err != nil {
+			return 0, fmt.Errorf("messagedb.EventStore: failed to append event: %w", err)
+		}
+
+		var position int64
+		err = rows.Scan(&position)
+
+		_ = rows.Close()
+		//todo: log error
+
+		if err != nil {
+			return 0, fmt.Errorf("messagedb.EventStore: failed to read result of appending an event: %w", err)
+		}
+	}
+	
+	//todo: continue
 }
 
 func (s *EventStore) Stream(
