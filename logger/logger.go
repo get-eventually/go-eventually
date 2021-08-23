@@ -39,3 +39,15 @@ func Error(l Logger, msg string, fields ...Field) {
 		l.Error(msg, fields...)
 	}
 }
+
+// Nop is a nop logger implementation.
+type Nop struct{}
+
+// Debug prints literally nothing.
+func (Nop) Debug(msg string, fields ...Field) {}
+
+// Info prints literally nothing.
+func (Nop) Info(msg string, fields ...Field) {}
+
+// Error prints literally nothing.
+func (Nop) Error(msg string, fields ...Field) {}
