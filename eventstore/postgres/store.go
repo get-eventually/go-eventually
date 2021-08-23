@@ -14,7 +14,6 @@ import (
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/eventstore"
 	"github.com/get-eventually/go-eventually/eventstore/postgres/migrations"
-	"github.com/get-eventually/go-eventually/subscription/checkpoint"
 
 	"github.com/golang-migrate/migrate"
 	_ "github.com/golang-migrate/migrate/database/postgres" // postgres driver for migrate
@@ -39,10 +38,7 @@ const (
 // is provided, which would mean no events would be registered for the desired type.
 var ErrEmptyEventsMap = fmt.Errorf("postgres.EventStore: empty events map provided for type")
 
-var (
-	_ eventstore.Store        = &EventStore{}
-	_ checkpoint.Checkpointer = &EventStore{}
-)
+var _ eventstore.Store = &EventStore{}
 
 // EventStore is an eventstore.Store implementation which uses
 // PostgreSQL as backend datastore.
@@ -110,39 +106,6 @@ func runMigrations(dsn string) (err error) {
 // Close closes the Event Store database connection.
 func (st *EventStore) Close() error {
 	return st.db.Close()
-}
-
-// Read reads the latest checkpointed sequence number of the subscription specified.
-func (st *EventStore) Read(ctx context.Context, subscriptionName string) (int64, error) {
-	row := st.db.QueryRowContext(
-		ctx,
-		"SELECT get_or_create_subscription_checkpoint($1)",
-		subscriptionName,
-	)
-
-	var lastSequenceNumber int64
-	if err := row.Scan(&lastSequenceNumber); err != nil {
-		return 0, fmt.Errorf("postgres.EventStore: failed to read subscription checkpoint: %w", err)
-	}
-
-	return lastSequenceNumber, nil
-}
-
-// Write checkpoints the sequence number value provided for the specified subscription.
-func (st *EventStore) Write(ctx context.Context, subscriptionName string, sequenceNumber int64) error {
-	_, err := st.db.ExecContext(
-		ctx,
-		`UPDATE subscriptions_checkpoints
-		SET last_sequence_number = $1
-		WHERE subscription_id = $2`,
-		sequenceNumber,
-		subscriptionName,
-	)
-	if err != nil {
-		return fmt.Errorf("postgres.EventStore: failed to write subscription checkpoint: %w", err)
-	}
-
-	return nil
 }
 
 // Register registers Domain Events used by the application in order to decode events

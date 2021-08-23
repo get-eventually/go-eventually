@@ -35,6 +35,15 @@ func obtainEventStore(t *testing.T) *postgres.EventStore {
 	return store
 }
 
+func openDB() (*sql.DB, error) {
+	url, ok := os.LookupEnv("DATABASE_URL")
+	if !ok {
+		url = defaultPostgresURL
+	}
+
+	return sql.Open("postgres", url)
+}
+
 func TestStoreSuite(t *testing.T) {
 	store := obtainEventStore(t)
 	defer func() { assert.NoError(t, store.Close()) }()
@@ -45,12 +54,7 @@ func TestStoreSuite(t *testing.T) {
 		}
 	}
 
-	url, ok := os.LookupEnv("DATABASE_URL")
-	if !ok {
-		url = defaultPostgresURL
-	}
-
-	db, err := sql.Open("postgres", url)
+	db, err := openDB()
 	handleError(err)
 
 	ctx := context.Background()
@@ -82,27 +86,6 @@ func TestStoreSuite(t *testing.T) {
 
 		return store
 	}))
-}
-
-func TestCheckpointer(t *testing.T) {
-	store := obtainEventStore(t)
-	defer func() { assert.NoError(t, store.Close()) }()
-
-	ctx := context.Background()
-
-	const subscriptionName = "test-subscription"
-
-	seqNum, err := store.Read(ctx, subscriptionName)
-	assert.NoError(t, err)
-	assert.Zero(t, seqNum)
-
-	newSeqNum := int64(1200)
-	err = store.Write(ctx, subscriptionName, newSeqNum)
-	assert.NoError(t, err)
-
-	seqNum, err = store.Read(ctx, subscriptionName)
-	assert.NoError(t, err)
-	assert.Equal(t, newSeqNum, seqNum)
 }
 
 func TestRegister(t *testing.T) {
