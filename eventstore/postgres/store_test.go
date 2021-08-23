@@ -12,6 +12,7 @@ import (
 	"github.com/get-eventually/go-eventually/internal"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -27,10 +28,10 @@ func obtainEventStore(t *testing.T) *postgres.EventStore {
 		url = defaultPostgresURL
 	}
 
+	require.NoError(t, postgres.RunMigrations(url))
+
 	store, err := postgres.OpenEventStore(url)
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
 
 	return store
 }

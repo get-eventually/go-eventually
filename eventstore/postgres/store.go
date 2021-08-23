@@ -5,19 +5,14 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"net/url"
 	"reflect"
 	"time"
 
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/eventstore"
-	"github.com/get-eventually/go-eventually/eventstore/postgres/migrations"
 
-	"github.com/golang-migrate/migrate"
 	_ "github.com/golang-migrate/migrate/database/postgres" // postgres driver for migrate
-	bindata "github.com/golang-migrate/migrate/source/go_bindata"
 	"github.com/lib/pq"
 )
 
@@ -49,16 +44,12 @@ type EventStore struct {
 	eventTypeToName map[reflect.Type]string
 }
 
-// OpenEventStore opens a connection with the PostgreSQL identified by the
-// provided DSN and run migrations for the Event Store functionalities.
+// OpenEventStore opens a connection with the PostgreSQL identified by the provided DSN.
+// Make sure to perform migrations first by running postgres.RunMigrations() function.
 func OpenEventStore(dsn string) (*EventStore, error) {
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("postgres.EventStore: failed to open connection with the db: %w", err)
-	}
-
-	if err := runMigrations(dsn); err != nil {
-		return nil, err
 	}
 
 	return &EventStore{
@@ -67,40 +58,6 @@ func OpenEventStore(dsn string) (*EventStore, error) {
 		eventNameToType: make(map[string]reflect.Type),
 		eventTypeToName: make(map[reflect.Type]string),
 	}, nil
-}
-
-func runMigrations(dsn string) (err error) {
-	u, err := url.Parse(dsn)
-	if err != nil {
-		return fmt.Errorf("postgres.EventStore: invalid dsn format: %w", err)
-	}
-
-	// go-migrate allows to specify a different migration table
-	// than the default 'schema_migrations'. In this case, we want to use
-	// a dedicated table to avoid potential clashing with the same tool running
-	// on the same PostgreSQL database instance that is being used as
-	// an Event Store.
-	q := u.Query()
-	q.Add("x-migrations-table", "eventually_schema_migrations")
-	u.RawQuery = q.Encode()
-
-	src := bindata.Resource(migrations.AssetNames(), migrations.Asset)
-
-	driver, err := bindata.WithInstance(src)
-	if err != nil {
-		return fmt.Errorf("postgres.EventStore: failed to access migrations: %w", err)
-	}
-
-	m, err := migrate.NewWithSourceInstance("go-bindata", driver, u.String())
-	if err != nil {
-		return fmt.Errorf("postgres.EventStore: failed to create migrate instance: %w", err)
-	}
-
-	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
-		return fmt.Errorf("postgres.EventStore: failed to migrate database: %w", err)
-	}
-
-	return nil
 }
 
 // Close closes the Event Store database connection.
