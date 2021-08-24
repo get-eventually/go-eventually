@@ -2,6 +2,7 @@ package projection_test
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -65,7 +66,12 @@ func TestRunner(t *testing.T) {
 	// events onto this slice.
 	var received []eventstore.Event
 
+	receivedMx := new(sync.RWMutex)
+
 	applier := projection.ApplierFunc(func(_ context.Context, event eventstore.Event) error {
+		receivedMx.Lock()
+		defer receivedMx.Unlock()
+
 		received = append(received, event)
 		return nil
 	})
@@ -76,7 +82,6 @@ func TestRunner(t *testing.T) {
 	}
 
 	group, ctx := errgroup.WithContext(ctx)
-
 	group.Go(func() error {
 		return runner.Run(ctx)
 	})
@@ -96,15 +101,21 @@ func TestRunner(t *testing.T) {
 
 	// Some active waiting to make sure the Runner has drained the subscription
 	// event stream and updated the Applier successfully.
+	// Some active waiting to make sure the Runner has drained the subscription
+	// event stream and updated the Applier successfully.
 	attempts := 0
 	ticker := time.NewTicker(100 * time.Millisecond)
 
 	for range ticker.C {
+		receivedMx.RLock()
+
 		if len(received) > 0 || attempts > 10 {
 			return
 		}
 
 		attempts++
+
+		receivedMx.RUnlock()
 	}
 
 	cancel()
