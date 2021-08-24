@@ -7,13 +7,13 @@ import (
 	"github.com/get-eventually/go-eventually/extension/correlation"
 )
 
-func ExampleFusedAppendStreamer() {
+func ExampleFused() {
 	eventStore := inmemory.NewEventStore()
 	correlatedEventStore := correlation.WrapEventStore(eventStore, func() string {
 		return "test-id"
 	})
 
-	aggregate.NewRepository(aggregate.Type{}, eventstore.FusedAppendStreamer{
+	aggregate.NewRepository(aggregate.Type{}, eventstore.Fused{
 		Appender: correlatedEventStore,
 		Streamer: eventStore,
 	})

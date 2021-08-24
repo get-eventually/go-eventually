@@ -15,6 +15,7 @@ import (
 type TrackingEventStore struct {
 	sync.RWMutex
 
+	// TODO(ar3s3ru): we can use eventstore.Appender here instead
 	eventstore.Store
 	recorded []eventstore.Event
 }

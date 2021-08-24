@@ -1,0 +1,138 @@
+package postgres
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+	"time"
+
+	"github.com/get-eventually/go-eventually/eventstore"
+	"github.com/get-eventually/go-eventually/logger"
+	"github.com/get-eventually/go-eventually/subscription/checkpoint"
+)
+
+type consumerGroupLease struct {
+	ID        string
+	Member    uint8
+	GroupSize uint8
+	LeasedAt  time.Time
+}
+
+var _ eventstore.Streamer = &Streamer{}
+var _ checkpoint.Checkpointer = &Streamer{}
+
+type StreamerOptions struct {
+	ConsumerGroup string
+	DB            *sql.DB
+	Registry      eventstore.Registry
+	BatchSize     uint64
+	Logger        logger.Logger
+}
+
+type Streamer struct {
+	options      StreamerOptions
+	checkpointer Checkpointer
+	lease        consumerGroupLease
+}
+
+func NewStreamer(ctx context.Context, options StreamerOptions) (*Streamer, error) {
+	streamer := &Streamer{
+		options: options,
+		checkpointer: Checkpointer{
+			DB:     options.DB,
+			Logger: options.Logger,
+		},
+	}
+
+	return streamer, nil
+}
+
+func (s *Streamer) acquireConsumerGroupLease(ctx context.Context) (consumerGroupLease, error) {
+	return consumerGroupLease{}, nil
+}
+
+func (s *Streamer) checkpointName() string {
+	return fmt.Sprintf("%s-%d", s.options.ConsumerGroup, s.lease.GroupSize)
+}
+
+// Read reads the latest checkpointed sequence number of the subscription specified.
+func (s *Streamer) Read(ctx context.Context, subscriptionName string) (int64, error) {
+	return s.checkpointer.Read(ctx, s.checkpointName())
+}
+
+// Write checkpoints the sequence number value provided for the specified subscription.
+func (s *Streamer) Write(ctx context.Context, subscriptionName string, sequenceNumber int64) error {
+	return s.checkpointer.Write(ctx, s.checkpointName(), sequenceNumber)
+}
+
+// Stream opens the specific Event Stream identified by the provided id.
+func (s *Streamer) Stream(
+	ctx context.Context,
+	es eventstore.EventStream,
+	id eventstore.StreamID,
+	selectt eventstore.Select,
+) error {
+	return fmt.Errorf("postgres.Streamer: Stream method is not supported by this component, use EventStore for that")
+}
+
+// StreamByType opens a stream of all Event Streams grouped by the same Type,
+// as specified in input.
+//
+// The stream will be ordered based on their Global Sequence Number.
+func (s *Streamer) StreamByType(
+	ctx context.Context,
+	es eventstore.EventStream,
+	streamType string,
+	selectt eventstore.Select,
+) error {
+	defer close(es)
+
+	leaseID, err := s.acquireConsumerGroupLease(ctx)
+	if err != nil {
+		return fmt.Errorf("postgres.Streamer: failed to acquire consumer group lease: %w", err)
+	}
+
+	rows, err := s.options.DB.QueryContext(
+		ctx,
+		`SELECT * FROM stream_by_type($1, $2, $3, $4)`,
+		streamType,
+		selectt.From,
+		s.options.BatchSize,
+		leaseID,
+	)
+
+	if err != nil {
+		return fmt.Errorf("postgres.Streamer: failed to stream events: %w", err)
+	}
+
+	return rowsToStream(rows, es, s.options.Registry, s.options.Logger)
+}
+
+// StreamAll opens a stream of all Event Streams found in the Event Store.
+// The stream will be ordered based on their Global Sequence Number.
+func (s *Streamer) StreamAll(
+	ctx context.Context,
+	es eventstore.EventStream,
+	selectt eventstore.Select,
+) error {
+	defer close(es)
+
+	leaseID, err := s.acquireConsumerGroupLease(ctx)
+	if err != nil {
+		return fmt.Errorf("postgres.Streamer: failed to acquire consumer group lease: %w", err)
+	}
+
+	rows, err := s.options.DB.QueryContext(
+		ctx,
+		`SELECT * FROM stream_all($1, $2, $3)`,
+		selectt.From,
+		s.options.BatchSize,
+		leaseID,
+	)
+
+	if err != nil {
+		return fmt.Errorf("postgres.Streamer: failed to stream events: %w", err)
+	}
+
+	return rowsToStream(rows, es, s.options.Registry, s.options.Logger)
+}
