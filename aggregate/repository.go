@@ -15,12 +15,6 @@ import (
 // specified Aggregate Root have been found.
 var ErrRootNotFound = fmt.Errorf("aggregate.Repository: aggregate root not found")
 
-// RepositoryEventStore is the Event Store interface used by the Repository.
-type RepositoryEventStore interface {
-	eventstore.Appender
-	eventstore.Streamer
-}
-
 // RepositorySnapshotStore is the Snapshot Store interface used by the Repository.
 type RepositorySnapshotStore interface {
 	snapshot.Getter
@@ -71,14 +65,14 @@ func RepositoryWithSnapshotPolicy(policy snapshot.Policy) RepositoryOption {
 // Use `NewRepository` to create a new instance of this type.
 type Repository struct {
 	aggregateType  Type
-	eventStore     RepositoryEventStore
+	eventStore     eventstore.Store
 	snapshotStore  RepositorySnapshotStore
 	snapshotPolicy snapshot.Policy
 }
 
 // NewRepository creates a new instance for retrieving and saving Aggregate Roots
 // of the Aggregate type specified in the supplied Type argument.
-func NewRepository(aggregateType Type, eventStore RepositoryEventStore, options ...RepositoryOption) *Repository {
+func NewRepository(aggregateType Type, eventStore eventstore.Store, options ...RepositoryOption) *Repository {
 	r := &Repository{
 		aggregateType:  aggregateType,
 		eventStore:     eventStore,

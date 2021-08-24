@@ -13,16 +13,16 @@ import (
 //
 // Useful for tests assertion.
 type TrackingEventStore struct {
-	sync.RWMutex
+	eventstore.Appender
 
-	eventstore.Store
+	mx       sync.RWMutex
 	recorded []eventstore.Event
 }
 
 // NewTrackingEventStore wraps an Event Store to capture events that get
 // appended to it.
-func NewTrackingEventStore(store eventstore.Store) *TrackingEventStore {
-	return &TrackingEventStore{Store: store}
+func NewTrackingEventStore(appender eventstore.Appender) *TrackingEventStore {
+	return &TrackingEventStore{Appender: appender}
 }
 
 // Recorded returns the list of Events that have been appended
@@ -33,8 +33,8 @@ func NewTrackingEventStore(store eventstore.Store) *TrackingEventStore {
 // the order of Events in the returned slice always follows the global order
 // of the Event Stream (or the Event Store).
 func (es *TrackingEventStore) Recorded() []eventstore.Event {
-	es.RLock()
-	defer es.RUnlock()
+	es.mx.RLock()
+	defer es.mx.RUnlock()
 
 	return es.recorded
 }
@@ -49,10 +49,10 @@ func (es *TrackingEventStore) Append(
 	expected eventstore.VersionCheck,
 	events ...eventually.Event,
 ) (int64, error) {
-	es.Lock()
-	defer es.Unlock()
+	es.mx.Lock()
+	defer es.mx.Unlock()
 
-	v, err := es.Store.Append(ctx, id, expected, events...)
+	v, err := es.Appender.Append(ctx, id, expected, events...)
 	if err != nil {
 		return v, err
 	}

@@ -143,7 +143,10 @@ func (sc CommandHandlerThen) Using( //nolint:gocritic
 	}
 
 	trackingStore := inmemory.NewTrackingEventStore(store)
-	repository := aggregate.NewRepository(aggregateType, trackingStore)
+	repository := aggregate.NewRepository(aggregateType, eventstore.Fused{
+		Appender: trackingStore,
+		Streamer: store,
+	})
 
 	handler := handlerFactory(repository)
 	err := handler.Handle(context.Background(), sc.when)

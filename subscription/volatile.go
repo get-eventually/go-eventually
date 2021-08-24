@@ -1,53 +1,56 @@
 package subscription
 
-import (
-	"context"
-	"fmt"
+// NOTE(ar3s3ru): Volatile subscriptions are currently disabled, since the
+// support for Subscriptions is currently being deprecated.
 
-	"github.com/get-eventually/go-eventually/eventstore"
-)
+// import (
+// 	"context"
+// 	"fmt"
 
-var _ Subscription = Volatile{}
+// 	"github.com/get-eventually/go-eventually/eventstore"
+// )
 
-// Volatile is a Subscription type that does not keep state of
-// the last Event processed or received, nor survives the Subscription
-// checkpoint between restarts.
-//
-// Use this Subscription type for volatile processes, such as projecting
-// realtime metrics, or when you're only interested in newer events
-// committed to the Event Store.
-type Volatile struct {
-	SubscriptionName string
-	Target           TargetStream
-	EventStore       eventstore.Subscriber
-}
+// var _ Subscription = Volatile{}
 
-// Name is the name of the subscription.
-func (v Volatile) Name() string { return v.SubscriptionName }
+// // Volatile is a Subscription type that does not keep state of
+// // the last Event processed or received, nor survives the Subscription
+// // checkpoint between restarts.
+// //
+// // Use this Subscription type for volatile processes, such as projecting
+// // realtime metrics, or when you're only interested in newer events
+// // committed to the Event Store.
+// type Volatile struct {
+// 	SubscriptionName string
+// 	Target           TargetStream
+// 	EventStore       eventstore.Subscriber
+// }
 
-// Start starts the Subscription by opening a subscribing Event Stream
-// using the subscription's Subscriber instance.
-func (v Volatile) Start(ctx context.Context, stream eventstore.EventStream) error {
-	var err error
+// // Name is the name of the subscription.
+// func (v Volatile) Name() string { return v.SubscriptionName }
 
-	switch t := v.Target.(type) {
-	case TargetStreamAll:
-		err = v.EventStore.SubscribeToAll(ctx, stream)
-	case TargetStreamType:
-		err = v.EventStore.SubscribeToType(ctx, stream, t.Type)
-	default:
-		return fmt.Errorf("subscription.Volatile: unexpected target type")
-	}
+// // Start starts the Subscription by opening a subscribing Event Stream
+// // using the subscription's Subscriber instance.
+// func (v Volatile) Start(ctx context.Context, stream eventstore.EventStream) error {
+// 	var err error
 
-	if err != nil {
-		return fmt.Errorf("subscription.Volatile: event subscriber exited with error: %w", err)
-	}
+// 	switch t := v.Target.(type) {
+// 	case TargetStreamAll:
+// 		err = v.EventStore.SubscribeToAll(ctx, stream)
+// 	case TargetStreamType:
+// 		err = v.EventStore.SubscribeToType(ctx, stream, t.Type)
+// 	default:
+// 		return fmt.Errorf("subscription.Volatile: unexpected target type")
+// 	}
 
-	return nil
-}
+// 	if err != nil {
+// 		return fmt.Errorf("subscription.Volatile: event subscriber exited with error: %w", err)
+// 	}
 
-// Checkpoint is a no-op operation, since the transient nature of the
-// Subscription does not require to persist its current state.
-func (Volatile) Checkpoint(ctx context.Context, event eventstore.Event) error {
-	return nil
-}
+// 	return nil
+// }
+
+// // Checkpoint is a no-op operation, since the transient nature of the
+// // Subscription does not require to persist its current state.
+// func (Volatile) Checkpoint(ctx context.Context, event eventstore.Event) error {
+// 	return nil
+// }
