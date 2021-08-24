@@ -2,7 +2,6 @@ package projection_test
 
 import (
 	"context"
-	"sync"
 	"testing"
 	"time"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/get-eventually/go-eventually/eventstore"
 	"github.com/get-eventually/go-eventually/eventstore/inmemory"
 	"github.com/get-eventually/go-eventually/internal"
+	"github.com/get-eventually/go-eventually/logger"
 	"github.com/get-eventually/go-eventually/projection"
 	"github.com/get-eventually/go-eventually/subscription"
 	"github.com/get-eventually/go-eventually/subscription/checkpoint"
@@ -51,11 +51,14 @@ func TestRunner(t *testing.T) {
 	eventStore := inmemory.NewEventStore()
 
 	// Create a new subscription to listen events from the event store
-	testSubscription := subscription.CatchUp{
+	testSubscription := &subscription.CatchUp{
 		SubscriptionName: "test-subscription",
 		Target:           subscription.TargetStreamAll{},
 		EventStore:       eventStore,
 		Checkpointer:     checkpoint.NopCheckpointer,
+		PullEvery:        10 * time.Millisecond,
+		MaxInterval:      50 * time.Millisecond,
+		Logger:           logger.Nop{},
 	}
 
 	// The target applier function triggers a side effect that projects all received
@@ -72,19 +75,11 @@ func TestRunner(t *testing.T) {
 		Subscription: testSubscription,
 	}
 
-	wg := new(sync.WaitGroup)
-	wg.Add(1)
-
 	group, ctx := errgroup.WithContext(ctx)
 
 	group.Go(func() error {
-		go func() { wg.Done() }()
 		return runner.Run(ctx)
 	})
-
-	// This is to ensure to append events only after the subscription has been
-	// started from the Runner.
-	wg.Wait()
 
 	for _, event := range expectedEvents {
 		_, err := eventStore.Append(
@@ -101,7 +96,17 @@ func TestRunner(t *testing.T) {
 
 	// Some active waiting to make sure the Runner has drained the subscription
 	// event stream and updated the Applier successfully.
-	<-time.After(100 * time.Millisecond)
+	attempts := 0
+	ticker := time.NewTicker(100 * time.Millisecond)
+
+	for range ticker.C {
+		if len(received) > 0 || attempts > 10 {
+			return
+		}
+
+		attempts++
+	}
+
 	cancel()
 
 	if !assert.ErrorIs(t, group.Wait(), context.Canceled) {
