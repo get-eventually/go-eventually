@@ -12,20 +12,6 @@ import (
 	"github.com/get-eventually/go-eventually/internal"
 )
 
-func TestNewRegistry(t *testing.T) {
-	t.Run("initialize with nil deserializer fails", func(t *testing.T) {
-		r, err := eventstore.NewRegistry(nil)
-		assert.Zero(t, r)
-		assert.Error(t, err)
-	})
-
-	t.Run("initialize with proper deserializer", func(t *testing.T) {
-		r, err := eventstore.NewRegistry(json.Unmarshal)
-		assert.NotZero(t, r)
-		assert.NoError(t, err)
-	})
-}
-
 type event1 struct{}
 
 //nolint:goconst // This is used for testing, it's ok not to define a constant.
@@ -75,10 +61,8 @@ func TestRegistry_Register(t *testing.T) {
 		name, tc := name, tc
 
 		t.Run(name, func(t *testing.T) {
-			r, err := eventstore.NewRegistry(json.Unmarshal)
-			require.NoError(t, err)
-
-			err = r.Register(tc.input...)
+			r := eventstore.NewRegistry(json.Unmarshal)
+			err := r.Register(tc.input...)
 
 			if tc.wantErr {
 				assert.Error(t, err)
@@ -118,8 +102,7 @@ func TestRegistry_Deserialize(t *testing.T) {
 		name, tc := name, tc
 
 		t.Run(name, func(t *testing.T) {
-			r, err := eventstore.NewRegistry(json.Unmarshal)
-			require.NoError(t, err)
+			r := eventstore.NewRegistry(json.Unmarshal)
 
 			require.NoError(t, r.Register(
 				internal.IntPayload(0),
