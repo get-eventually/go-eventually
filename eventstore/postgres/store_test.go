@@ -16,7 +16,7 @@ import (
 
 const defaultPostgresURL = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
 
-func obtainEventStore(t *testing.T) *postgres.EventStore {
+func obtainEventStore(t *testing.T) (*sql.DB, postgres.EventStore) {
 	if testing.Short() {
 		t.SkipNow()
 	}
@@ -28,27 +28,15 @@ func obtainEventStore(t *testing.T) *postgres.EventStore {
 
 	require.NoError(t, postgres.RunMigrations(url))
 
-	store, err := postgres.OpenEventStore(url)
+	db, err := sql.Open("postgres", url)
 	require.NoError(t, err)
 
-	return store
-}
-
-func openDB() (*sql.DB, error) {
-	url, ok := os.LookupEnv("DATABASE_URL")
-	if !ok {
-		url = defaultPostgresURL
-	}
-
-	return sql.Open("postgres", url)
+	return db, postgres.NewEventStore(db)
 }
 
 func TestStoreSuite(t *testing.T) {
-	store := obtainEventStore(t)
-	defer func() { assert.NoError(t, store.Close()) }()
-
-	db, err := openDB()
-	require.NoError(t, err)
+	db, store := obtainEventStore(t)
+	defer func() { assert.NoError(t, db.Close()) }()
 
 	require.NoError(t, store.Register(internal.IntPayload(0)))
 
