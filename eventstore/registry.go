@@ -26,18 +26,12 @@ type Registry struct {
 
 // NewRegistry creates a new registry for deserializing event types, using
 // the provided deserializer.
-//
-// An error is returned if the deserializer is nil.
-func NewRegistry(deserializer DeserializerFn) (Registry, error) {
-	if deserializer == nil {
-		return Registry{}, fmt.Errorf("eventstore.Registry: invalid deserializer provided")
-	}
-
+func NewRegistry(deserializer DeserializerFn) Registry {
 	return Registry{
 		deserializerFn:  deserializer,
 		eventNameToType: make(map[string]reflect.Type),
 		eventTypeToName: make(map[reflect.Type]string),
-	}, nil
+	}
 }
 
 // Register adds the type information to this registry for all the provided Payload types.
