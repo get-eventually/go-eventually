@@ -18,9 +18,6 @@ type EventStore struct {
 	events            []eventstore.Event
 	byType            map[string][]int
 	byTypeAndInstance map[string]map[string][]int
-
-	subscribers       []eventstore.EventStream
-	subscribersByType map[string][]eventstore.EventStream
 }
 
 // NewEventStore creates a new empty EventStore instance.
@@ -28,7 +25,6 @@ func NewEventStore() *EventStore {
 	return &EventStore{
 		byType:            make(map[string][]int),
 		byTypeAndInstance: make(map[string]map[string][]int),
-		subscribersByType: make(map[string][]eventstore.EventStream),
 	}
 }
 
@@ -143,75 +139,6 @@ func (s *EventStore) Stream(
 	return nil
 }
 
-// SubscribeToAll subscribes to all committed Events in the Event Store and
-// uses the provided EventStream to notify the callers with such Events.
-//
-// Note: this call is synchronous, and returns to the caller
-// only when the context is closed.
-//
-// context.Canceled error is always returned.
-func (s *EventStore) SubscribeToAll(ctx context.Context, es eventstore.EventStream) error {
-	defer close(es)
-
-	s.mx.Lock()
-	s.subscribers = append(s.subscribers, es)
-	s.mx.Unlock()
-
-	<-ctx.Done()
-
-	s.mx.Lock()
-	defer s.mx.Unlock()
-
-	subscribers := make([]eventstore.EventStream, 0, len(s.subscribers)-1)
-
-	for _, subscriber := range s.subscribers {
-		if subscriber == es {
-			continue
-		}
-
-		subscribers = append(subscribers, subscriber)
-	}
-
-	s.subscribers = subscribers
-
-	return contextErr(ctx)
-}
-
-// SubscribeToType subscribes to all committed Events of the specified Type
-// in the Event Store and uses the provided EventStream to notify the callers
-// with such Events.
-//
-// Note: this call is synchronous, and returns to the caller
-// only when the context is closed.
-//
-// context.Canceled error is always returned.
-func (s *EventStore) SubscribeToType(ctx context.Context, es eventstore.EventStream, typ string) error {
-	defer close(es)
-
-	s.mx.Lock()
-	s.subscribersByType[typ] = append(s.subscribersByType[typ], es)
-	s.mx.Unlock()
-
-	<-ctx.Done()
-
-	s.mx.Lock()
-	defer s.mx.Unlock()
-
-	subscribers := make([]eventstore.EventStream, 0, len(s.subscribersByType[typ])-1)
-
-	for _, subscriber := range s.subscribersByType[typ] {
-		if subscriber == es {
-			continue
-		}
-
-		subscribers = append(subscribers, subscriber)
-	}
-
-	s.subscribersByType[typ] = subscribers
-
-	return ctx.Err()
-}
-
 // Append inserts the specified Domain Events into the Event Stream specified
 // by the current instance, returning the new version of the Event Stream.
 //
@@ -268,9 +195,6 @@ func (s *EventStore) Append(
 	s.byType[id.Type] = append(s.byType[id.Type], newIndexes...)
 	s.byTypeAndInstance[id.Type][id.Name] = append(s.byTypeAndInstance[id.Type][id.Name], newIndexes...)
 
-	// Send notifications to subscribers.
-	defer func() { s.notify(id.Type, newPersistedEvents...) }()
-
 	lastCommittedEvent := newPersistedEvents[len(newPersistedEvents)-1]
 
 	return lastCommittedEvent.Version, nil
@@ -279,18 +203,6 @@ func (s *EventStore) Append(
 func (s *EventStore) ensureMapsAreCreated(typ string) {
 	if v, ok := s.byTypeAndInstance[typ]; !ok || v == nil {
 		s.byTypeAndInstance[typ] = make(map[string][]int)
-	}
-}
-
-func (s *EventStore) notify(typ string, events ...eventstore.Event) {
-	//nolint:gocritic // This slice is supposed to be a combination of these two slices,
-	//                // with no modifications to the original ones.
-	subscribers := append(s.subscribers, s.subscribersByType[typ]...)
-
-	for _, event := range events {
-		for _, subscriber := range subscribers {
-			subscriber <- event
-		}
 	}
 }
 
