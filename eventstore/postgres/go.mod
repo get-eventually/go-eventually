@@ -2,8 +2,6 @@ module github.com/get-eventually/go-eventually/eventstore/postgres
 
 go 1.15
 
-replace github.com/get-eventually/go-eventually => ../../
-
 require (
 	github.com/Microsoft/go-winio v0.4.16 // indirect
 	github.com/containerd/containerd v1.4.3 // indirect
@@ -11,7 +9,7 @@ require (
 	github.com/docker/docker v20.10.2+incompatible // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
-	github.com/get-eventually/go-eventually v0.0.0-00010101000000-000000000000
+	github.com/get-eventually/go-eventually v0.0.0-20210825075251-35c80b0b6985
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-migrate/migrate v3.5.4+incompatible
 	github.com/gorilla/mux v1.8.0 // indirect
