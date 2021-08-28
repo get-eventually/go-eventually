@@ -1,4 +1,4 @@
-package opentelemetry
+package oteleventually
 
 import "go.opentelemetry.io/otel/attribute"
 
@@ -13,11 +13,13 @@ const (
 
 // Metrics exported by this package.
 const (
-	AppendMetric          = "eventually.eventstore.append"
 	ProjectionApplyMetric = "eventually.projection.apply.duration.ms"
 )
 
 var (
+	// ErrorAttribute is used with a metric when an error is recorded.
+	ErrorAttribute = attribute.Key("error")
+
 	// StreamNameAttribute is the attribute identifier that contains the Stream name,
 	// or Stream instance id, when using an eventstore.Instanced.
 	StreamNameAttribute = attribute.Key("stream.name")
@@ -38,11 +40,11 @@ var (
 
 	// VersionCheckAttribute is the attribute identifier that contains the expected
 	// version provided when using Append to add new events to the Event Store.
-	VersionCheckAttribute = attribute.Key("append.version.check")
+	VersionCheckAttribute = attribute.Key("version.check")
 
 	// VersionNewAttribute is the attribute identifier that contains the new version
 	// returned by the Event Store on Append calls.
-	VersionNewAttribute = attribute.Key("append.version.new")
+	VersionNewAttribute = attribute.Key("version.new")
 
 	// ProjectionNameAttribute is the attribute identifier that contains the name
 	// of a specific Projection.
