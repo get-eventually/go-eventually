@@ -9,7 +9,6 @@ import (
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/command"
 	"github.com/get-eventually/go-eventually/eventstore"
-	"github.com/get-eventually/go-eventually/internal"
 	"github.com/get-eventually/go-eventually/projection"
 )
 
@@ -117,7 +116,7 @@ type ProcessManagerFactory func(cd command.Dispatcher) projection.Applier
 // using the Process Manager instance produced by the provided factory function.
 func (sc ProcessManagerThen) Using(t *testing.T, processManagerFactory ProcessManagerFactory) {
 	ctx := context.Background()
-	commandDispatcher := internal.NewInMemoryCommandDispatcher()
+	commandDispatcher := command.NewTrackingDispatcher()
 	processManager := processManagerFactory(commandDispatcher)
 
 	for _, event := range sc.given {

@@ -25,7 +25,7 @@ func (h handler) Handle(ctx context.Context, c eventually.Command) error {
 }
 
 func TestBus(t *testing.T) {
-	bus := command.NewSimpleBus()
+	bus := command.NewInMemoryDispatcher()
 	bus.Register(handler{t})
 
 	err := bus.Dispatch(context.Background(), eventually.Command{
