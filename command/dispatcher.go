@@ -31,12 +31,12 @@ var _ Dispatcher = InMemoryDispatcher{}
 // InMemoryDispatcher is a in-memory Command Dispatcher implementation that allows to register
 // Command Handlers and dispatch Domain Commands.
 //
-// Use NewInMemoryDispatcher to create a new SimpleBus instance.
+// Use NewInMemoryDispatcher to create a new InMemoryDispatcher instance.
 type InMemoryDispatcher struct {
 	handlers map[reflect.Type]Handler
 }
 
-// NewSimpleBus returns a new instance of SimpleBus.
+// NewInMemoryDispatcher returns a new instance of InMemoryDispatcher.
 func NewInMemoryDispatcher() InMemoryDispatcher {
 	return InMemoryDispatcher{handlers: make(map[reflect.Type]Handler)}
 }
@@ -47,7 +47,7 @@ func NewInMemoryDispatcher() InMemoryDispatcher {
 //
 // Please note, when registering multiple Handlers accepting the same Command type,
 // the last registration will overwrite any previous Handler registration, as
-// this SimpleBus does not support voting.
+// this InMemoryDispatcher does not support voting.
 func (d InMemoryDispatcher) Register(handler Handler) {
 	typ := reflect.TypeOf(handler.CommandType())
 	d.handlers[typ] = handler
@@ -89,7 +89,7 @@ type TrackingDispatcher struct {
 	recordedCommands []eventually.Command
 }
 
-// NewInMemoryCommandDispatcher creates a new instance of a fake in-memory command.Dispatcher.
+// NewTrackingDispatcher creates a new instance of a fake in-memory command.Dispatcher.
 func NewTrackingDispatcher() *TrackingDispatcher {
 	return new(TrackingDispatcher)
 }
