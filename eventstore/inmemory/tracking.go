@@ -57,10 +57,12 @@ func (es *TrackingEventStore) Append(
 		return v, err
 	}
 
+	previousVersion := v - int64(len(events))
+
 	for i, event := range events {
 		es.recorded = append(es.recorded, eventstore.Event{
 			Stream:  id,
-			Version: int64(expected) + int64(i) + 1,
+			Version: previousVersion + int64(i) + 1,
 			Event:   event,
 		})
 	}

@@ -47,7 +47,7 @@ func TestTrackingEventStore(t *testing.T) {
 		})
 
 		assert.NoError(t, err)
-		assert.ElementsMatch(t, stripMetadata(events), trackingEventStore.Recorded())
+		assert.Equal(t, stripMetadata(events), trackingEventStore.Recorded())
 	})
 }
 
