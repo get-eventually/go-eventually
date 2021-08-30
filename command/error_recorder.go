@@ -37,6 +37,12 @@ type ErrorRecorder struct {
 	// If unspecified, FailedCommandType will be used by default.
 	StreamType string
 
+	// StreamNameMapper maps to a StreamName value based on the command that failed.
+	// This is useful in case you want to use the same Aggregate id the command is targeting.
+	//
+	// If unspecified, the command name will be used instead.
+	StreamNameMapper func(cmd eventually.Command) string
+
 	// EventMapper should return the Domain Event type you defined for these commands.
 	//
 	// NOTE: this is necessary for (de)-serialization purposes while generics are
@@ -53,9 +59,14 @@ func (er ErrorRecorder) streamType() string {
 }
 
 func (er ErrorRecorder) buildStreamID(cmd eventually.Command) eventstore.StreamID {
+	streamName := cmd.Payload.Name()
+	if er.StreamNameMapper != nil {
+		streamName = er.StreamNameMapper(cmd)
+	}
+
 	return eventstore.StreamID{
 		Type: er.streamType(),
-		Name: cmd.Payload.Name(),
+		Name: streamName,
 	}
 }
 
