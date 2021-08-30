@@ -2,6 +2,7 @@ package oteleventually
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -196,7 +197,6 @@ func (es *InstrumentedEventStore) Append(
 		StreamTypeAttribute.String(id.Type),
 		StreamNameAttribute.String(id.Name),
 		VersionCheckAttribute.Int64(int64(expected)),
-		attribute.Any("events", events),
 	}
 
 	start := time.Now()
@@ -209,7 +209,12 @@ func (es *InstrumentedEventStore) Append(
 		}
 	}()
 
-	ctx, span := es.tracer.Start(ctx, AppendSpanName, trace.WithAttributes(attributes...))
+	spanAttributes := attributes
+	if b, err := json.Marshal(events); b != nil && err == nil { //nolint:govet // err shadowing is fine.
+		spanAttributes = append(spanAttributes, attribute.String("events", string(b)))
+	}
+
+	ctx, span := es.tracer.Start(ctx, AppendSpanName, trace.WithAttributes(spanAttributes...))
 	defer span.End()
 
 	if newVersion, err = es.eventStore.Append(ctx, id, expected, events...); err != nil {
