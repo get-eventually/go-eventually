@@ -156,6 +156,12 @@ func (ss *StoreSuite) TestStream() {
 
 	assert.NoError(t, err)
 
+	streamAllByTypes, err := StreamToSlice(ctx, func(ctx context.Context, es EventStream) error {
+		return ss.eventStore.Stream(ctx, es, stream.ByTypes{firstInstance.Type, secondInstance.Type}, SelectFromBeginning)
+	})
+
+	assert.NoError(t, err)
+
 	streamFirstType, err := StreamToSlice(ctx, func(ctx context.Context, es EventStream) error {
 		return ss.eventStore.Stream(ctx, es, stream.ByType(firstInstance.Type), SelectFromBeginning)
 	})
@@ -181,6 +187,7 @@ func (ss *StoreSuite) TestStream() {
 	assert.NoError(t, err)
 
 	assert.Equal(t, expectedStreamAll, ss.skipMetadata(streamAll))
+	assert.Equal(t, expectedStreamAll, ss.skipMetadata(streamAllByTypes))
 	assert.Equal(t, expectedStreamFirstInstance, ss.skipMetadata(streamFirstType))
 	assert.Equal(t, expectedStreamFirstInstance, ss.skipMetadata(streamFirstInstance))
 	assert.Equal(t, expectedStreamSecondInstance, ss.skipMetadata(streamSecondType))
@@ -189,6 +196,12 @@ func (ss *StoreSuite) TestStream() {
 	// Streaming with an out-of-bound Select will yield empty elements.
 	streamAll, err = StreamToSlice(ctx, func(ctx context.Context, es EventStream) error {
 		return ss.eventStore.Stream(ctx, es, stream.All{}, Select{From: 7})
+	})
+
+	assert.NoError(t, err)
+
+	streamAllByTypes, err = StreamToSlice(ctx, func(ctx context.Context, es EventStream) error {
+		return ss.eventStore.Stream(ctx, es, stream.ByTypes{firstInstance.Type, secondInstance.Type}, Select{From: 7})
 	})
 
 	assert.NoError(t, err)
@@ -218,6 +231,7 @@ func (ss *StoreSuite) TestStream() {
 	assert.NoError(t, err)
 
 	assert.Empty(t, streamAll)
+	assert.Empty(t, streamAllByTypes)
 	assert.Empty(t, streamFirstType)
 	assert.Empty(t, streamSecondType)
 	assert.Empty(t, streamFirstInstance)

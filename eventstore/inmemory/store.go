@@ -104,10 +104,6 @@ func (s *EventStore) streamByID(
 	id stream.ID,
 	selectt eventstore.Select,
 ) error {
-	s.mx.RLock()
-	defer s.mx.RUnlock()
-	defer close(es)
-
 	if m, ok := s.byTypeAndInstance[id.Type]; !ok || m == nil {
 		return nil
 	}
