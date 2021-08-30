@@ -145,7 +145,8 @@ func TestErrorRecorder(t *testing.T) {
 		eventStore := inmemory.NewEventStore()
 		trackingEventStore := inmemory.NewTrackingEventStore(eventStore)
 
-		expectedStreamType := "mocks-command"
+		const expectedStreamType = "mocks-command"
+
 		expectedErr := errors.New("failed command")
 		expectedCommand := eventually.Command{
 			Payload: mockCommand{message: t.Name()},
@@ -174,6 +175,53 @@ func TestErrorRecorder(t *testing.T) {
 				Stream: eventstore.StreamID{
 					Type: expectedStreamType,
 					Name: expectedCommand.Payload.Name(),
+				},
+				Event: eventually.Event{
+					Payload: mockCommandHasFailed{
+						err:     expectedErr,
+						command: expectedCommand.Payload.(mockCommand),
+					},
+				},
+			},
+		}, trackingEventStore.Recorded())
+	})
+
+	t.Run("when handler fails, record event with custom stream name", func(t *testing.T) {
+		eventStore := inmemory.NewEventStore()
+		trackingEventStore := inmemory.NewTrackingEventStore(eventStore)
+
+		expectedStreamType := "mocks-command"
+		expectedErr := errors.New("failed command")
+		expectedCommand := eventually.Command{
+			Payload: mockCommand{message: t.Name()},
+		}
+
+		handler := command.ErrorRecorder{
+			Handler: command.HandlerFunc(func(ctx context.Context, cmd eventually.Command) error {
+				return expectedErr
+			}),
+			Appender:   trackingEventStore,
+			StreamType: expectedStreamType,
+			StreamNameMapper: func(cmd eventually.Command) string {
+				return cmd.Payload.(mockCommand).message
+			},
+			EventMapper: func(err error, cmd eventually.Command) eventually.Payload {
+				return mockCommandHasFailed{
+					err:     err,
+					command: cmd.Payload.(mockCommand),
+				}
+			},
+		}
+
+		err := handler.Handle(context.Background(), expectedCommand)
+
+		assert.Error(t, err)
+		assert.Equal(t, []eventstore.Event{
+			{
+				Version: 1,
+				Stream: eventstore.StreamID{
+					Type: expectedStreamType,
+					Name: expectedCommand.Payload.(mockCommand).message,
 				},
 				Event: eventually.Event{
 					Payload: mockCommandHasFailed{
