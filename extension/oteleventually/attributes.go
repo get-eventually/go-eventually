@@ -2,23 +2,13 @@ package oteleventually
 
 import "go.opentelemetry.io/otel/attribute"
 
-// Names of the OpenTelemetry spans created by the package.
-const (
-	StreamSpanName       = "EventStore.Stream"
-	StreamByTypeSpanName = "EventStore.StreamByType"
-	StreamAllSpanName    = "EventStore.StreamAll"
-	AppendSpanName       = "EventStore.Append"
-	ApplierSpanName      = "Projection.Applier"
-)
-
-// Metrics exported by this package.
-const (
-	ProjectionApplyMetric = "eventually.projection.apply.duration.ms"
-)
-
 var (
 	// ErrorAttribute is used with a metric when an error is recorded.
 	ErrorAttribute = attribute.Key("error")
+
+	// StreamTargetAttribute is the attribute identifier that contains the
+	// stream target value used for EventStore.Stream calls.
+	StreamTargetAttribute = attribute.Key("stream.target")
 
 	// StreamNameAttribute is the attribute identifier that contains the Stream name,
 	// or Stream instance id, when using an eventstore.Instanced.

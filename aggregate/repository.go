@@ -9,6 +9,7 @@ import (
 
 	"github.com/get-eventually/go-eventually/aggregate/snapshot"
 	"github.com/get-eventually/go-eventually/eventstore"
+	"github.com/get-eventually/go-eventually/eventstore/stream"
 )
 
 // ErrRootNotFound is returned by the Repository when no Events for the
@@ -99,7 +100,7 @@ func (r *Repository) Add(ctx context.Context, root Root) error {
 		return nil
 	}
 
-	streamID := eventstore.StreamID{
+	streamID := stream.ID{
 		Type: r.aggregateType.Name(),
 		Name: root.AggregateID().String(),
 	}
@@ -144,7 +145,7 @@ func (r Repository) Get(ctx context.Context, id ID) (Root, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	streamID := eventstore.StreamID{
+	streamID := stream.ID{
 		Type: r.aggregateType.Name(),
 		Name: id.String(),
 	}
@@ -154,19 +155,19 @@ func (r Repository) Get(ctx context.Context, id ID) (Root, error) {
 		return nil, fmt.Errorf("aggregate.Repository: failed to fetch initial aggregate root state: %w", err)
 	}
 
-	stream := make(chan eventstore.Event, 1)
+	eventStream := make(chan eventstore.Event, 1)
 	streamSelect := eventstore.Select{From: root.Version()}
 
 	group, ctx := errgroup.WithContext(ctx)
 	group.Go(func() error {
-		if err := r.eventStore.Stream(ctx, stream, streamID, streamSelect); err != nil {
+		if err := r.eventStore.Stream(ctx, eventStream, stream.ByID(streamID), streamSelect); err != nil {
 			return fmt.Errorf("aggregate.Repository: failed while reading event from stream: %w", err)
 		}
 
 		return nil
 	})
 
-	for event := range stream {
+	for event := range eventStream {
 		isEmpty = false
 
 		if err := root.Apply(event.Event); err != nil {
@@ -187,7 +188,7 @@ func (r Repository) Get(ctx context.Context, id ID) (Root, error) {
 	return root, nil
 }
 
-func (r Repository) fetchAggregateRootState(ctx context.Context, id eventstore.StreamID) (Root, bool, error) {
+func (r Repository) fetchAggregateRootState(ctx context.Context, id stream.ID) (Root, bool, error) {
 	state := r.aggregateType.instance()
 	isEmpty := true
 

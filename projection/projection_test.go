@@ -12,6 +12,7 @@ import (
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/eventstore"
 	"github.com/get-eventually/go-eventually/eventstore/inmemory"
+	"github.com/get-eventually/go-eventually/eventstore/stream"
 	"github.com/get-eventually/go-eventually/internal"
 	"github.com/get-eventually/go-eventually/logger"
 	"github.com/get-eventually/go-eventually/projection"
@@ -19,7 +20,7 @@ import (
 	"github.com/get-eventually/go-eventually/subscription/checkpoint"
 )
 
-var streamID = eventstore.StreamID{
+var streamID = stream.ID{
 	Type: "my-type",
 	Name: "my-instance",
 }
@@ -54,7 +55,7 @@ func TestRunner(t *testing.T) {
 	// Create a new subscription to listen events from the event store
 	testSubscription := &subscription.CatchUp{
 		SubscriptionName: "test-subscription",
-		Target:           subscription.TargetStreamAll{},
+		Target:           stream.All{},
 		EventStore:       eventStore,
 		Checkpointer:     checkpoint.NopCheckpointer,
 		PullEvery:        10 * time.Millisecond,

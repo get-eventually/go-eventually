@@ -8,16 +8,17 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/get-eventually/go-eventually"
+	"github.com/get-eventually/go-eventually/eventstore/stream"
 	"github.com/get-eventually/go-eventually/internal"
 )
 
 var (
-	firstInstance = StreamID{
+	firstInstance = stream.ID{
 		Type: "first-type",
 		Name: "my-instance",
 	}
 
-	secondInstance = StreamID{
+	secondInstance = stream.ID{
 		Type: "second-type",
 		Name: "my-instance",
 	}
@@ -134,7 +135,7 @@ func (ss *StoreSuite) TestStream() {
 
 	// Make sure the Event Store is completely empty.
 	streamAll, err := StreamToSlice(ctx, func(ctx context.Context, es EventStream) error {
-		return ss.eventStore.StreamAll(ctx, es, SelectFromBeginning)
+		return ss.eventStore.Stream(ctx, es, stream.All{}, SelectFromBeginning)
 	})
 
 	assert.Empty(t, streamAll)
@@ -150,36 +151,43 @@ func (ss *StoreSuite) TestStream() {
 
 	// Make sure the Event Store has recorded the events as expected.
 	streamAll, err = StreamToSlice(ctx, func(ctx context.Context, es EventStream) error {
-		return ss.eventStore.StreamAll(ctx, es, SelectFromBeginning)
+		return ss.eventStore.Stream(ctx, es, stream.All{}, SelectFromBeginning)
+	})
+
+	assert.NoError(t, err)
+
+	streamAllByTypes, err := StreamToSlice(ctx, func(ctx context.Context, es EventStream) error {
+		return ss.eventStore.Stream(ctx, es, stream.ByTypes{firstInstance.Type, secondInstance.Type}, SelectFromBeginning)
 	})
 
 	assert.NoError(t, err)
 
 	streamFirstType, err := StreamToSlice(ctx, func(ctx context.Context, es EventStream) error {
-		return ss.eventStore.StreamByType(ctx, es, firstInstance.Type, SelectFromBeginning)
+		return ss.eventStore.Stream(ctx, es, stream.ByType(firstInstance.Type), SelectFromBeginning)
 	})
 
 	assert.NoError(t, err)
 
 	streamSecondType, err := StreamToSlice(ctx, func(ctx context.Context, es EventStream) error {
-		return ss.eventStore.StreamByType(ctx, es, secondInstance.Type, SelectFromBeginning)
+		return ss.eventStore.Stream(ctx, es, stream.ByType(secondInstance.Type), SelectFromBeginning)
 	})
 
 	assert.NoError(t, err)
 
 	streamFirstInstance, err := StreamToSlice(ctx, func(ctx context.Context, es EventStream) error {
-		return ss.eventStore.Stream(ctx, es, firstInstance, SelectFromBeginning)
+		return ss.eventStore.Stream(ctx, es, stream.ByID(firstInstance), SelectFromBeginning)
 	})
 
 	assert.NoError(t, err)
 
 	streamSecondInstance, err := StreamToSlice(ctx, func(ctx context.Context, es EventStream) error {
-		return ss.eventStore.Stream(ctx, es, secondInstance, SelectFromBeginning)
+		return ss.eventStore.Stream(ctx, es, stream.ByID(secondInstance), SelectFromBeginning)
 	})
 
 	assert.NoError(t, err)
 
 	assert.Equal(t, expectedStreamAll, ss.skipMetadata(streamAll))
+	assert.Equal(t, expectedStreamAll, ss.skipMetadata(streamAllByTypes))
 	assert.Equal(t, expectedStreamFirstInstance, ss.skipMetadata(streamFirstType))
 	assert.Equal(t, expectedStreamFirstInstance, ss.skipMetadata(streamFirstInstance))
 	assert.Equal(t, expectedStreamSecondInstance, ss.skipMetadata(streamSecondType))
@@ -187,36 +195,43 @@ func (ss *StoreSuite) TestStream() {
 
 	// Streaming with an out-of-bound Select will yield empty elements.
 	streamAll, err = StreamToSlice(ctx, func(ctx context.Context, es EventStream) error {
-		return ss.eventStore.StreamAll(ctx, es, Select{From: 7})
+		return ss.eventStore.Stream(ctx, es, stream.All{}, Select{From: 7})
+	})
+
+	assert.NoError(t, err)
+
+	streamAllByTypes, err = StreamToSlice(ctx, func(ctx context.Context, es EventStream) error {
+		return ss.eventStore.Stream(ctx, es, stream.ByTypes{firstInstance.Type, secondInstance.Type}, Select{From: 7})
 	})
 
 	assert.NoError(t, err)
 
 	streamFirstType, err = StreamToSlice(ctx, func(ctx context.Context, es EventStream) error {
-		return ss.eventStore.StreamByType(ctx, es, firstInstance.Type, Select{From: 7})
+		return ss.eventStore.Stream(ctx, es, stream.ByType(firstInstance.Type), Select{From: 7})
 	})
 
 	assert.NoError(t, err)
 
 	streamSecondType, err = StreamToSlice(ctx, func(ctx context.Context, es EventStream) error {
-		return ss.eventStore.StreamByType(ctx, es, secondInstance.Type, Select{From: 7})
+		return ss.eventStore.Stream(ctx, es, stream.ByType(secondInstance.Type), Select{From: 7})
 	})
 
 	assert.NoError(t, err)
 
 	streamFirstInstance, err = StreamToSlice(ctx, func(ctx context.Context, es EventStream) error {
-		return ss.eventStore.Stream(ctx, es, firstInstance, Select{From: 4})
+		return ss.eventStore.Stream(ctx, es, stream.ByID(firstInstance), Select{From: 4})
 	})
 
 	assert.NoError(t, err)
 
 	streamSecondInstance, err = StreamToSlice(ctx, func(ctx context.Context, es EventStream) error {
-		return ss.eventStore.Stream(ctx, es, secondInstance, Select{From: 4})
+		return ss.eventStore.Stream(ctx, es, stream.ByID(secondInstance), Select{From: 4})
 	})
 
 	assert.NoError(t, err)
 
 	assert.Empty(t, streamAll)
+	assert.Empty(t, streamAllByTypes)
 	assert.Empty(t, streamFirstType)
 	assert.Empty(t, streamSecondType)
 	assert.Empty(t, streamFirstInstance)

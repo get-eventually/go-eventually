@@ -14,6 +14,7 @@ import (
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/eventstore"
 	"github.com/get-eventually/go-eventually/eventstore/inmemory"
+	"github.com/get-eventually/go-eventually/eventstore/stream"
 	"github.com/get-eventually/go-eventually/extension/zaplogger"
 	"github.com/get-eventually/go-eventually/internal"
 	"github.com/get-eventually/go-eventually/subscription"
@@ -30,7 +31,7 @@ func TestCatchUp(t *testing.T) {
 		return &subscription.CatchUp{
 			SubscriptionName: t.Name(),
 			Checkpointer:     checkpoint.NopCheckpointer,
-			Target:           subscription.TargetStreamAll{},
+			Target:           stream.All{},
 			Logger:           zaplogger.Wrap(logger),
 			EventStore:       store,
 			PullEvery:        10 * time.Millisecond,
@@ -56,7 +57,7 @@ func (s *CatchUpSuite) SetupTest() {
 
 func (s *CatchUpSuite) TestCatchUp() {
 	s.Run("catch-up subscriptions will receive events from before the subscription has started", func() {
-		streamID := eventstore.StreamID{
+		streamID := stream.ID{
 			Type: "my-type",
 			Name: "my-instance",
 		}

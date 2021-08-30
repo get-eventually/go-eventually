@@ -11,6 +11,7 @@ import (
 	"github.com/get-eventually/go-eventually/command"
 	"github.com/get-eventually/go-eventually/eventstore"
 	"github.com/get-eventually/go-eventually/eventstore/inmemory"
+	"github.com/get-eventually/go-eventually/eventstore/stream"
 )
 
 type mockCommand struct {
@@ -84,7 +85,7 @@ func TestErrorRecorder(t *testing.T) {
 		assert.Equal(t, []eventstore.Event{
 			{
 				Version: 1,
-				Stream: eventstore.StreamID{
+				Stream: stream.ID{
 					Type: command.FailedType,
 					Name: expectedCommand.Payload.Name(),
 				},
@@ -127,7 +128,7 @@ func TestErrorRecorder(t *testing.T) {
 		assert.Equal(t, []eventstore.Event{
 			{
 				Version: 1,
-				Stream: eventstore.StreamID{
+				Stream: stream.ID{
 					Type: command.FailedType,
 					Name: expectedCommand.Payload.Name(),
 				},
@@ -172,7 +173,7 @@ func TestErrorRecorder(t *testing.T) {
 		assert.Equal(t, []eventstore.Event{
 			{
 				Version: 1,
-				Stream: eventstore.StreamID{
+				Stream: stream.ID{
 					Type: expectedStreamType,
 					Name: expectedCommand.Payload.Name(),
 				},
@@ -219,7 +220,7 @@ func TestErrorRecorder(t *testing.T) {
 		assert.Equal(t, []eventstore.Event{
 			{
 				Version: 1,
-				Stream: eventstore.StreamID{
+				Stream: stream.ID{
 					Type: expectedStreamType,
 					Name: expectedCommand.Payload.(mockCommand).message,
 				},

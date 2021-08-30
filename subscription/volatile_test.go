@@ -20,7 +20,7 @@ package subscription_test
 // 	ctx, cancel := context.WithCancel(context.Background())
 // 	defer cancel()
 
-// 	streamID := eventstore.StreamID{
+// 	streamID := stream.ID{
 // 		Type: "my-type",
 // 		Name: "my-instance",
 // 	}

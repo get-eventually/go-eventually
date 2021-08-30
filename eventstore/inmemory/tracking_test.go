@@ -9,6 +9,7 @@ import (
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/eventstore"
 	"github.com/get-eventually/go-eventually/eventstore/inmemory"
+	"github.com/get-eventually/go-eventually/eventstore/stream"
 	"github.com/get-eventually/go-eventually/internal"
 )
 
@@ -24,7 +25,7 @@ func TestTrackingEventStore(t *testing.T) {
 		eventStore := inmemory.NewEventStore()
 		trackingEventStore := inmemory.NewTrackingEventStore(eventStore)
 
-		streamID := eventstore.StreamID{
+		streamID := stream.ID{
 			Type: "test-type",
 			Name: "test-instance",
 		}
@@ -43,7 +44,7 @@ func TestTrackingEventStore(t *testing.T) {
 
 		// Compare events in the event store and recorded ones from the tracking store.
 		events, err := eventstore.StreamToSlice(ctx, func(ctx context.Context, es eventstore.EventStream) error {
-			return eventStore.Stream(ctx, es, streamID, eventstore.SelectFromBeginning)
+			return eventStore.Stream(ctx, es, stream.ByID(streamID), eventstore.SelectFromBeginning)
 		})
 
 		assert.NoError(t, err)

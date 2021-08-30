@@ -13,6 +13,7 @@ import (
 
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/eventstore"
+	"github.com/get-eventually/go-eventually/eventstore/stream"
 )
 
 var _ eventstore.Store = &InstrumentedEventStore{}
@@ -97,77 +98,27 @@ func (es *InstrumentedEventStore) reportStreamMetrics(
 	es.streamDuration.Record(ctx, time.Since(start).Milliseconds(), attributes...)
 }
 
-// StreamAll delegates the call to the underlying Event Store and records
-// a trace of the result.
-func (es *InstrumentedEventStore) StreamAll(
-	ctx context.Context,
-	stream eventstore.EventStream,
-	selectt eventstore.Select,
-) (err error) {
-	attributes := []attribute.KeyValue{
-		SelectFromAttribute.Int64(selectt.From),
-	}
-
-	start := time.Now()
-	defer func() {
-		es.reportStreamMetrics(ctx, start, err, append(attributes,
-			StreamNameAttribute.String("*"),
-			StreamTypeAttribute.String("*"),
-		)...)
-	}()
-
-	ctx, span := es.tracer.Start(ctx, StreamAllSpanName, trace.WithAttributes(attributes...))
-	defer span.End()
-
-	if err = es.eventStore.StreamAll(ctx, stream, selectt); err != nil {
-		span.RecordError(err)
-	}
-
-	return err
-}
-
-// StreamByType delegates the call to the underlying Event Store and records
-// a trace of the result.
-func (es *InstrumentedEventStore) StreamByType(
-	ctx context.Context,
-	stream eventstore.EventStream,
-	typ string,
-	selectt eventstore.Select,
-) (err error) {
-	attributes := []attribute.KeyValue{
-		SelectFromAttribute.Int64(selectt.From),
-		StreamTypeAttribute.String(typ),
-	}
-
-	ctx, span := es.tracer.Start(ctx, StreamByTypeSpanName, trace.WithAttributes(attributes...))
-	defer span.End()
-
-	start := time.Now()
-	defer func() {
-		es.reportStreamMetrics(ctx, start, err, append(attributes,
-			StreamNameAttribute.String("*"),
-		)...)
-	}()
-
-	if err = es.eventStore.StreamByType(ctx, stream, typ, selectt); err != nil {
-		span.RecordError(err)
-	}
-
-	return err
-}
-
 // Stream delegates the call to the underlying Event Store and records
 // a trace of the result.
 func (es *InstrumentedEventStore) Stream(
 	ctx context.Context,
-	stream eventstore.EventStream,
-	id eventstore.StreamID,
+	eventStream eventstore.EventStream,
+	target stream.Target,
 	selectt eventstore.Select,
 ) (err error) {
 	attributes := []attribute.KeyValue{
 		SelectFromAttribute.Int64(selectt.From),
-		StreamTypeAttribute.String(id.Type),
-		StreamNameAttribute.String(id.Name),
+	}
+
+	switch t := target.(type) {
+	case stream.All:
+		attributes = append(attributes, StreamTargetAttribute.String("<all>"))
+	case stream.ByType:
+		attributes = append(attributes, StreamTypeAttribute.String(string(t)))
+	case stream.ByTypes:
+		attributes = append(attributes, StreamTypeAttribute.Array([]string(t)))
+	case stream.ByID:
+		attributes = append(attributes, StreamTypeAttribute.String(t.Type), StreamNameAttribute.String(t.Name))
 	}
 
 	start := time.Now()
@@ -175,10 +126,10 @@ func (es *InstrumentedEventStore) Stream(
 		es.reportStreamMetrics(ctx, start, err, attributes...)
 	}()
 
-	ctx, span := es.tracer.Start(ctx, StreamSpanName, trace.WithAttributes(attributes...))
+	ctx, span := es.tracer.Start(ctx, "EventStore.Stream", trace.WithAttributes(attributes...))
 	defer span.End()
 
-	if err = es.eventStore.Stream(ctx, stream, id, selectt); err != nil {
+	if err = es.eventStore.Stream(ctx, eventStream, target, selectt); err != nil {
 		span.RecordError(err)
 	}
 
@@ -189,7 +140,7 @@ func (es *InstrumentedEventStore) Stream(
 // a trace of the result and increments the metric referenced by AppendMetric.
 func (es *InstrumentedEventStore) Append(
 	ctx context.Context,
-	id eventstore.StreamID,
+	id stream.ID,
 	expected eventstore.VersionCheck,
 	events ...eventually.Event,
 ) (newVersion int64, err error) {
@@ -214,7 +165,7 @@ func (es *InstrumentedEventStore) Append(
 		spanAttributes = append(spanAttributes, attribute.String("events", string(b)))
 	}
 
-	ctx, span := es.tracer.Start(ctx, AppendSpanName, trace.WithAttributes(spanAttributes...))
+	ctx, span := es.tracer.Start(ctx, "EventStore.Append", trace.WithAttributes(spanAttributes...))
 	defer span.End()
 
 	if newVersion, err = es.eventStore.Append(ctx, id, expected, events...); err != nil {

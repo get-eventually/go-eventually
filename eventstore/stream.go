@@ -6,9 +6,6 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// EventStream is a stream of persisted Events.
-type EventStream chan<- Event
-
 // StreamToSlice synchronously exhausts an EventStream to an Event slice,
 // and returns an error if the EventStream origin, passed here as a closure,
 // fails with an error.

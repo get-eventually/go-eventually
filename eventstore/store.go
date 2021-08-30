@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/get-eventually/go-eventually"
+	"github.com/get-eventually/go-eventually/eventstore/stream"
 )
 
 // VersionCheck is used to specify the expected version of an Event Stream
@@ -17,17 +18,6 @@ type VersionCheck int64
 // check on the Event Stream version, when you just want to insert some
 // events in the Event Store.
 const VersionCheckAny VersionCheck = iota - 1
-
-// StreamID represents the unique identifier for an Event Stream.
-type StreamID struct {
-	// Type is the type, or category, of the Event Stream to which this
-	// Event belong. Usually, this is the name of the Aggregate type.
-	Type string
-
-	// Name is the name of the Event Stream to which this Event belong.
-	// Usually, this is the string representation of the Aggregate id.
-	Name string
-}
 
 // Select is used to effectively select a slice of the Event Stream,
 // by referencing to either the Event Stream version (in case of Stream)
@@ -47,7 +37,7 @@ type Event struct {
 
 	// Stream is the identifier of the Event Stream this Event
 	// belongs to.
-	Stream StreamID
+	Stream stream.ID
 
 	// Version is the version of this Event, used for Optimistic Locking
 	// and detecting or avoiding concurrency conflict scenarios.
@@ -57,6 +47,9 @@ type Event struct {
 	// used for ordered streaming.
 	SequenceNumber int64
 }
+
+// EventStream is a stream of persisted Events.
+type EventStream chan<- Event
 
 // Store represents an Event Store.
 type Store interface {
@@ -83,7 +76,7 @@ type Appender interface {
 	//
 	// An instance of ErrConflict will be returned if the optimistic locking
 	// version check fails against the current version of the Event Stream.
-	Append(context.Context, StreamID, VersionCheck, ...eventually.Event) (int64, error)
+	Append(ctx context.Context, id stream.ID, versionCheck VersionCheck, events ...eventually.Event) (int64, error)
 }
 
 // Streamer is the Event Store trait that deals with opening Event Streams
@@ -100,16 +93,6 @@ type Appender interface {
 // in order to allow to callers to choose the desired buffering on the channel,
 // matching the caller concurrency properties.
 type Streamer interface {
-	// Stream opens the specific Event Stream identified by the provided id.
-	Stream(context.Context, EventStream, StreamID, Select) error
-
-	// StreamByType opens a stream of all Event Streams grouped by the same Type,
-	// as specified in input.
-	//
-	// The stream will be ordered based on their Global Sequence Number.
-	StreamByType(context.Context, EventStream, string, Select) error
-
-	// StreamAll opens a stream of all Event Streams found in the Event Store.
-	// The stream will be ordered based on their Global Sequence Number.
-	StreamAll(context.Context, EventStream, Select) error
+	// Stream opens one or more Event Streams as specified by the provided Event Stream target.
+	Stream(ctx context.Context, es EventStream, target stream.Target, selectt Select) error
 }
