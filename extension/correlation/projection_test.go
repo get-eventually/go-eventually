@@ -9,6 +9,7 @@ import (
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/eventstore"
 	"github.com/get-eventually/go-eventually/eventstore/inmemory"
+	"github.com/get-eventually/go-eventually/eventstore/stream"
 	"github.com/get-eventually/go-eventually/extension/correlation"
 	"github.com/get-eventually/go-eventually/internal"
 )
@@ -25,12 +26,13 @@ func TestProjectionWrapper(t *testing.T) {
 
 	ctx := context.Background()
 	eventStore := inmemory.NewEventStore()
-	correlatedEventStore := correlation.WrapEventStore(eventStore, func() string {
-		return correlationID
-	})
+	correlatedEventStore := correlation.EventStoreWrapper{
+		Appender:  eventStore,
+		Generator: func() string { return correlationID },
+	}
 
 	t.Run("wrapped projector does not extend context if incoming event has no correlation data", func(t *testing.T) {
-		streamID := eventstore.StreamID{
+		streamID := stream.ID{
 			Type: typeName,
 			Name: "my-instance",
 		}
@@ -47,29 +49,31 @@ func TestProjectionWrapper(t *testing.T) {
 		}
 
 		events, err := eventstore.StreamToSlice(ctx, func(ctx context.Context, es eventstore.EventStream) error {
-			return eventStore.Stream(ctx, es, streamID, eventstore.SelectFromBeginning)
+			return eventStore.Stream(ctx, es, stream.ByID(streamID), eventstore.SelectFromBeginning)
 		})
 
 		assert.NoError(t, err)
 		assert.Len(t, events, 1)
 
-		projection := applierFunc(func(ctx context.Context, _ eventstore.Event) error {
-			correlationID, hasCorrelation := correlation.IDContext(ctx)
-			causationID, hasCausation := correlation.CausationIDContext(ctx)
+		projection := correlation.ProjectionWrapper{
+			Projection: applierFunc(func(ctx context.Context, _ eventstore.Event) error {
+				correlationID, hasCorrelation := correlation.IDContext(ctx)
+				causationID, hasCausation := correlation.CausationIDContext(ctx)
 
-			assert.Zero(t, correlationID)
-			assert.False(t, hasCorrelation)
-			assert.Zero(t, causationID)
-			assert.False(t, hasCausation)
+				assert.Zero(t, correlationID)
+				assert.False(t, hasCorrelation)
+				assert.Zero(t, causationID)
+				assert.False(t, hasCausation)
 
-			return nil
-		})
+				return nil
+			}),
+		}
 
-		assert.NoError(t, correlation.WrapProjection(projection).Apply(ctx, events[0]))
+		assert.NoError(t, projection.Apply(ctx, events[0]))
 	})
 
 	t.Run("wrapped projector extends context with incoming event correlation data", func(t *testing.T) {
-		streamID := eventstore.StreamID{
+		streamID := stream.ID{
 			Type: typeName,
 			Name: "my-correlated-instance",
 		}
@@ -86,24 +90,26 @@ func TestProjectionWrapper(t *testing.T) {
 		}
 
 		events, err := eventstore.StreamToSlice(ctx, func(ctx context.Context, es eventstore.EventStream) error {
-			return eventStore.Stream(ctx, es, streamID, eventstore.SelectFromBeginning)
+			return eventStore.Stream(ctx, es, stream.ByID(streamID), eventstore.SelectFromBeginning)
 		})
 
 		assert.NoError(t, err)
 		assert.Len(t, events, 1)
 
-		projection := applierFunc(func(ctx context.Context, _ eventstore.Event) error {
-			id, hasCorrelation := correlation.IDContext(ctx)
-			causationID, hasCausation := correlation.CausationIDContext(ctx)
+		projection := correlation.ProjectionWrapper{
+			Projection: applierFunc(func(ctx context.Context, _ eventstore.Event) error {
+				id, hasCorrelation := correlation.IDContext(ctx)
+				causationID, hasCausation := correlation.CausationIDContext(ctx)
 
-			assert.Equal(t, correlationID, id)
-			assert.Equal(t, correlationID, causationID)
-			assert.True(t, hasCorrelation)
-			assert.True(t, hasCausation)
+				assert.Equal(t, correlationID, id)
+				assert.Equal(t, correlationID, causationID)
+				assert.True(t, hasCorrelation)
+				assert.True(t, hasCausation)
 
-			return nil
-		})
+				return nil
+			}),
+		}
 
-		assert.NoError(t, correlation.WrapProjection(projection).Apply(ctx, events[0]))
+		assert.NoError(t, projection.Apply(ctx, events[0]))
 	})
 }

@@ -87,7 +87,7 @@ func (ip *InstrumentedProjection) Apply(ctx context.Context, event eventstore.Ev
 		attribute.Any("event", event),
 	)
 
-	ctx, span := ip.tracer.Start(ctx, ApplierSpanName, trace.WithAttributes(spanAttributes...))
+	ctx, span := ip.tracer.Start(ctx, "Projection.Apply", trace.WithAttributes(spanAttributes...))
 	defer span.End()
 
 	start := time.Now()

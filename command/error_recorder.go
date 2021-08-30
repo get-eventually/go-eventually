@@ -6,6 +6,7 @@ import (
 
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/eventstore"
+	"github.com/get-eventually/go-eventually/eventstore/stream"
 )
 
 // FailedType is the default stream type used by ErrorRecorder
@@ -58,13 +59,13 @@ func (er ErrorRecorder) streamType() string {
 	return FailedType
 }
 
-func (er ErrorRecorder) buildStreamID(cmd eventually.Command) eventstore.StreamID {
+func (er ErrorRecorder) buildStreamID(cmd eventually.Command) stream.ID {
 	streamName := cmd.Payload.Name()
 	if er.StreamNameMapper != nil {
 		streamName = er.StreamNameMapper(cmd)
 	}
 
-	return eventstore.StreamID{
+	return stream.ID{
 		Type: er.streamType(),
 		Name: streamName,
 	}

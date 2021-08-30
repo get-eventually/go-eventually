@@ -12,16 +12,8 @@ var _ projection.Applier = ProjectionWrapper{}
 // ProjectionWrapper is an extension component that adds Correlation
 // and Causation ids to the context of the underlying projection.Applier
 // instance, if found in the Message received in Apply.
-//
-// Use WrapProjection to create a new instance.
 type ProjectionWrapper struct {
-	applier projection.Applier
-}
-
-// WrapProjection wraps the specified projection.Applier instance
-// with a ProjectionWrapper extension component.
-func WrapProjection(applier projection.Applier) ProjectionWrapper {
-	return ProjectionWrapper{applier: applier}
+	Projection projection.Applier
 }
 
 // Apply applies the provided Event to the wrapped projection.Applier,
@@ -38,5 +30,5 @@ func (pw ProjectionWrapper) Apply(ctx context.Context, event eventstore.Event) e
 		ctx = WithCausationID(ctx, eventID)
 	}
 
-	return pw.applier.Apply(ctx, event)
+	return pw.Projection.Apply(ctx, event)
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/eventstore"
+	"github.com/get-eventually/go-eventually/eventstore/stream"
 )
 
 var _ eventstore.Store = &EventStore{}
@@ -28,21 +29,7 @@ func NewEventStore() *EventStore {
 	}
 }
 
-// StreamAll streams all Event Store committed events onto the provided EventStream,
-// from the specified Global Sequence Number in `from`.
-//
-// Note: this call is synchronous, and will return when all the Events
-// have been successfully written to the provided EventStream, or when
-// the context has been canceled.
-//
-// An error is returned if one Event in the Event Store does not have a
-// Global Sequence Number (which should never happen), or when the context
-// is done.
-func (s *EventStore) StreamAll(ctx context.Context, es eventstore.EventStream, selectt eventstore.Select) error {
-	s.mx.RLock()
-	defer s.mx.RUnlock()
-	defer close(es)
-
+func (s *EventStore) streamAll(ctx context.Context, es eventstore.EventStream, selectt eventstore.Select) error {
 	for _, event := range s.events {
 		if event.SequenceNumber < selectt.From {
 			continue
@@ -58,26 +45,12 @@ func (s *EventStore) StreamAll(ctx context.Context, es eventstore.EventStream, s
 	return nil
 }
 
-// StreamByType streams all Event Store committed events of a specific Type (or Category)
-// onto the provided EventStream, from the specified Global Sequence Number in `from`.
-//
-// Note: this call is synchronous, and will return when all the Events
-// have been successfully written to the provided EventStream, or when
-// the context has been canceled.
-//
-// An error is returned if one Event in the Event Store does not have a
-// Global Sequence Number (which should never happen), or when the context
-// is done.
-func (s *EventStore) StreamByType(
+func (s *EventStore) streamByType(
 	ctx context.Context,
 	es eventstore.EventStream,
 	typ string,
 	selectt eventstore.Select,
 ) error {
-	s.mx.RLock()
-	defer s.mx.RUnlock()
-	defer close(es)
-
 	for _, eventIdx := range s.byType[typ] {
 		event := s.events[eventIdx]
 
@@ -95,18 +68,40 @@ func (s *EventStore) StreamByType(
 	return nil
 }
 
-// Stream streams all Domain Events committed in a specific event stream
-// onto the provided EventStream channel, from the specified version in `from`.
-//
-// Note: this call is synchronous, and will return when all the Events
-// have been successfully written to the provided EventStream, or when
-// the context has been canceled.
-//
-// An error is returned when the context is done.
-func (s *EventStore) Stream(
+func (s *EventStore) streamByTypes(
 	ctx context.Context,
 	es eventstore.EventStream,
-	id eventstore.StreamID,
+	types []string,
+	selectt eventstore.Select,
+) error {
+	indexedTypes := make(map[string]struct{})
+	for _, typ := range types {
+		indexedTypes[typ] = struct{}{}
+	}
+
+	for _, event := range s.events {
+		if event.SequenceNumber < selectt.From {
+			continue
+		}
+
+		if _, ok := indexedTypes[event.Stream.Type]; !ok {
+			continue
+		}
+
+		select {
+		case es <- event:
+		case <-ctx.Done():
+			return contextErr(ctx)
+		}
+	}
+
+	return nil
+}
+
+func (s *EventStore) streamByID(
+	ctx context.Context,
+	es eventstore.EventStream,
+	id stream.ID,
 	selectt eventstore.Select,
 ) error {
 	s.mx.RLock()
@@ -139,6 +134,38 @@ func (s *EventStore) Stream(
 	return nil
 }
 
+// Stream streams committed events in the Event Store onto the provided EventStream,
+// from the specified Global Sequence Number in `from`, based on the provided stream.Target.
+//
+// Note: this call is synchronous, and will return when all the Events
+// have been successfully written to the provided EventStream, or when
+// the context has been canceled.
+//
+// This method fails only when the context is canceled.
+func (s *EventStore) Stream(
+	ctx context.Context,
+	es eventstore.EventStream,
+	target stream.Target,
+	selectt eventstore.Select,
+) error {
+	s.mx.RLock()
+	defer s.mx.RUnlock()
+	defer close(es)
+
+	switch t := target.(type) {
+	case stream.All:
+		return s.streamAll(ctx, es, selectt)
+	case stream.ByType:
+		return s.streamByType(ctx, es, string(t), selectt)
+	case stream.ByTypes:
+		return s.streamByTypes(ctx, es, []string(t), selectt)
+	case stream.ByID:
+		return s.streamByID(ctx, es, stream.ID(t), selectt)
+	default:
+		return fmt.Errorf("inmemory.EventStore: unsupported stream target type provided: %T", t)
+	}
+}
+
 // Append inserts the specified Domain Events into the Event Stream specified
 // by the current instance, returning the new version of the Event Stream.
 //
@@ -153,7 +180,7 @@ func (s *EventStore) Stream(
 // version check fails against the current version of the Event Stream.
 func (s *EventStore) Append(
 	ctx context.Context,
-	id eventstore.StreamID,
+	id stream.ID,
 	expected eventstore.VersionCheck,
 	events ...eventually.Event,
 ) (int64, error) {

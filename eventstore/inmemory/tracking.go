@@ -6,6 +6,7 @@ import (
 
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/eventstore"
+	"github.com/get-eventually/go-eventually/eventstore/stream"
 )
 
 // TrackingEventStore is an Event Store wrapper to track the Events
@@ -45,7 +46,7 @@ func (es *TrackingEventStore) Recorded() []eventstore.Event {
 // The recorded events can be accessed by calling Recorded().
 func (es *TrackingEventStore) Append(
 	ctx context.Context,
-	id eventstore.StreamID,
+	id stream.ID,
 	expected eventstore.VersionCheck,
 	events ...eventually.Event,
 ) (int64, error) {

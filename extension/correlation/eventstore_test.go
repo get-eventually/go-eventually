@@ -10,6 +10,7 @@ import (
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/eventstore"
 	"github.com/get-eventually/go-eventually/eventstore/inmemory"
+	"github.com/get-eventually/go-eventually/eventstore/stream"
 	"github.com/get-eventually/go-eventually/extension/correlation"
 	"github.com/get-eventually/go-eventually/internal"
 )
@@ -30,10 +31,13 @@ func TestEventStoreWrapper(t *testing.T) {
 	}
 
 	eventStore := inmemory.NewEventStore()
-	correlatedEventStore := correlation.WrapEventStore(eventStore, generator)
+	correlatedEventStore := correlation.EventStoreWrapper{
+		Appender:  eventStore,
+		Generator: generator,
+	}
 
 	ctx := context.Background()
-	streamID := eventstore.StreamID{
+	streamID := stream.ID{
 		Type: "my-type",
 		Name: "my-instance",
 	}
@@ -52,7 +56,7 @@ func TestEventStoreWrapper(t *testing.T) {
 
 	// Make sure the new events have been recorded with correlation data.
 	events, err := eventstore.StreamToSlice(ctx, func(ctx context.Context, es eventstore.EventStream) error {
-		return eventStore.Stream(ctx, es, streamID, eventstore.SelectFromBeginning)
+		return eventStore.Stream(ctx, es, stream.ByID(streamID), eventstore.SelectFromBeginning)
 	})
 
 	assert.NoError(t, err)

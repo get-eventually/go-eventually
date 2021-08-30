@@ -9,6 +9,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/get-eventually/go-eventually/eventstore"
+	"github.com/get-eventually/go-eventually/eventstore/stream"
 	"github.com/get-eventually/go-eventually/logger"
 	"github.com/get-eventually/go-eventually/subscription/checkpoint"
 )
@@ -28,7 +29,7 @@ var _ Subscription = &CatchUp{}
 // and subscribing to updates.
 type CatchUp struct {
 	SubscriptionName string
-	Target           TargetStream
+	Target           stream.Target
 	EventStore       eventstore.Streamer
 	Checkpointer     checkpoint.Checkpointer
 	Logger           logger.Logger
@@ -59,8 +60,8 @@ func (s *CatchUp) Name() string { return s.SubscriptionName }
 
 // Start starts sending messages on the provided EventStream channel
 // by calling the Event Store from where it last left off.
-func (s *CatchUp) Start(ctx context.Context, stream eventstore.EventStream) error {
-	defer close(stream)
+func (s *CatchUp) Start(ctx context.Context, eventStream eventstore.EventStream) error {
+	defer close(eventStream)
 
 	lastSequenceNumber, err := s.Checkpointer.Read(ctx, s.Name())
 	if err != nil {
@@ -84,7 +85,7 @@ func (s *CatchUp) Start(ctx context.Context, stream eventstore.EventStream) erro
 			return ctx.Err()
 
 		case <-time.After(b.NextBackOff()):
-			sequenceNumber, err := s.catchUp(ctx, stream, lastSequenceNumber)
+			sequenceNumber, err := s.catchUp(ctx, eventStream, lastSequenceNumber)
 			if err != nil {
 				return fmt.Errorf("subscription.CatchUp: failed while streaming: %w", err)
 			}
@@ -104,7 +105,7 @@ func (s *CatchUp) Start(ctx context.Context, stream eventstore.EventStream) erro
 
 func (s *CatchUp) catchUp(
 	ctx context.Context,
-	stream eventstore.EventStream,
+	eventStream eventstore.EventStream,
 	lastSequenceNumber int64,
 ) (int64, error) {
 	es := make(chan eventstore.Event, s.bufferSize())
@@ -115,14 +116,7 @@ func (s *CatchUp) catchUp(
 
 	group, ctx := errgroup.WithContext(ctx)
 	group.Go(func() error {
-		switch t := s.Target.(type) {
-		case TargetStreamAll:
-			return s.EventStore.StreamAll(ctx, es, selectFrom)
-		case TargetStreamType:
-			return s.EventStore.StreamByType(ctx, es, t.Type, selectFrom)
-		default:
-			return fmt.Errorf("subscription.CatchUp: unexpected target type")
-		}
+		return s.EventStore.Stream(ctx, es, s.Target, selectFrom)
 	})
 
 	for event := range es {
@@ -133,7 +127,7 @@ func (s *CatchUp) catchUp(
 			logger.With("sequenceNumber", event.SequenceNumber),
 		)
 
-		stream <- event
+		eventStream <- event
 		lastSequenceNumber = event.SequenceNumber
 	}
 

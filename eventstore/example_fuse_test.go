@@ -9,9 +9,10 @@ import (
 
 func ExampleFused() {
 	eventStore := inmemory.NewEventStore()
-	correlatedEventStore := correlation.WrapEventStore(eventStore, func() string {
-		return "test-id"
-	})
+	correlatedEventStore := correlation.EventStoreWrapper{
+		Appender:  eventStore,
+		Generator: func() string { return "test-id" },
+	}
 
 	aggregate.NewRepository(aggregate.Type{}, eventstore.Fused{
 		Appender: correlatedEventStore,
