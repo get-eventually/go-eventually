@@ -10,6 +10,24 @@ type Checkpointer interface {
 	Write(ctx context.Context, key string, sequenceNumber int64) error
 }
 
+// CheckpointerMock is a mock implementation of a checkpoint.Checkpointer.
+type CheckpointerMock struct {
+	// ReadFn is the function called on checkpoint.Checkpointer.Read.
+	ReadFn func(ctx context.Context, key string) (int64, error)
+	// WriteFn is the function called on checkpoint.Checkpointer.Write.
+	WriteFn func(ctx context.Context, key string, sequenceNumber int64) error
+}
+
+// Read runs the checkpoint.CheckpointerMock.ReadFn function.
+func (m CheckpointerMock) Read(ctx context.Context, key string) (int64, error) {
+	return m.ReadFn(ctx, key)
+}
+
+// Write runs the checkpoint.CheckpointerMock.WriteFn function.
+func (m CheckpointerMock) Write(ctx context.Context, key string, sequenceNumber int64) error {
+	return m.WriteFn(ctx, key, sequenceNumber)
+}
+
 // NopCheckpointer is a Checkpointer implementation that always restarts
 // from the beginning.
 var NopCheckpointer = FixedCheckpointer{StartingFrom: 0}
