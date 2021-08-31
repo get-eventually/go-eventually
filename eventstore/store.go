@@ -48,6 +48,17 @@ type Event struct {
 	SequenceNumber int64
 }
 
+// MapEvents maps a list of persisted eventstore.Event to only their internal Event data.
+func MapEvents(events []Event) []eventually.Event {
+	res := make([]eventually.Event, 0, len(events))
+
+	for _, event := range events {
+		res = append(res, event.Event)
+	}
+
+	return res
+}
+
 // EventStream is a stream of persisted Events.
 type EventStream chan<- Event
 
