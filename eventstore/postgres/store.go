@@ -8,6 +8,8 @@ import (
 
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/eventstore"
+	"github.com/get-eventually/go-eventually/eventstore/stream"
+	"github.com/lib/pq"
 
 	_ "github.com/golang-migrate/migrate/database/postgres" // postgres driver for migrate
 )
@@ -34,72 +36,54 @@ func (st EventStore) Register(events ...eventually.Payload) error {
 	return st.registry.Register(events...)
 }
 
-// StreamAll opens an Event Stream and sinks all the events in the Event Store in the provided
-// channel, skipping those events with a sequence number lower than the provided bound.
-func (st EventStore) StreamAll(ctx context.Context, es eventstore.EventStream, selectt eventstore.Select) error {
-	defer close(es)
-
-	rows, err := st.db.QueryContext(
-		ctx,
-		`SELECT * FROM events
-			WHERE global_sequence_number >= $1
-			ORDER BY global_sequence_number ASC`,
-		selectt.From,
-	)
-	if err != nil {
-		return fmt.Errorf("postgres.EventStore: failed to get events from store: %w", err)
-	}
-
-	// FIXME(ar3s3ru): add logger support in the event store
-	return rowsToStream(rows, es, st.registry, nil)
-}
-
-// StreamByType opens a stream of all Event Streams grouped by the same Type,
-// as specified in input.
+// Stream opens one or more Event Streams depending on the provided target.
 //
-// The stream will be ordered based on their Global Sequence Number.
-func (st EventStore) StreamByType(
-	ctx context.Context,
-	es eventstore.EventStream,
-	typ string,
-	selectt eventstore.Select,
-) error {
-	defer close(es)
-
-	rows, err := st.db.QueryContext(
-		ctx,
-		`SELECT * FROM events
-			WHERE stream_type = $1 AND global_sequence_number >= $2
-			ORDER BY global_sequence_number ASC`,
-		typ,
-		selectt.From,
-	)
-	if err != nil {
-		return fmt.Errorf("postgres.EventStore: failed to get events from store: %w", err)
-	}
-
-	// FIXME(ar3s3ru): add logger support in the event store
-	return rowsToStream(rows, es, st.registry, nil)
-}
-
-// Stream opens the specific Event Stream identified by the provided id.
+// In case of multi-Event Streams targets, the Select value specified will be applied
+// over the value of the Global Sequence Number of the events. In case of a single Event Stream,
+// this is applied over the Version value.
 func (st EventStore) Stream(
 	ctx context.Context,
 	es eventstore.EventStream,
-	id eventstore.StreamID,
+	target stream.Target,
 	selectt eventstore.Select,
 ) error {
 	defer close(es)
 
-	rows, err := st.db.QueryContext(
-		ctx,
-		`SELECT * FROM events
-			WHERE stream_type = $1 AND stream_id = $2 AND "version" >= $3
-			ORDER BY "version" ASC`,
-		id.Type,
-		id.Name,
-		selectt.From,
+	var (
+		query string
+		args  []interface{}
 	)
+
+	switch t := target.(type) {
+	case stream.All:
+		query = `SELECT * FROM events
+		         WHERE global_sequence_number >= $1
+		         ORDER BY global_sequence_number ASC`
+		args = append(args, selectt.From)
+
+	case stream.ByType:
+		query = `SELECT * FROM events
+		         WHERE global_sequence_number >= $1 AND stream_type = $2
+		         ORDER BY global_sequence_number ASC`
+		args = append(args, selectt.From, string(t))
+
+	case stream.ByTypes:
+		query = `SELECT * FROM events
+		         WHERE global_sequence_number >= $1 AND stream_type = ANY($2)
+		         ORDER BY global_sequence_number ASC`
+		args = append(args, selectt.From, pq.Array(t))
+
+	case stream.ByID:
+		query = `SELECT * FROM events
+				 WHERE "version" >= $1 AND stream_type = $2 AND stream_id = $3
+				 ORDER BY "version" ASC`
+		args = append(args, selectt.From, t.Type, t.Name)
+
+	default:
+		return fmt.Errorf("postgres.EventStore: unsupported stream target: %T", t)
+	}
+
+	rows, err := st.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("postgres.EventStore: failed to get events from store: %w", err)
 	}
@@ -122,7 +106,7 @@ func (st EventStore) Stream(
 // of conflicting expectations with the provided VersionCheck value.
 func (st EventStore) Append(
 	ctx context.Context,
-	id eventstore.StreamID,
+	id stream.ID,
 	expected eventstore.VersionCheck,
 	events ...eventually.Event,
 ) (v int64, err error) {
@@ -159,7 +143,7 @@ func (st EventStore) Append(
 func (st *EventStore) appendEvent(
 	ctx context.Context,
 	tx *sql.Tx,
-	id eventstore.StreamID,
+	id stream.ID,
 	expected eventstore.VersionCheck,
 	event eventually.Event,
 ) (int64, error) {
