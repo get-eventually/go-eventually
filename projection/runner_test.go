@@ -144,7 +144,7 @@ func TestRunner(t *testing.T) {
 			EventStore:       eventStore,
 			PullEvery:        10 * time.Millisecond,
 			MaxInterval:      50 * time.Millisecond,
-			Logger:           logger.Nop{},
+			Logger:           logger.NewTest(t),
 			Checkpointer: checkpoint.CheckpointerMock{
 				ReadFn: func(ctx context.Context, key string) (int64, error) {
 					return 0, nil

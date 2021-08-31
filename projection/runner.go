@@ -7,6 +7,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/get-eventually/go-eventually/eventstore"
+	"github.com/get-eventually/go-eventually/logger"
 	"github.com/get-eventually/go-eventually/subscription"
 )
 
@@ -46,6 +47,7 @@ type Runner struct {
 	Applier      Applier
 	Subscription subscription.Subscription
 	BufferSize   int
+	Logger       logger.Logger
 }
 
 // Run starts listening to Events from the provided Subscription
@@ -71,6 +73,8 @@ func (r Runner) Run(ctx context.Context) error {
 	group, ctx := errgroup.WithContext(ctx)
 
 	group.Go(func() error {
+		logger.Info(r.Logger, "Subscription started for projection runner")
+
 		if err := r.Subscription.Start(ctx, eventStream); err != nil {
 			return fmt.Errorf("projection.Runner: subscription exited with error: %w", err)
 		}
@@ -87,7 +91,7 @@ func (r Runner) Run(ctx context.Context) error {
 			// Users could use projection.DoNotCheckpoint(ctx) to specify whether they want the message
 			// not to be checkpointed.
 			checkpoint := true
-			ctx = contextWithPreferredCheckpointStrategy(ctx, &checkpoint)
+			ctx := contextWithPreferredCheckpointStrategy(ctx, &checkpoint) //nolint:govet // Shadowing is fine.
 
 			if err := r.Applier.Apply(ctx, event); err != nil {
 				return fmt.Errorf("projection.Runner: failed to apply event to projection: %w", err)
@@ -96,12 +100,20 @@ func (r Runner) Run(ctx context.Context) error {
 			if checkpoint {
 				toCheckpoint <- event
 			}
+
+			logger.Info(r.Logger, "Skip checkpointing of event processed",
+				logger.With("sequenceNumber", event.SequenceNumber),
+			)
 		}
 
 		return nil
 	})
 
 	for event := range toCheckpoint {
+		logger.Info(r.Logger, "Checkpointing processed event",
+			logger.With("sequenceNumber", event.SequenceNumber),
+		)
+
 		if err := r.Subscription.Checkpoint(ctx, event); err != nil {
 			return fmt.Errorf("projection.Runner: failed to checkpoint event: %w", err)
 		}
