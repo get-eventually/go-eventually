@@ -10,8 +10,10 @@ import (
 	"github.com/get-eventually/go-eventually/eventstore/stream"
 )
 
-var _ eventstore.Store = &EventStore{}
-var _ eventstore.SequenceNumberGetter = &EventStore{}
+var (
+	_ eventstore.Store                = &EventStore{}
+	_ eventstore.SequenceNumberGetter = &EventStore{}
+)
 
 // EventStore is an in-memory eventstore.Store implementation.
 type EventStore struct {

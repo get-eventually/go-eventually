@@ -34,7 +34,7 @@ func TestVolatile(t *testing.T) {
 	logger, err := zap.NewDevelopment()
 	require.NoError(t, err)
 
-	volatileSubscription := subscription.Volatile{
+	volatileSubscription := &subscription.Volatile{
 		SubscriptionName: "test-volatile-subscription",
 		Target:           stream.ByType(streamID.Type),
 		EventStore:       eventStore,

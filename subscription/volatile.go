@@ -11,7 +11,7 @@ import (
 	"github.com/get-eventually/go-eventually/subscription/checkpoint"
 )
 
-var _ Subscription = Volatile{}
+var _ Subscription = &Volatile{}
 
 // Volatile is a Subscription type that does not keep state of
 // the last Event processed or received, nor survives the Subscription
@@ -51,11 +51,11 @@ type Volatile struct {
 }
 
 // Name is the name of the subscription.
-func (v Volatile) Name() string { return v.SubscriptionName }
+func (v *Volatile) Name() string { return v.SubscriptionName }
 
 // Start starts the Subscription by opening a subscribing Event Stream
 // using the subscription's Subscriber instance.
-func (v Volatile) Start(ctx context.Context, stream eventstore.EventStream) error {
+func (v *Volatile) Start(ctx context.Context, es eventstore.EventStream) error {
 	latestSequenceNumber, err := v.EventStore.LatestSequenceNumber(ctx)
 	if err != nil {
 		return fmt.Errorf("subscription.Volatile: failed to get latest sequence number from event store: %w", err)
@@ -72,7 +72,7 @@ func (v Volatile) Start(ctx context.Context, stream eventstore.EventStream) erro
 		BufferSize:       v.BufferSize,
 	}
 
-	if err := catchUpSubscription.Start(ctx, stream); err != nil {
+	if err := catchUpSubscription.Start(ctx, es); err != nil {
 		return fmt.Errorf("subscription.Volatile: internal catch-up subscription exited with error: %w", err)
 	}
 
@@ -81,6 +81,6 @@ func (v Volatile) Start(ctx context.Context, stream eventstore.EventStream) erro
 
 // Checkpoint is a no-op operation, since the transient nature of the
 // Subscription does not require to persist its current state.
-func (Volatile) Checkpoint(ctx context.Context, event eventstore.Event) error {
+func (*Volatile) Checkpoint(ctx context.Context, event eventstore.Event) error {
 	return nil
 }
