@@ -107,3 +107,11 @@ type Streamer interface {
 	// Stream opens one or more Event Streams as specified by the provided Event Stream target.
 	Stream(ctx context.Context, es EventStream, target stream.Target, selectt Select) error
 }
+
+// SequenceNumberGetter is an Event Store trait that is used to interact with
+// sequence numbers (e.g. queries).
+type SequenceNumberGetter interface {
+	// LatestSequenceNumber should return the latest, global Sequence Number
+	// registered by the Event Store.
+	LatestSequenceNumber(ctx context.Context) (int64, error)
+}

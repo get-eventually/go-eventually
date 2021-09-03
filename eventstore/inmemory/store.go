@@ -11,6 +11,7 @@ import (
 )
 
 var _ eventstore.Store = &EventStore{}
+var _ eventstore.SequenceNumberGetter = &EventStore{}
 
 // EventStore is an in-memory eventstore.Store implementation.
 type EventStore struct {
@@ -27,6 +28,14 @@ func NewEventStore() *EventStore {
 		byType:            make(map[string][]int),
 		byTypeAndInstance: make(map[string]map[string][]int),
 	}
+}
+
+func contextErr(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("inmemory.EventStore: context done: %w", err)
+	}
+
+	return nil
 }
 
 func (s *EventStore) streamAll(ctx context.Context, es eventstore.EventStream, selectt eventstore.Select) error {
@@ -162,6 +171,12 @@ func (s *EventStore) Stream(
 	}
 }
 
+func (s *EventStore) ensureMapsAreCreated(typ string) {
+	if v, ok := s.byTypeAndInstance[typ]; !ok || v == nil {
+		s.byTypeAndInstance[typ] = make(map[string][]int)
+	}
+}
+
 // Append inserts the specified Domain Events into the Event Stream specified
 // by the current instance, returning the new version of the Event Stream.
 //
@@ -223,16 +238,11 @@ func (s *EventStore) Append(
 	return lastCommittedEvent.Version, nil
 }
 
-func (s *EventStore) ensureMapsAreCreated(typ string) {
-	if v, ok := s.byTypeAndInstance[typ]; !ok || v == nil {
-		s.byTypeAndInstance[typ] = make(map[string][]int)
-	}
-}
+// LatestSequenceNumber returns the size of the internal Event Log.
+// This method never fails.
+func (s *EventStore) LatestSequenceNumber(ctx context.Context) (int64, error) {
+	s.mx.RLock()
+	defer s.mx.RUnlock()
 
-func contextErr(ctx context.Context) error {
-	if err := ctx.Err(); err != nil {
-		return fmt.Errorf("inmemory.EventStore: context done: %w", err)
-	}
-
-	return nil
+	return int64(len(s.events)), nil
 }
