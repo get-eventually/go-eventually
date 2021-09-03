@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
 
@@ -25,14 +26,14 @@ func TestCatchUp(t *testing.T) {
 	s := new(CatchUpSuite)
 
 	logger, err := zap.NewDevelopment()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	s.makeSubscription = func(store eventstore.Store) subscription.Subscription {
 		return &subscription.CatchUp{
 			SubscriptionName: t.Name(),
 			Checkpointer:     checkpoint.NopCheckpointer,
 			Target:           stream.All{},
-			Logger:           zaplogger.Wrap(logger),
+			Logger:           zaplogger.Wrap(logger.With(zap.String("test", t.Name()))),
 			EventStore:       store,
 			PullEvery:        10 * time.Millisecond,
 			MaxInterval:      50 * time.Millisecond,
