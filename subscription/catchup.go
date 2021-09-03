@@ -82,7 +82,11 @@ func (s *CatchUp) Start(ctx context.Context, eventStream eventstore.EventStream)
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			if err := ctx.Err(); err != nil {
+				return fmt.Errorf("subscription.CatchUp: context error: %w", err)
+			}
+
+			return nil
 
 		case <-time.After(b.NextBackOff()):
 			sequenceNumber, err := s.catchUp(ctx, eventStream, lastSequenceNumber)

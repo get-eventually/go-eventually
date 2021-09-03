@@ -1,56 +1,86 @@
 package subscription
 
-// NOTE(ar3s3ru): Volatile subscriptions are currently disabled, since the
-// support for Subscriptions is currently being deprecated.
+import (
+	"context"
+	"fmt"
+	"time"
 
-// import (
-// 	"context"
-// 	"fmt"
+	"github.com/get-eventually/go-eventually/eventstore"
+	"github.com/get-eventually/go-eventually/eventstore/stream"
+	"github.com/get-eventually/go-eventually/logger"
+	"github.com/get-eventually/go-eventually/subscription/checkpoint"
+)
 
-// 	"github.com/get-eventually/go-eventually/eventstore"
-// )
+var _ Subscription = &Volatile{}
 
-// var _ Subscription = Volatile{}
+// Volatile is a Subscription type that does not keep state of
+// the last Event processed or received, nor survives the Subscription
+// checkpoint between restarts.
+//
+// Use this Subscription type for volatile processes, such as projecting
+// realtime metrics, or when you're only interested in newer events
+// committed to the Event Store.
+type Volatile struct {
+	SubscriptionName string
+	Target           stream.Target
+	Logger           logger.Logger
+	EventStore       interface {
+		eventstore.Streamer
+		eventstore.SequenceNumberGetter
+	}
 
-// // Volatile is a Subscription type that does not keep state of
-// // the last Event processed or received, nor survives the Subscription
-// // checkpoint between restarts.
-// //
-// // Use this Subscription type for volatile processes, such as projecting
-// // realtime metrics, or when you're only interested in newer events
-// // committed to the Event Store.
-// type Volatile struct {
-// 	SubscriptionName string
-// 	Target           TargetStream
-// 	EventStore       eventstore.Subscriber
-// }
+	// PullEvery is the minimum interval between each streaming call to the Event Store.
+	//
+	// Defaults to DefaultPullInterval if unspecified or negative value
+	// has been provided.
+	PullEvery time.Duration
 
-// // Name is the name of the subscription.
-// func (v Volatile) Name() string { return v.SubscriptionName }
+	// MaxInterval is the maximum interval between each streaming call to the Event Store.
+	// Use this value to ensure a specific eventual consistency window.
+	//
+	// Defaults to DefaultMaxPullInterval if unspecified or negative value
+	// has been provided.
+	MaxInterval time.Duration
 
-// // Start starts the Subscription by opening a subscribing Event Stream
-// // using the subscription's Subscriber instance.
-// func (v Volatile) Start(ctx context.Context, stream eventstore.EventStream) error {
-// 	var err error
+	// BufferSize is the size of buffered channels used as EventStreams
+	// by the Subscription when receiving Events from the Event Store.
+	//
+	// Defaults to DefaultPullCatchUpBufferSize if unspecified or a negative
+	// value has been provided.
+	BufferSize int
+}
 
-// 	switch t := v.Target.(type) {
-// 	case TargetStreamAll:
-// 		err = v.EventStore.SubscribeToAll(ctx, stream)
-// 	case TargetStreamType:
-// 		err = v.EventStore.SubscribeToType(ctx, stream, t.Type)
-// 	default:
-// 		return fmt.Errorf("subscription.Volatile: unexpected target type")
-// 	}
+// Name is the name of the subscription.
+func (v *Volatile) Name() string { return v.SubscriptionName }
 
-// 	if err != nil {
-// 		return fmt.Errorf("subscription.Volatile: event subscriber exited with error: %w", err)
-// 	}
+// Start starts the Subscription by opening a subscribing Event Stream
+// using the subscription's Subscriber instance.
+func (v *Volatile) Start(ctx context.Context, es eventstore.EventStream) error {
+	latestSequenceNumber, err := v.EventStore.LatestSequenceNumber(ctx)
+	if err != nil {
+		return fmt.Errorf("subscription.Volatile: failed to get latest sequence number from event store: %w", err)
+	}
 
-// 	return nil
-// }
+	catchUpSubscription := &CatchUp{
+		SubscriptionName: v.SubscriptionName,
+		Target:           v.Target,
+		EventStore:       v.EventStore,
+		Checkpointer:     checkpoint.FixedCheckpointer{StartingFrom: latestSequenceNumber},
+		Logger:           v.Logger,
+		PullEvery:        v.PullEvery,
+		MaxInterval:      v.MaxInterval,
+		BufferSize:       v.BufferSize,
+	}
 
-// // Checkpoint is a no-op operation, since the transient nature of the
-// // Subscription does not require to persist its current state.
-// func (Volatile) Checkpoint(ctx context.Context, event eventstore.Event) error {
-// 	return nil
-// }
+	if err := catchUpSubscription.Start(ctx, es); err != nil {
+		return fmt.Errorf("subscription.Volatile: internal catch-up subscription exited with error: %w", err)
+	}
+
+	return nil
+}
+
+// Checkpoint is a no-op operation, since the transient nature of the
+// Subscription does not require to persist its current state.
+func (*Volatile) Checkpoint(ctx context.Context, event eventstore.Event) error {
+	return nil
+}
