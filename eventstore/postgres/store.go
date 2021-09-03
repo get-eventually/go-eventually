@@ -14,7 +14,10 @@ import (
 	_ "github.com/golang-migrate/migrate/database/postgres" // postgres driver for migrate
 )
 
-var _ eventstore.Store = &EventStore{}
+var (
+	_ eventstore.Store                = &EventStore{}
+	_ eventstore.SequenceNumberGetter = &EventStore{}
+)
 
 // EventStore is an eventstore.Store implementation which uses
 // PostgreSQL as backend datastore.
@@ -180,4 +183,24 @@ func (st *EventStore) appendEvent(
 	}
 
 	return newVersion, nil
+}
+
+// LatestSequenceNumber returns the latest Sequence Number used by a Domain Event
+// committed to the Event Store.
+func (st EventStore) LatestSequenceNumber(ctx context.Context) (int64, error) {
+	row := st.db.QueryRowContext(
+		ctx,
+		"SELECT max(global_sequence_number) FROM events",
+	)
+
+	if err := row.Err(); err != nil {
+		return 0, fmt.Errorf("postgres.EventStore: failed to get latest sequence number: %w", err)
+	}
+
+	var sequenceNumber int64
+	if err := row.Scan(&sequenceNumber); err != nil {
+		return 0, fmt.Errorf("postgres.EventStore: failed to scan latest sequence number from sql row: %w", err)
+	}
+
+	return sequenceNumber, nil
 }
