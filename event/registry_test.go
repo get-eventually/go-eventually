@@ -1,4 +1,4 @@
-package eventstore_test
+package event_test
 
 import (
 	"encoding/json"
@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/get-eventually/go-eventually"
-	"github.com/get-eventually/go-eventually/eventstore"
+	"github.com/get-eventually/go-eventually/event"
 	"github.com/get-eventually/go-eventually/internal"
 )
 
@@ -61,7 +61,7 @@ func TestRegistry_Register(t *testing.T) {
 		name, tc := name, tc
 
 		t.Run(name, func(t *testing.T) {
-			r := eventstore.NewRegistry(json.Unmarshal)
+			r := event.NewRegistry(json.Unmarshal)
 			err := r.Register(tc.input...)
 
 			if tc.wantErr {
@@ -102,7 +102,7 @@ func TestRegistry_Deserialize(t *testing.T) {
 		name, tc := name, tc
 
 		t.Run(name, func(t *testing.T) {
-			r := eventstore.NewRegistry(json.Unmarshal)
+			r := event.NewRegistry(json.Unmarshal)
 
 			require.NoError(t, r.Register(
 				internal.IntPayload(0),

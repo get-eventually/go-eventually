@@ -3,10 +3,12 @@ package correlation
 import (
 	"context"
 
-	"github.com/get-eventually/go-eventually"
-	"github.com/get-eventually/go-eventually/eventstore"
-	"github.com/get-eventually/go-eventually/eventstore/stream"
+	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/event/stream"
+	"github.com/get-eventually/go-eventually/version"
 )
+
+var _ event.Appender = EventStoreWrapper{}
 
 // Generator is a string identifier generator.
 type Generator func() string
@@ -25,7 +27,7 @@ type Generator func() string
 // and correlation.WithCausationID functions, or correlation.ProjectionWrapper
 // for more info.
 type EventStoreWrapper struct {
-	Appender  eventstore.Appender
+	Appender  event.Appender
 	Generator Generator
 }
 
@@ -34,9 +36,9 @@ type EventStoreWrapper struct {
 func (esw EventStoreWrapper) Append(
 	ctx context.Context,
 	id stream.ID,
-	expected eventstore.VersionCheck,
-	events ...eventually.Event,
-) (int64, error) {
+	expected version.Check,
+	events ...event.Event,
+) (uint64, error) {
 	// if request id is here, use that; otherwise, build a new id
 	causeID := esw.Generator()
 

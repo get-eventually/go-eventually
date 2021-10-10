@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
-
-	"github.com/get-eventually/go-eventually"
 )
 
 // Dispatcher represents a component that routes Domain Commands into
@@ -23,7 +21,7 @@ import (
 // Make sure to pick the right kind of Command Dispatcher that suits your
 // application needs.
 type Dispatcher interface {
-	Dispatch(context.Context, eventually.Command) error
+	Dispatch(context.Context, Command) error
 }
 
 var _ Dispatcher = InMemoryDispatcher{}
@@ -63,7 +61,7 @@ func (d InMemoryDispatcher) Register(handler Handler) {
 // the Dispatch method returns when the Command Handler finished execution.
 // If the Command Handler fails execution, returning an error, this error
 // is also returned by the Dispatch invocation.
-func (d InMemoryDispatcher) Dispatch(ctx context.Context, cmd eventually.Command) error {
+func (d InMemoryDispatcher) Dispatch(ctx context.Context, cmd Command) error {
 	typ := reflect.TypeOf(cmd.Payload)
 
 	handler, ok := d.handlers[typ]
@@ -86,7 +84,7 @@ var _ Dispatcher = &TrackingDispatcher{}
 // Useful for testing, this implementation is thread-safe.
 type TrackingDispatcher struct {
 	mx               sync.RWMutex
-	recordedCommands []eventually.Command
+	recordedCommands []Command
 }
 
 // NewTrackingDispatcher creates a new instance of a fake in-memory command.Dispatcher.
@@ -95,7 +93,7 @@ func NewTrackingDispatcher() *TrackingDispatcher {
 }
 
 // Dispatch records the provided Command internally.
-func (cd *TrackingDispatcher) Dispatch(ctx context.Context, cmd eventually.Command) error {
+func (cd *TrackingDispatcher) Dispatch(ctx context.Context, cmd Command) error {
 	cd.mx.Lock()
 	defer cd.mx.Unlock()
 
@@ -105,7 +103,7 @@ func (cd *TrackingDispatcher) Dispatch(ctx context.Context, cmd eventually.Comma
 }
 
 // RecordedCommands returns the list of Commands recorded by the dispatcher.
-func (cd *TrackingDispatcher) RecordedCommands() []eventually.Command {
+func (cd *TrackingDispatcher) RecordedCommands() []Command {
 	cd.mx.RLock()
 	defer cd.mx.RUnlock()
 
@@ -114,7 +112,7 @@ func (cd *TrackingDispatcher) RecordedCommands() []eventually.Command {
 
 // FlushCommands returns the list of Commands recorded by the dispatcher and
 // resets the internal list to nil.
-func (cd *TrackingDispatcher) FlushCommands() []eventually.Command {
+func (cd *TrackingDispatcher) FlushCommands() []Command {
 	cd.mx.Lock()
 	defer cd.mx.Unlock()
 

@@ -9,9 +9,9 @@ import (
 
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/command"
-	"github.com/get-eventually/go-eventually/eventstore"
-	"github.com/get-eventually/go-eventually/eventstore/inmemory"
-	"github.com/get-eventually/go-eventually/eventstore/stream"
+	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/event/stream"
+	"github.com/get-eventually/go-eventually/extension/inmemory"
 )
 
 type mockCommand struct {
@@ -37,11 +37,11 @@ func TestErrorRecorder(t *testing.T) {
 		trackingEventStore := inmemory.NewTrackingEventStore(eventStore)
 
 		handler := command.ErrorRecorder{
-			Handler: command.HandlerFunc(func(ctx context.Context, cmd eventually.Command) error {
+			Handler: command.HandlerFunc(func(ctx context.Context, cmd command.Command) error {
 				return nil
 			}),
 			Appender: trackingEventStore,
-			EventMapper: func(err error, cmd eventually.Command) eventually.Payload {
+			EventMapper: func(err error, cmd command.Command) eventually.Payload {
 				return mockCommandHasFailed{
 					err:     err,
 					command: cmd.Payload.(mockCommand),
@@ -49,7 +49,7 @@ func TestErrorRecorder(t *testing.T) {
 			},
 		}
 
-		err := handler.Handle(context.Background(), eventually.Command{
+		err := handler.Handle(context.Background(), command.Command{
 			Payload: mockCommand{message: t.Name()},
 		})
 
@@ -62,16 +62,16 @@ func TestErrorRecorder(t *testing.T) {
 		trackingEventStore := inmemory.NewTrackingEventStore(eventStore)
 
 		expectedErr := errors.New("failed command")
-		expectedCommand := eventually.Command{
+		expectedCommand := command.Command{
 			Payload: mockCommand{message: t.Name()},
 		}
 
 		handler := command.ErrorRecorder{
-			Handler: command.HandlerFunc(func(ctx context.Context, cmd eventually.Command) error {
+			Handler: command.HandlerFunc(func(ctx context.Context, cmd command.Command) error {
 				return expectedErr
 			}),
 			Appender: trackingEventStore,
-			EventMapper: func(err error, cmd eventually.Command) eventually.Payload {
+			EventMapper: func(err error, cmd command.Command) eventually.Payload {
 				return mockCommandHasFailed{
 					err:     err,
 					command: cmd.Payload.(mockCommand),
@@ -82,14 +82,14 @@ func TestErrorRecorder(t *testing.T) {
 		err := handler.Handle(context.Background(), expectedCommand)
 
 		assert.Error(t, err)
-		assert.Equal(t, []eventstore.Event{
+		assert.Equal(t, []event.Persisted{
 			{
 				Version: 1,
 				Stream: stream.ID{
 					Type: command.FailedType,
 					Name: expectedCommand.Payload.Name(),
 				},
-				Event: eventually.Event{
+				Event: event.Event{
 					Payload: mockCommandHasFailed{
 						err:     expectedErr,
 						command: expectedCommand.Payload.(mockCommand),
@@ -104,17 +104,17 @@ func TestErrorRecorder(t *testing.T) {
 		trackingEventStore := inmemory.NewTrackingEventStore(eventStore)
 
 		expectedErr := errors.New("failed command")
-		expectedCommand := eventually.Command{
+		expectedCommand := command.Command{
 			Payload: mockCommand{message: t.Name()},
 		}
 
 		handler := command.ErrorRecorder{
 			CaptureErrors: true,
-			Handler: command.HandlerFunc(func(ctx context.Context, cmd eventually.Command) error {
+			Handler: command.HandlerFunc(func(ctx context.Context, cmd command.Command) error {
 				return expectedErr
 			}),
 			Appender: trackingEventStore,
-			EventMapper: func(err error, cmd eventually.Command) eventually.Payload {
+			EventMapper: func(err error, cmd command.Command) eventually.Payload {
 				return mockCommandHasFailed{
 					err:     err,
 					command: cmd.Payload.(mockCommand),
@@ -125,14 +125,14 @@ func TestErrorRecorder(t *testing.T) {
 		err := handler.Handle(context.Background(), expectedCommand)
 
 		assert.NoError(t, err)
-		assert.Equal(t, []eventstore.Event{
+		assert.Equal(t, []event.Persisted{
 			{
 				Version: 1,
 				Stream: stream.ID{
 					Type: command.FailedType,
 					Name: expectedCommand.Payload.Name(),
 				},
-				Event: eventually.Event{
+				Event: event.Event{
 					Payload: mockCommandHasFailed{
 						err:     expectedErr,
 						command: expectedCommand.Payload.(mockCommand),
@@ -149,17 +149,17 @@ func TestErrorRecorder(t *testing.T) {
 		const expectedStreamType = "mocks-command"
 
 		expectedErr := errors.New("failed command")
-		expectedCommand := eventually.Command{
+		expectedCommand := command.Command{
 			Payload: mockCommand{message: t.Name()},
 		}
 
 		handler := command.ErrorRecorder{
-			Handler: command.HandlerFunc(func(ctx context.Context, cmd eventually.Command) error {
+			Handler: command.HandlerFunc(func(ctx context.Context, cmd command.Command) error {
 				return expectedErr
 			}),
 			Appender:   trackingEventStore,
 			StreamType: expectedStreamType,
-			EventMapper: func(err error, cmd eventually.Command) eventually.Payload {
+			EventMapper: func(err error, cmd command.Command) eventually.Payload {
 				return mockCommandHasFailed{
 					err:     err,
 					command: cmd.Payload.(mockCommand),
@@ -170,14 +170,14 @@ func TestErrorRecorder(t *testing.T) {
 		err := handler.Handle(context.Background(), expectedCommand)
 
 		assert.Error(t, err)
-		assert.Equal(t, []eventstore.Event{
+		assert.Equal(t, []event.Persisted{
 			{
 				Version: 1,
 				Stream: stream.ID{
 					Type: expectedStreamType,
 					Name: expectedCommand.Payload.Name(),
 				},
-				Event: eventually.Event{
+				Event: event.Event{
 					Payload: mockCommandHasFailed{
 						err:     expectedErr,
 						command: expectedCommand.Payload.(mockCommand),
@@ -193,20 +193,20 @@ func TestErrorRecorder(t *testing.T) {
 
 		expectedStreamType := "mocks-command"
 		expectedErr := errors.New("failed command")
-		expectedCommand := eventually.Command{
+		expectedCommand := command.Command{
 			Payload: mockCommand{message: t.Name()},
 		}
 
 		handler := command.ErrorRecorder{
-			Handler: command.HandlerFunc(func(ctx context.Context, cmd eventually.Command) error {
+			Handler: command.HandlerFunc(func(ctx context.Context, cmd command.Command) error {
 				return expectedErr
 			}),
 			Appender:   trackingEventStore,
 			StreamType: expectedStreamType,
-			StreamNameMapper: func(cmd eventually.Command) string {
+			StreamNameMapper: func(cmd command.Command) string {
 				return cmd.Payload.(mockCommand).message
 			},
-			EventMapper: func(err error, cmd eventually.Command) eventually.Payload {
+			EventMapper: func(err error, cmd command.Command) eventually.Payload {
 				return mockCommandHasFailed{
 					err:     err,
 					command: cmd.Payload.(mockCommand),
@@ -217,14 +217,14 @@ func TestErrorRecorder(t *testing.T) {
 		err := handler.Handle(context.Background(), expectedCommand)
 
 		assert.Error(t, err)
-		assert.Equal(t, []eventstore.Event{
+		assert.Equal(t, []event.Persisted{
 			{
 				Version: 1,
 				Stream: stream.ID{
 					Type: expectedStreamType,
 					Name: expectedCommand.Payload.(mockCommand).message,
 				},
-				Event: eventually.Event{
+				Event: event.Event{
 					Payload: mockCommandHasFailed{
 						err:     expectedErr,
 						command: expectedCommand.Payload.(mockCommand),

@@ -12,11 +12,12 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/get-eventually/go-eventually"
+	"github.com/get-eventually/go-eventually/event"
 	"github.com/get-eventually/go-eventually/eventstore"
 	"github.com/get-eventually/go-eventually/eventstore/stream"
 )
 
-var _ eventstore.Store = &InstrumentedEventStore{}
+var _ event.Store = &InstrumentedEventStore{}
 
 // InstrumentedEventStore is a wrapper to provide OpenTelemetry instrumentation
 // for EventStore compatible implementations, and compatible
@@ -26,7 +27,7 @@ var _ eventstore.Store = &InstrumentedEventStore{}
 type InstrumentedEventStore struct {
 	meter      metric.Meter
 	tracer     trace.Tracer
-	eventStore eventstore.Store
+	eventStore event.Store
 
 	appendCount    metric.Int64Counter
 	appendDuration metric.Int64ValueRecorder

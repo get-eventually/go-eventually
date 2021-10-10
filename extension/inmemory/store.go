@@ -2,24 +2,22 @@ package inmemory
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
-	"github.com/get-eventually/go-eventually"
-	"github.com/get-eventually/go-eventually/eventstore"
-	"github.com/get-eventually/go-eventually/eventstore/stream"
+	"github.com/pkg/errors"
+
+	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/event/stream"
+	"github.com/get-eventually/go-eventually/version"
 )
 
-var (
-	_ eventstore.Store                = &EventStore{}
-	_ eventstore.SequenceNumberGetter = &EventStore{}
-)
+var _ event.Store = &EventStore{}
 
 // EventStore is an in-memory eventstore.Store implementation.
 type EventStore struct {
 	mx sync.RWMutex
 
-	events            []eventstore.Event
+	events            []event.Persisted
 	byType            map[string][]int
 	byTypeAndInstance map[string]map[string][]int
 }
@@ -34,20 +32,20 @@ func NewEventStore() *EventStore {
 
 func contextErr(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
-		return fmt.Errorf("inmemory.EventStore: context done: %w", err)
+		return errors.Wrap(err, "inmemory.EventStore: context done")
 	}
 
 	return nil
 }
 
-func (s *EventStore) streamAll(ctx context.Context, es eventstore.EventStream, selectt eventstore.Select) error {
+func (s *EventStore) streamAll(ctx context.Context, eventStream event.Stream, selector version.Selector) error {
 	for _, event := range s.events {
-		if event.SequenceNumber < selectt.From {
+		if event.SequenceNumber < selector.From {
 			continue
 		}
 
 		select {
-		case es <- event:
+		case eventStream <- event:
 		case <-ctx.Done():
 			return contextErr(ctx)
 		}
@@ -58,19 +56,19 @@ func (s *EventStore) streamAll(ctx context.Context, es eventstore.EventStream, s
 
 func (s *EventStore) streamByType(
 	ctx context.Context,
-	es eventstore.EventStream,
-	typ string,
-	selectt eventstore.Select,
+	eventStream event.Stream,
+	eventType string,
+	selector version.Selector,
 ) error {
-	for _, eventIdx := range s.byType[typ] {
+	for _, eventIdx := range s.byType[eventType] {
 		event := s.events[eventIdx]
 
-		if event.SequenceNumber < selectt.From {
+		if event.SequenceNumber < selector.From {
 			continue
 		}
 
 		select {
-		case es <- event:
+		case eventStream <- event:
 		case <-ctx.Done():
 			return contextErr(ctx)
 		}
@@ -81,17 +79,17 @@ func (s *EventStore) streamByType(
 
 func (s *EventStore) streamByTypes(
 	ctx context.Context,
-	es eventstore.EventStream,
-	types []string,
-	selectt eventstore.Select,
+	eventStream event.Stream,
+	eventTypes []string,
+	selector version.Selector,
 ) error {
 	indexedTypes := make(map[string]struct{})
-	for _, typ := range types {
+	for _, typ := range eventTypes {
 		indexedTypes[typ] = struct{}{}
 	}
 
 	for _, event := range s.events {
-		if event.SequenceNumber < selectt.From {
+		if event.SequenceNumber < selector.From {
 			continue
 		}
 
@@ -100,7 +98,7 @@ func (s *EventStore) streamByTypes(
 		}
 
 		select {
-		case es <- event:
+		case eventStream <- event:
 		case <-ctx.Done():
 			return contextErr(ctx)
 		}
@@ -111,15 +109,15 @@ func (s *EventStore) streamByTypes(
 
 func (s *EventStore) streamByID(
 	ctx context.Context,
-	es eventstore.EventStream,
-	id stream.ID,
-	selectt eventstore.Select,
+	eventStream event.Stream,
+	eventStreamID stream.ID,
+	selector version.Selector,
 ) error {
-	if m, ok := s.byTypeAndInstance[id.Type]; !ok || m == nil {
+	if m, ok := s.byTypeAndInstance[eventStreamID.Type]; !ok || m == nil {
 		return nil
 	}
 
-	eventIdxs, ok := s.byTypeAndInstance[id.Type][id.Name]
+	eventIdxs, ok := s.byTypeAndInstance[eventStreamID.Type][eventStreamID.Name]
 	if !ok {
 		return nil
 	}
@@ -127,12 +125,12 @@ func (s *EventStore) streamByID(
 	for _, idx := range eventIdxs {
 		event := s.events[idx]
 
-		if event.Version < selectt.From {
+		if event.Version < selector.From {
 			continue
 		}
 
 		select {
-		case es <- event:
+		case eventStream <- event:
 		case <-ctx.Done():
 			return contextErr(ctx)
 		}
@@ -151,26 +149,29 @@ func (s *EventStore) streamByID(
 // This method fails only when the context is canceled.
 func (s *EventStore) Stream(
 	ctx context.Context,
-	es eventstore.EventStream,
-	target stream.Target,
-	selectt eventstore.Select,
+	eventStream event.Stream,
+	eventStreamID stream.ID,
+	selector version.Selector,
 ) error {
 	s.mx.RLock()
 	defer s.mx.RUnlock()
-	defer close(es)
+	defer close(eventStream)
 
-	switch t := target.(type) {
-	case stream.All:
-		return s.streamAll(ctx, es, selectt)
-	case stream.ByType:
-		return s.streamByType(ctx, es, string(t), selectt)
-	case stream.ByTypes:
-		return s.streamByTypes(ctx, es, []string(t), selectt)
-	case stream.ByID:
-		return s.streamByID(ctx, es, stream.ID(t), selectt)
-	default:
-		return fmt.Errorf("inmemory.EventStore: unsupported stream target type provided: %T", t)
-	}
+	// TODO(ar3s3ru): refactor this
+	// switch t := target.(type) {
+	// case stream.All:
+	// 	return s.streamAll(ctx, es, selectt)
+	// case stream.ByType:
+	// 	return s.streamByType(ctx, es, string(t), selectt)
+	// case stream.ByTypes:
+	// 	return s.streamByTypes(ctx, es, []string(t), selectt)
+	// case stream.ByID:
+	// 	return s.streamByID(ctx, es, stream.ID(t), selectt)
+	// default:
+	// 	return fmt.Errorf("inmemory.EventStore: unsupported stream target type provided: %T", t)
+	// }
+
+	return s.streamByID(ctx, eventStream, eventStreamID, selector)
 }
 
 func (s *EventStore) ensureMapsAreCreated(typ string) {
@@ -194,38 +195,39 @@ func (s *EventStore) ensureMapsAreCreated(typ string) {
 func (s *EventStore) Append(
 	ctx context.Context,
 	id stream.ID,
-	expected eventstore.VersionCheck,
-	events ...eventually.Event,
-) (int64, error) {
+	expected version.Check,
+	events ...event.Event,
+) (uint64, error) {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 
-	// Make sure we create the necessary maps, otherwise the code
-	// down below will panic.
+	// Make sure we create the necessary maps, otherwise the code down below will panic.
 	s.ensureMapsAreCreated(id.Type)
 
-	currentVersion := eventstore.VersionCheck(len(s.byTypeAndInstance[id.Type][id.Name]))
-	if expected != eventstore.VersionCheckAny && currentVersion != expected {
-		return 0, fmt.Errorf("inmemory: failed to append events: %w", eventstore.ErrConflict{
-			Expected: int64(expected),
-			Actual:   int64(currentVersion),
-		})
+	currentVersion := version.CheckExact(len(s.byTypeAndInstance[id.Type][id.Name]))
+	if expected != version.Any && currentVersion != expected {
+		err := event.ErrConflict{
+			Expected: uint64(expected.(version.CheckExact)),
+			Actual:   uint64(currentVersion),
+		}
+
+		return 0, errors.Wrap(err, "inmemory.EventStore: failed to append events")
 	}
 
 	nextOffset := int64(len(s.events))
-	newPersistedEvents := make([]eventstore.Event, 0, len(events))
+	newPersistedEvents := make([]event.Persisted, 0, len(events))
 	newIndexes := make([]int, 0, len(events))
 
-	for i, event := range events {
+	for i, evt := range events {
 		nextIndex := int(nextOffset) + i
 
 		// Sequence numbers and versions should all start from 1,
 		// hence why this block uses `+ 1`.
-		newPersistedEvents = append(newPersistedEvents, eventstore.Event{
+		newPersistedEvents = append(newPersistedEvents, event.Persisted{
 			Stream:         id,
-			Version:        int64(currentVersion) + int64(i) + 1,
-			SequenceNumber: int64(nextIndex) + 1,
-			Event:          event,
+			Version:        uint64(currentVersion) + uint64(i) + 1,
+			SequenceNumber: uint64(nextIndex) + 1,
+			Event:          evt,
 		})
 
 		newIndexes = append(newIndexes, nextIndex)

@@ -6,19 +6,15 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/get-eventually/go-eventually"
-	"github.com/get-eventually/go-eventually/eventstore"
-	"github.com/get-eventually/go-eventually/eventstore/inmemory"
-	"github.com/get-eventually/go-eventually/eventstore/stream"
+	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/event/stream"
 	"github.com/get-eventually/go-eventually/extension/correlation"
+	"github.com/get-eventually/go-eventually/extension/inmemory"
 	"github.com/get-eventually/go-eventually/internal"
+	"github.com/get-eventually/go-eventually/version"
 )
 
-type applierFunc func(context.Context, eventstore.Event) error
-
-func (f applierFunc) Apply(ctx context.Context, event eventstore.Event) error { return f(ctx, event) }
-
-func TestProjectionWrapper(t *testing.T) {
+func TestProcessorWrapper(t *testing.T) {
 	const (
 		typeName      = "my-type"
 		correlationID = "fantastic-id"
@@ -40,23 +36,23 @@ func TestProjectionWrapper(t *testing.T) {
 		_, err := eventStore.Append(
 			ctx,
 			streamID,
-			eventstore.VersionCheck(0),
-			eventually.Event{Payload: internal.StringPayload("uncorrelated-test")},
+			version.CheckExact(0),
+			event.Event{Payload: internal.StringPayload("uncorrelated-test")},
 		)
 
 		if !assert.NoError(t, err) {
 			return
 		}
 
-		events, err := eventstore.StreamToSlice(ctx, func(ctx context.Context, es eventstore.EventStream) error {
-			return eventStore.Stream(ctx, es, stream.ByID(streamID), eventstore.SelectFromBeginning)
+		events, err := event.StreamToSlice(ctx, func(ctx context.Context, eventStream event.Stream) error {
+			return eventStore.Stream(ctx, eventStream, streamID, version.SelectFromBeginning)
 		})
 
 		assert.NoError(t, err)
 		assert.Len(t, events, 1)
 
-		projection := correlation.ProjectionWrapper{
-			Projection: applierFunc(func(ctx context.Context, _ eventstore.Event) error {
+		processor := correlation.ProcessorWrapper{
+			Processor: event.ProcessorFunc(func(ctx context.Context, _ event.Persisted) error {
 				correlationID, hasCorrelation := correlation.IDContext(ctx)
 				causationID, hasCausation := correlation.CausationIDContext(ctx)
 
@@ -69,7 +65,7 @@ func TestProjectionWrapper(t *testing.T) {
 			}),
 		}
 
-		assert.NoError(t, projection.Apply(ctx, events[0]))
+		assert.NoError(t, processor.Process(ctx, events[0]))
 	})
 
 	t.Run("wrapped projector extends context with incoming event correlation data", func(t *testing.T) {
@@ -81,23 +77,23 @@ func TestProjectionWrapper(t *testing.T) {
 		_, err := correlatedEventStore.Append(
 			ctx,
 			streamID,
-			eventstore.VersionCheck(0),
-			eventually.Event{Payload: internal.StringPayload("correlated-test")},
+			version.CheckExact(0),
+			event.Event{Payload: internal.StringPayload("correlated-test")},
 		)
 
 		if !assert.NoError(t, err) {
 			return
 		}
 
-		events, err := eventstore.StreamToSlice(ctx, func(ctx context.Context, es eventstore.EventStream) error {
-			return eventStore.Stream(ctx, es, stream.ByID(streamID), eventstore.SelectFromBeginning)
+		events, err := event.StreamToSlice(ctx, func(ctx context.Context, eventStream event.Stream) error {
+			return eventStore.Stream(ctx, eventStream, streamID, version.SelectFromBeginning)
 		})
 
 		assert.NoError(t, err)
 		assert.Len(t, events, 1)
 
-		projection := correlation.ProjectionWrapper{
-			Projection: applierFunc(func(ctx context.Context, _ eventstore.Event) error {
+		processor := correlation.ProcessorWrapper{
+			Processor: event.ProcessorFunc(func(ctx context.Context, _ event.Persisted) error {
 				id, hasCorrelation := correlation.IDContext(ctx)
 				causationID, hasCausation := correlation.CausationIDContext(ctx)
 
@@ -110,6 +106,6 @@ func TestProjectionWrapper(t *testing.T) {
 			}),
 		}
 
-		assert.NoError(t, projection.Apply(ctx, events[0]))
+		assert.NoError(t, processor.Process(ctx, events[0]))
 	})
 }

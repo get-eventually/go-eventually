@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/command"
 )
 
@@ -18,17 +17,17 @@ type handler struct {
 	t *testing.T
 }
 
-func (handler) CommandType() command.Command { return cmd{} }
-func (h handler) Handle(ctx context.Context, c eventually.Command) error {
+func (handler) CommandType() command.Type { return cmd{} }
+func (h handler) Handle(ctx context.Context, c command.Command) error {
 	assert.IsType(h.t, cmd{}, c.Payload)
 	return nil
 }
 
-func TestBus(t *testing.T) {
-	bus := command.NewInMemoryDispatcher()
-	bus.Register(handler{t})
+func TestDispatcher(t *testing.T) {
+	dispatcher := command.NewInMemoryDispatcher()
+	dispatcher.Register(handler{t})
 
-	err := bus.Dispatch(context.Background(), eventually.Command{
+	err := dispatcher.Dispatch(context.Background(), command.Command{
 		Payload: cmd{},
 	})
 	assert.NoError(t, err)

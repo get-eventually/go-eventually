@@ -1,10 +1,10 @@
-package eventstore_test
+package event_test
 
 import (
 	"github.com/get-eventually/go-eventually/aggregate"
-	"github.com/get-eventually/go-eventually/eventstore"
-	"github.com/get-eventually/go-eventually/eventstore/inmemory"
+	"github.com/get-eventually/go-eventually/event"
 	"github.com/get-eventually/go-eventually/extension/correlation"
+	"github.com/get-eventually/go-eventually/extension/inmemory"
 )
 
 func ExampleFused() {
@@ -14,7 +14,7 @@ func ExampleFused() {
 		Generator: func() string { return "test-id" },
 	}
 
-	aggregate.NewRepository(aggregate.Type{}, eventstore.Fused{
+	aggregate.NewRepository(aggregate.Type{}, event.FusedStore{
 		Appender: correlatedEventStore,
 		Streamer: eventStore,
 	})

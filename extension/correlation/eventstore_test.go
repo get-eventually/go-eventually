@@ -7,12 +7,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/get-eventually/go-eventually"
-	"github.com/get-eventually/go-eventually/eventstore"
-	"github.com/get-eventually/go-eventually/eventstore/inmemory"
-	"github.com/get-eventually/go-eventually/eventstore/stream"
+	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/event/stream"
 	"github.com/get-eventually/go-eventually/extension/correlation"
+	"github.com/get-eventually/go-eventually/extension/inmemory"
 	"github.com/get-eventually/go-eventually/internal"
+	"github.com/get-eventually/go-eventually/version"
 )
 
 const randomStringSize = 12
@@ -45,9 +45,9 @@ func TestEventStoreWrapper(t *testing.T) {
 	_, err := correlatedEventStore.Append(
 		ctx,
 		streamID,
-		eventstore.VersionCheck(0),
-		eventually.Event{Payload: internal.StringPayload("my-first-event")},
-		eventually.Event{Payload: internal.StringPayload("my-second-event")},
+		version.CheckExact(0),
+		event.Event{Payload: internal.StringPayload("my-first-event")},
+		event.Event{Payload: internal.StringPayload("my-second-event")},
 	)
 
 	if !assert.NoError(t, err) {
@@ -55,8 +55,8 @@ func TestEventStoreWrapper(t *testing.T) {
 	}
 
 	// Make sure the new events have been recorded with correlation data.
-	events, err := eventstore.StreamToSlice(ctx, func(ctx context.Context, es eventstore.EventStream) error {
-		return eventStore.Stream(ctx, es, stream.ByID(streamID), eventstore.SelectFromBeginning)
+	events, err := event.StreamToSlice(ctx, func(ctx context.Context, eventStream event.Stream) error {
+		return eventStore.Stream(ctx, eventStream, streamID, version.SelectFromBeginning)
 	})
 
 	assert.NoError(t, err)

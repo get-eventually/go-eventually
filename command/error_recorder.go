@@ -2,11 +2,13 @@ package command
 
 import (
 	"context"
-	"fmt"
+
+	"github.com/pkg/errors"
 
 	"github.com/get-eventually/go-eventually"
-	"github.com/get-eventually/go-eventually/eventstore"
-	"github.com/get-eventually/go-eventually/eventstore/stream"
+	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/event/stream"
+	"github.com/get-eventually/go-eventually/version"
 )
 
 // FailedType is the default stream type used by ErrorRecorder
@@ -24,7 +26,7 @@ type ErrorRecorder struct {
 	Handler
 
 	// Appender is the Event Store instance used for appending domain events.
-	Appender eventstore.Appender
+	Appender event.Appender
 
 	// CaptureErrors specifies whether an error reported from the
 	// command.Handler should be captured (or "silenced") by this component
@@ -42,13 +44,13 @@ type ErrorRecorder struct {
 	// This is useful in case you want to use the same Aggregate id the command is targeting.
 	//
 	// If unspecified, the command name will be used instead.
-	StreamNameMapper func(cmd eventually.Command) string
+	StreamNameMapper func(cmd Command) string
 
 	// EventMapper should return the Domain Event type you defined for these commands.
 	//
 	// NOTE: this is necessary for (de)-serialization purposes while generics are
 	// still missing in Go. This requirement might be removed in the future.
-	EventMapper func(err error, cmd eventually.Command) eventually.Payload
+	EventMapper func(err error, cmd Command) eventually.Payload
 }
 
 func (er ErrorRecorder) streamType() string {
@@ -59,7 +61,7 @@ func (er ErrorRecorder) streamType() string {
 	return FailedType
 }
 
-func (er ErrorRecorder) buildStreamID(cmd eventually.Command) stream.ID {
+func (er ErrorRecorder) buildStreamID(cmd Command) stream.ID {
 	streamName := cmd.Payload.Name()
 	if er.StreamNameMapper != nil {
 		streamName = er.StreamNameMapper(cmd)
@@ -80,25 +82,25 @@ func (er ErrorRecorder) buildStreamID(cmd eventually.Command) stream.ID {
 //
 // If CaptureError has been set to "true", the error from the command.Handler is silenced
 // but an error can still be returned if the append operation on the Event Store fails.
-func (er ErrorRecorder) Handle(ctx context.Context, cmd eventually.Command) error {
+func (er ErrorRecorder) Handle(ctx context.Context, cmd Command) error {
 	err := er.Handler.Handle(ctx, cmd)
 	if err == nil {
 		return nil
 	}
 
 	streamID := er.buildStreamID(cmd)
-	event := eventually.Event{
+	event := event.Event{
 		Payload: er.EventMapper(err, cmd),
 	}
 
-	_, appendErr := er.Appender.Append(ctx, streamID, eventstore.VersionCheckAny, event)
+	_, appendErr := er.Appender.Append(ctx, streamID, version.Any, event)
 	if appendErr != nil && er.CaptureErrors {
 		// Append error only returned if silencing command.Handler errors.
-		return fmt.Errorf("command.ErrorRecorder: failed to append command error to event store: %w", err)
+		return errors.Wrap(err, "command.ErrorRecorder: failed to append command error to event store")
 	}
 
 	if !er.CaptureErrors {
-		return fmt.Errorf("command.ErrorRecorder: command handler failed: %w", err)
+		return errors.Wrap(err, "command.ErrorRecorder: command handler failed")
 	}
 
 	return nil

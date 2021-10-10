@@ -6,11 +6,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/get-eventually/go-eventually"
-	"github.com/get-eventually/go-eventually/eventstore"
-	"github.com/get-eventually/go-eventually/eventstore/inmemory"
-	"github.com/get-eventually/go-eventually/eventstore/stream"
+	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/event/stream"
+	"github.com/get-eventually/go-eventually/extension/inmemory"
 	"github.com/get-eventually/go-eventually/internal"
+	"github.com/get-eventually/go-eventually/version"
 )
 
 func TestTrackingEventStore(t *testing.T) {
@@ -33,9 +33,9 @@ func TestTrackingEventStore(t *testing.T) {
 		_, err := trackingEventStore.Append(
 			ctx,
 			streamID,
-			eventstore.VersionCheck(0),
-			eventually.Event{Payload: internal.StringPayload("hello")},
-			eventually.Event{Payload: internal.StringPayload("world")},
+			version.CheckExact(0),
+			event.Event{Payload: internal.StringPayload("hello")},
+			event.Event{Payload: internal.StringPayload("world")},
 		)
 
 		if !assert.NoError(t, err) {
@@ -43,8 +43,8 @@ func TestTrackingEventStore(t *testing.T) {
 		}
 
 		// Compare events in the event store and recorded ones from the tracking store.
-		events, err := eventstore.StreamToSlice(ctx, func(ctx context.Context, es eventstore.EventStream) error {
-			return eventStore.Stream(ctx, es, stream.ByID(streamID), eventstore.SelectFromBeginning)
+		events, err := event.StreamToSlice(ctx, func(ctx context.Context, eventStream event.Stream) error {
+			return eventStore.Stream(ctx, eventStream, streamID, version.SelectFromBeginning)
 		})
 
 		assert.NoError(t, err)
@@ -52,7 +52,7 @@ func TestTrackingEventStore(t *testing.T) {
 	})
 }
 
-func stripMetadata(events []eventstore.Event) []eventstore.Event {
+func stripMetadata(events []event.Persisted) []event.Persisted {
 	for i := range events {
 		events[i].SequenceNumber = 0
 		events[i].Metadata = nil

@@ -4,9 +4,9 @@ import (
 	"context"
 	"sync"
 
-	"github.com/get-eventually/go-eventually"
-	"github.com/get-eventually/go-eventually/eventstore"
-	"github.com/get-eventually/go-eventually/eventstore/stream"
+	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/event/stream"
+	"github.com/get-eventually/go-eventually/version"
 )
 
 // TrackingEventStore is an Event Store wrapper to track the Events
@@ -14,15 +14,15 @@ import (
 //
 // Useful for tests assertion.
 type TrackingEventStore struct {
-	eventstore.Appender
+	event.Appender
 
 	mx       sync.RWMutex
-	recorded []eventstore.Event
+	recorded []event.Persisted
 }
 
 // NewTrackingEventStore wraps an Event Store to capture events that get
 // appended to it.
-func NewTrackingEventStore(appender eventstore.Appender) *TrackingEventStore {
+func NewTrackingEventStore(appender event.Appender) *TrackingEventStore {
 	return &TrackingEventStore{Appender: appender}
 }
 
@@ -33,7 +33,7 @@ func NewTrackingEventStore(appender eventstore.Appender) *TrackingEventStore {
 // the Event Store. Usually you should not need it in test assertions, since
 // the order of Events in the returned slice always follows the global order
 // of the Event Stream (or the Event Store).
-func (es *TrackingEventStore) Recorded() []eventstore.Event {
+func (es *TrackingEventStore) Recorded() []event.Persisted {
 	es.mx.RLock()
 	defer es.mx.RUnlock()
 
@@ -47,9 +47,9 @@ func (es *TrackingEventStore) Recorded() []eventstore.Event {
 func (es *TrackingEventStore) Append(
 	ctx context.Context,
 	id stream.ID,
-	expected eventstore.VersionCheck,
-	events ...eventually.Event,
-) (int64, error) {
+	expected version.Check,
+	events ...event.Event,
+) (uint64, error) {
 	es.mx.Lock()
 	defer es.mx.Unlock()
 
@@ -58,13 +58,13 @@ func (es *TrackingEventStore) Append(
 		return v, err
 	}
 
-	previousVersion := v - int64(len(events))
+	previousVersion := v - uint64(len(events))
 
-	for i, event := range events {
-		es.recorded = append(es.recorded, eventstore.Event{
+	for i, evt := range events {
+		es.recorded = append(es.recorded, event.Persisted{
 			Stream:  id,
-			Version: previousVersion + int64(i) + 1,
-			Event:   event,
+			Version: previousVersion + uint64(i) + 1,
+			Event:   evt,
 		})
 	}
 
