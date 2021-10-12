@@ -13,12 +13,12 @@ import (
 )
 
 var (
-	firstInstance = stream.ID{
+	firstInstance = event.StreamID{
 		Type: "first-type",
 		Name: "my-instance",
 	}
 
-	secondInstance = stream.ID{
+	secondInstance = event.StreamID{
 		Type: "second-type",
 		Name: "my-instance",
 	}

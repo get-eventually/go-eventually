@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/get-eventually/go-eventually/event"
-	"github.com/get-eventually/go-eventually/event/stream"
 	"github.com/get-eventually/go-eventually/extension/correlation"
 	"github.com/get-eventually/go-eventually/extension/inmemory"
 	"github.com/get-eventually/go-eventually/internal"
@@ -28,7 +27,7 @@ func TestProcessorWrapper(t *testing.T) {
 	}
 
 	t.Run("wrapped projector does not extend context if incoming event has no correlation data", func(t *testing.T) {
-		streamID := stream.ID{
+		streamID := event.StreamID{
 			Type: typeName,
 			Name: "my-instance",
 		}
@@ -69,7 +68,7 @@ func TestProcessorWrapper(t *testing.T) {
 	})
 
 	t.Run("wrapped projector extends context with incoming event correlation data", func(t *testing.T) {
-		streamID := stream.ID{
+		streamID := event.StreamID{
 			Type: typeName,
 			Name: "my-correlated-instance",
 		}

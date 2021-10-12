@@ -1,6 +1,10 @@
 package query
 
-import "context"
+import (
+	"context"
+
+	"github.com/get-eventually/go-eventually/event"
+)
 
 // Query is a marker interface for Domain Query types.
 type Query interface{}
@@ -18,4 +22,9 @@ type Answer interface{}
 type Handler interface {
 	QueryType() Query
 	Handle(context.Context, Query) (Answer, error)
+}
+
+type Projection interface {
+	event.Processor
+	Handler
 }

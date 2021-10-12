@@ -2,11 +2,10 @@ package event
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/get-eventually/go-eventually/event/stream"
-	"github.com/get-eventually/go-eventually/version"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/get-eventually/go-eventually/version"
 )
 
 type Stream chan<- Persisted
@@ -14,7 +13,7 @@ type Stream chan<- Persisted
 // StreamToSlice synchronously exhausts an EventStream to an event.Persisted slice,
 // and returns an error if the EventStream origin, passed here as a closure,
 // fails with an error.
-func StreamToSlice(ctx context.Context, f func(ctx context.Context, eventStream Stream) error) ([]Persisted, error) {
+func StreamToSlice(ctx context.Context, f func(ctx context.Context, stream Stream) error) ([]Persisted, error) {
 	ch := make(chan Persisted, 1)
 	group, ctx := errgroup.WithContext(ctx)
 
@@ -29,11 +28,11 @@ func StreamToSlice(ctx context.Context, f func(ctx context.Context, eventStream 
 }
 
 type Streamer interface {
-	Stream(ctx context.Context, eventStream Stream, eventStreamID stream.ID, selector version.Selector) error
+	Stream(ctx context.Context, stream Stream, id StreamID, selector version.Selector) error
 }
 
 type Appender interface {
-	Append(ctx context.Context, eventStreamID stream.ID, expected version.Check, events ...Event) (uint64, error)
+	Append(ctx context.Context, id StreamID, expected version.Check, events ...Event) (version.Version, error)
 }
 
 type Store interface {
@@ -57,20 +56,4 @@ type Store interface {
 type FusedStore struct {
 	Appender
 	Streamer
-}
-
-// ErrConflict is an error returned by an Event Store when appending
-// some events using an expected Event Stream version that does not match
-// the current state of the Event Stream.
-type ErrConflict struct {
-	Expected uint64
-	Actual   uint64
-}
-
-func (err ErrConflict) Error() string {
-	return fmt.Sprintf(
-		"event: conflict detected; expected stream version: %d, actual: %d",
-		err.Expected,
-		err.Actual,
-	)
 }

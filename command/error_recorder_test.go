@@ -10,7 +10,6 @@ import (
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/command"
 	"github.com/get-eventually/go-eventually/event"
-	"github.com/get-eventually/go-eventually/event/stream"
 	"github.com/get-eventually/go-eventually/extension/inmemory"
 )
 
@@ -85,7 +84,7 @@ func TestErrorRecorder(t *testing.T) {
 		assert.Equal(t, []event.Persisted{
 			{
 				Version: 1,
-				Stream: stream.ID{
+				Stream: event.StreamID{
 					Type: command.FailedType,
 					Name: expectedCommand.Payload.Name(),
 				},
@@ -128,7 +127,7 @@ func TestErrorRecorder(t *testing.T) {
 		assert.Equal(t, []event.Persisted{
 			{
 				Version: 1,
-				Stream: stream.ID{
+				Stream: event.StreamID{
 					Type: command.FailedType,
 					Name: expectedCommand.Payload.Name(),
 				},
@@ -173,7 +172,7 @@ func TestErrorRecorder(t *testing.T) {
 		assert.Equal(t, []event.Persisted{
 			{
 				Version: 1,
-				Stream: stream.ID{
+				Stream: event.StreamID{
 					Type: expectedStreamType,
 					Name: expectedCommand.Payload.Name(),
 				},
@@ -220,7 +219,7 @@ func TestErrorRecorder(t *testing.T) {
 		assert.Equal(t, []event.Persisted{
 			{
 				Version: 1,
-				Stream: stream.ID{
+				Stream: event.StreamID{
 					Type: expectedStreamType,
 					Name: expectedCommand.Payload.(mockCommand).message,
 				},

@@ -6,11 +6,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/aggregate"
 	"github.com/get-eventually/go-eventually/command"
-	"github.com/get-eventually/go-eventually/eventstore"
-	"github.com/get-eventually/go-eventually/eventstore/inmemory"
+	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/extension/inmemory"
+	"github.com/get-eventually/go-eventually/version"
 )
 
 // CommandHandlerInit is the entrypoint of the Command Handler scenario API.
@@ -36,12 +36,12 @@ func CommandHandler() CommandHandlerInit { return CommandHandlerInit{} }
 //
 // When you're testing Commands with a clean-slate system, you should either specify
 // no Domain Events, or skip directly to When().
-func (sc CommandHandlerInit) Given(events ...eventstore.Event) CommandHandlerGiven {
+func (sc CommandHandlerInit) Given(events ...event.Persisted) CommandHandlerGiven {
 	return CommandHandlerGiven{given: events}
 }
 
 // When provides the Command to evaluate.
-func (sc CommandHandlerInit) When(cmd eventually.Command) CommandHandlerWhen {
+func (sc CommandHandlerInit) When(cmd command.Command) CommandHandlerWhen {
 	return CommandHandlerWhen{when: cmd}
 }
 
@@ -49,11 +49,11 @@ func (sc CommandHandlerInit) When(cmd eventually.Command) CommandHandlerWhen {
 // a set of Domain Events have been provided using Given(), to represent
 // the state of the system at the time of evaluating a Command.
 type CommandHandlerGiven struct {
-	given []eventstore.Event
+	given []event.Persisted
 }
 
 // When provides the Command to evaluate.
-func (sc CommandHandlerGiven) When(cmd eventually.Command) CommandHandlerWhen {
+func (sc CommandHandlerGiven) When(cmd command.Command) CommandHandlerWhen {
 	return CommandHandlerWhen{
 		CommandHandlerGiven: sc,
 		when:                cmd,
@@ -65,7 +65,7 @@ func (sc CommandHandlerGiven) When(cmd eventually.Command) CommandHandlerWhen {
 type CommandHandlerWhen struct {
 	CommandHandlerGiven
 
-	when eventually.Command
+	when command.Command
 }
 
 // Then sets a positive expectation on the scenario outcome, to produce
@@ -73,7 +73,7 @@ type CommandHandlerWhen struct {
 //
 // The list of Domain Events specified should be ordered as the expected
 // order of recording by the Command Handler.
-func (sc CommandHandlerWhen) Then(events ...eventstore.Event) CommandHandlerThen {
+func (sc CommandHandlerWhen) Then(events ...event.Persisted) CommandHandlerThen {
 	return CommandHandlerThen{
 		CommandHandlerWhen: sc,
 		then:               events,
@@ -111,7 +111,7 @@ func (sc CommandHandlerWhen) ThenFails() CommandHandlerThen {
 type CommandHandlerThen struct {
 	CommandHandlerWhen
 
-	then      []eventstore.Event
+	then      []event.Persisted
 	thenError error
 	wantError bool
 }
@@ -135,15 +135,15 @@ func (sc CommandHandlerThen) Using( //nolint:gocritic
 	ctx := context.Background()
 	store := inmemory.NewEventStore()
 
-	for _, event := range sc.given {
-		_, err := store.Append(ctx, event.Stream, eventstore.VersionCheckAny, event.Event)
+	for _, evt := range sc.given {
+		_, err := store.Append(ctx, evt.Stream, version.Any, evt.Event)
 		if !assert.NoError(t, err) {
 			return
 		}
 	}
 
 	trackingStore := inmemory.NewTrackingEventStore(store)
-	repository := aggregate.NewRepository(aggregateType, eventstore.Fused{
+	repository := aggregate.NewRepository(aggregateType, event.FusedStore{
 		Appender: trackingStore,
 		Streamer: store,
 	})

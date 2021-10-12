@@ -18,7 +18,7 @@ import (
 	"github.com/get-eventually/go-eventually/internal"
 )
 
-var firstInstance = stream.ID{
+var firstInstance = event.StreamID{
 	Type: "first-type",
 	Name: "my-instance-for-latest-number",
 }

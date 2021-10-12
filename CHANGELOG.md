@@ -10,13 +10,18 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - ...
 
 ### Changed
-- ...
+- `projection` package has been removed, the types have been moved:
+    - `projection.Applier` is now `event.Processor`,
+    - `projection.Runner` is now `event.ProcessorRunner`.
+- `eventstore` package has been removed, and type implementations and definitions moved to the `event` package instead.
+- `stream` package has been removed, the `stream.ID` type is now under `event.StreamID`.
 
 ### Deprecated
 - ...
 
 ### Removed
-- ...
+- `subscription` package has been removed.
+- First-level support from the library to stream from multiple targets (`stream.ByType`, `stream.All`, etc.) has been removed. The `event.Streamer` interface now only targets a _single Event Stream_; for everything else, use an `event.Subscription` implementation instead.
 
 ## [v0.1.0-alpha.1]
 

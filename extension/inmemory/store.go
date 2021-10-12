@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/get-eventually/go-eventually/event"
-	"github.com/get-eventually/go-eventually/event/stream"
 	"github.com/get-eventually/go-eventually/version"
 )
 
@@ -38,107 +37,6 @@ func contextErr(ctx context.Context) error {
 	return nil
 }
 
-func (s *EventStore) streamAll(ctx context.Context, eventStream event.Stream, selector version.Selector) error {
-	for _, event := range s.events {
-		if event.SequenceNumber < selector.From {
-			continue
-		}
-
-		select {
-		case eventStream <- event:
-		case <-ctx.Done():
-			return contextErr(ctx)
-		}
-	}
-
-	return nil
-}
-
-func (s *EventStore) streamByType(
-	ctx context.Context,
-	eventStream event.Stream,
-	eventType string,
-	selector version.Selector,
-) error {
-	for _, eventIdx := range s.byType[eventType] {
-		event := s.events[eventIdx]
-
-		if event.SequenceNumber < selector.From {
-			continue
-		}
-
-		select {
-		case eventStream <- event:
-		case <-ctx.Done():
-			return contextErr(ctx)
-		}
-	}
-
-	return nil
-}
-
-func (s *EventStore) streamByTypes(
-	ctx context.Context,
-	eventStream event.Stream,
-	eventTypes []string,
-	selector version.Selector,
-) error {
-	indexedTypes := make(map[string]struct{})
-	for _, typ := range eventTypes {
-		indexedTypes[typ] = struct{}{}
-	}
-
-	for _, event := range s.events {
-		if event.SequenceNumber < selector.From {
-			continue
-		}
-
-		if _, ok := indexedTypes[event.Stream.Type]; !ok {
-			continue
-		}
-
-		select {
-		case eventStream <- event:
-		case <-ctx.Done():
-			return contextErr(ctx)
-		}
-	}
-
-	return nil
-}
-
-func (s *EventStore) streamByID(
-	ctx context.Context,
-	eventStream event.Stream,
-	eventStreamID stream.ID,
-	selector version.Selector,
-) error {
-	if m, ok := s.byTypeAndInstance[eventStreamID.Type]; !ok || m == nil {
-		return nil
-	}
-
-	eventIdxs, ok := s.byTypeAndInstance[eventStreamID.Type][eventStreamID.Name]
-	if !ok {
-		return nil
-	}
-
-	for _, idx := range eventIdxs {
-		event := s.events[idx]
-
-		if event.Version < selector.From {
-			continue
-		}
-
-		select {
-		case eventStream <- event:
-		case <-ctx.Done():
-			return contextErr(ctx)
-		}
-	}
-
-	return nil
-}
-
 // Stream streams committed events in the Event Store onto the provided EventStream,
 // from the specified Global Sequence Number in `from`, based on the provided stream.Target.
 //
@@ -150,28 +48,37 @@ func (s *EventStore) streamByID(
 func (s *EventStore) Stream(
 	ctx context.Context,
 	eventStream event.Stream,
-	eventStreamID stream.ID,
+	eventStreamID event.StreamID,
 	selector version.Selector,
 ) error {
 	s.mx.RLock()
 	defer s.mx.RUnlock()
 	defer close(eventStream)
 
-	// TODO(ar3s3ru): refactor this
-	// switch t := target.(type) {
-	// case stream.All:
-	// 	return s.streamAll(ctx, es, selectt)
-	// case stream.ByType:
-	// 	return s.streamByType(ctx, es, string(t), selectt)
-	// case stream.ByTypes:
-	// 	return s.streamByTypes(ctx, es, []string(t), selectt)
-	// case stream.ByID:
-	// 	return s.streamByID(ctx, es, stream.ID(t), selectt)
-	// default:
-	// 	return fmt.Errorf("inmemory.EventStore: unsupported stream target type provided: %T", t)
-	// }
+	if m, ok := s.byTypeAndInstance[eventStreamID.Type]; !ok || m == nil {
+		return nil
+	}
 
-	return s.streamByID(ctx, eventStream, eventStreamID, selector)
+	eventIdxs, ok := s.byTypeAndInstance[eventStreamID.Type][eventStreamID.Name]
+	if !ok {
+		return nil
+	}
+
+	for _, idx := range eventIdxs {
+		evt := s.events[idx]
+
+		if evt.Version < selector.From {
+			continue
+		}
+
+		select {
+		case eventStream <- evt:
+		case <-ctx.Done():
+			return contextErr(ctx)
+		}
+	}
+
+	return nil
 }
 
 func (s *EventStore) ensureMapsAreCreated(typ string) {
@@ -194,10 +101,10 @@ func (s *EventStore) ensureMapsAreCreated(typ string) {
 // version check fails against the current version of the Event Stream.
 func (s *EventStore) Append(
 	ctx context.Context,
-	id stream.ID,
+	id event.StreamID,
 	expected version.Check,
 	events ...event.Event,
-) (uint64, error) {
+) (version.Version, error) {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 
@@ -206,9 +113,9 @@ func (s *EventStore) Append(
 
 	currentVersion := version.CheckExact(len(s.byTypeAndInstance[id.Type][id.Name]))
 	if expected != version.Any && currentVersion != expected {
-		err := event.ErrConflict{
-			Expected: uint64(expected.(version.CheckExact)),
-			Actual:   uint64(currentVersion),
+		err := version.ErrConflict{
+			Expected: version.Version(expected.(version.CheckExact)),
+			Actual:   version.Version(currentVersion),
 		}
 
 		return 0, errors.Wrap(err, "inmemory.EventStore: failed to append events")
@@ -225,8 +132,8 @@ func (s *EventStore) Append(
 		// hence why this block uses `+ 1`.
 		newPersistedEvents = append(newPersistedEvents, event.Persisted{
 			Stream:         id,
-			Version:        uint64(currentVersion) + uint64(i) + 1,
-			SequenceNumber: uint64(nextIndex) + 1,
+			Version:        version.Version(currentVersion) + version.Version(i) + 1,
+			SequenceNumber: version.SequenceNumber(nextIndex) + 1,
 			Event:          evt,
 		})
 

@@ -10,27 +10,26 @@ import (
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/get-eventually/go-eventually/eventstore"
-	"github.com/get-eventually/go-eventually/projection"
+	"github.com/get-eventually/go-eventually/event"
 )
 
-var _ projection.Applier = &InstrumentedProjection{}
+var _ event.Processor = &InstrumentedProcessor{}
 
-// InstrumentedProjection wraps a projection.Applier instance to provide
+// InstrumentedProcessor wraps an event.Processor instance to provide
 // telemetry support using OpenTelemetry.
 //
 // Use InstrumentProjection function to create a new instance.
-type InstrumentedProjection struct {
-	name    string
-	meter   metric.Meter
-	tracer  trace.Tracer
-	applier projection.Applier
+type InstrumentedProcessor struct {
+	name      string
+	meter     metric.Meter
+	tracer    trace.Tracer
+	processor event.Processor
 
 	count    metric.Int64Counter
 	duration metric.Int64ValueRecorder
 }
 
-func (ip *InstrumentedProjection) registerMetrics() error {
+func (ip *InstrumentedProcessor) registerMetrics() error {
 	var err error
 
 	if ip.count, err = ip.meter.NewInt64Counter(
@@ -55,14 +54,14 @@ func (ip *InstrumentedProjection) registerMetrics() error {
 // telemetry data using OpenTelemetry.
 //
 // The name provided will be used for both traces and metrics exported.
-func InstrumentProjection(applier projection.Applier, opts ...Option) (*InstrumentedProjection, error) {
+func InstrumentProjection(processor event.Processor, opts ...Option) (*InstrumentedProcessor, error) {
 	cfg := newConfig(opts...)
 
-	ip := &InstrumentedProjection{
-		meter:   cfg.meter(),
-		tracer:  cfg.tracer(),
-		name:    cfg.ProjectionName,
-		applier: applier,
+	ip := &InstrumentedProcessor{
+		meter:     cfg.meter(),
+		tracer:    cfg.tracer(),
+		name:      cfg.ProjectionName,
+		processor: processor,
 	}
 
 	if err := ip.registerMetrics(); err != nil {
@@ -72,19 +71,20 @@ func InstrumentProjection(applier projection.Applier, opts ...Option) (*Instrume
 	return ip, nil
 }
 
-// Apply processes the provided Event using the underlying projection.Applier
+// Process processes the provided Event using the underlying event.Processor
 // implementation, and reports telemetry data on its execution.
-func (ip *InstrumentedProjection) Apply(ctx context.Context, event eventstore.Event) (err error) {
+func (ip *InstrumentedProcessor) Process(ctx context.Context, evt event.Persisted) (err error) {
 	attributes := []attribute.KeyValue{
-		ProjectionNameAttribute.String(ip.name),
-		EventTypeAttribute.String(event.Payload.Name()),
+		ProcessorNameAttribute.String(ip.name),
+		EventTypeAttribute.String(evt.Payload.Name()),
 	}
 
 	spanAttributes := append(attributes, //nolint:gocritic // Intended behavior.
-		StreamTypeAttribute.String(event.Stream.Type),
-		StreamNameAttribute.String(event.Stream.Name),
-		EventVersionAttribute.Int64(event.Version),
-		attribute.Any("event", event),
+		StreamTypeAttribute.String(evt.Stream.Type),
+		StreamNameAttribute.String(evt.Stream.Name),
+		EventVersionAttribute.Int64(int64(evt.Version)),
+		EventSequenceNumberAttribute.Int64(int64(evt.SequenceNumber)),
+		attribute.Any("event", evt),
 	)
 
 	ctx, span := ip.tracer.Start(ctx, "Projection.Apply", trace.WithAttributes(spanAttributes...))
@@ -96,7 +96,7 @@ func (ip *InstrumentedProjection) Apply(ctx context.Context, event eventstore.Ev
 		ip.count.Add(ctx, 1, append(attributes, ErrorAttribute.Bool(err != nil))...)
 	}()
 
-	if err = ip.applier.Apply(ctx, event); err != nil {
+	if err = ip.processor.Process(ctx, evt); err != nil {
 		span.RecordError(err)
 	}
 

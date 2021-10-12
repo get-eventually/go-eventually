@@ -6,10 +6,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/command"
-	"github.com/get-eventually/go-eventually/eventstore"
-	"github.com/get-eventually/go-eventually/projection"
+	"github.com/get-eventually/go-eventually/event"
 )
 
 // ProcessManagerInit is the entrypoint of the Process Manager scenario API.
@@ -32,7 +30,7 @@ func ProcessManager() ProcessManagerInit {
 // the Domain Event to test (later specified with When()). Depending on the Process
 // Manager implementation, applying these Events could either have no meaningful value,
 // or update some internal state or Read Model maintained by the Process Manager.
-func (ProcessManagerInit) Given(events ...eventstore.Event) ProcessManagerGiven {
+func (ProcessManagerInit) Given(events ...event.Persisted) ProcessManagerGiven {
 	return ProcessManagerGiven{
 		given: events,
 	}
@@ -42,11 +40,11 @@ func (ProcessManagerInit) Given(events ...eventstore.Event) ProcessManagerGiven 
 // have been provided using Given() to represent the state of the Process Manager
 // at the time of processing a new Domain Event.
 type ProcessManagerGiven struct {
-	given []eventstore.Event
+	given []event.Persisted
 }
 
 // When provides the persisted Domain Event the Process Manager should process.
-func (sc ProcessManagerGiven) When(event eventstore.Event) *ProcessManagerWhen {
+func (sc ProcessManagerGiven) When(event event.Persisted) *ProcessManagerWhen {
 	return &ProcessManagerWhen{
 		ProcessManagerGiven: sc,
 		when:                event,
@@ -60,12 +58,12 @@ func (sc ProcessManagerGiven) When(event eventstore.Event) *ProcessManagerWhen {
 type ProcessManagerWhen struct {
 	ProcessManagerGiven
 
-	when eventstore.Event
+	when event.Persisted
 }
 
 // Then sets a positive expectation on the scenario outcome, which should be
 // a list of Commands issued as a result of the Domain Event processed.
-func (sc *ProcessManagerWhen) Then(commands ...eventually.Command) ProcessManagerThen {
+func (sc *ProcessManagerWhen) Then(commands ...command.Command) ProcessManagerThen {
 	return ProcessManagerThen{
 		ProcessManagerWhen: sc,
 		then:               commands,
@@ -103,14 +101,14 @@ func (sc *ProcessManagerWhen) ThenFails() ProcessManagerThen {
 type ProcessManagerThen struct {
 	*ProcessManagerWhen
 
-	then      []eventually.Command
+	then      []command.Command
 	thenError error
 	wantError bool
 }
 
 // ProcessManagerFactory is the factory function used by the Process Manager
 // scenario to build the Process Manager type to test.
-type ProcessManagerFactory func(cd command.Dispatcher) projection.Applier
+type ProcessManagerFactory func(cd command.Dispatcher) event.Processor
 
 // Using performs the specified expectations of the scenario,
 // using the Process Manager instance produced by the provided factory function.
@@ -120,7 +118,7 @@ func (sc ProcessManagerThen) Using(t *testing.T, processManagerFactory ProcessMa
 	processManager := processManagerFactory(commandDispatcher)
 
 	for _, event := range sc.given {
-		if err := processManager.Apply(ctx, event); !assert.NoError(t, err) {
+		if err := processManager.Process(ctx, event); !assert.NoError(t, err) {
 			return
 		}
 	}
@@ -128,7 +126,7 @@ func (sc ProcessManagerThen) Using(t *testing.T, processManagerFactory ProcessMa
 	// Flush dispatcher to have clean list of recorded commands.
 	commandDispatcher.FlushCommands()
 
-	err := processManager.Apply(ctx, sc.when)
+	err := processManager.Process(ctx, sc.when)
 
 	if !sc.wantError {
 		assert.NoError(t, err)

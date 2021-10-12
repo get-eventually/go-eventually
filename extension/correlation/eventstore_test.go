@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/get-eventually/go-eventually/event"
-	"github.com/get-eventually/go-eventually/event/stream"
 	"github.com/get-eventually/go-eventually/extension/correlation"
 	"github.com/get-eventually/go-eventually/extension/inmemory"
 	"github.com/get-eventually/go-eventually/internal"
@@ -37,7 +36,7 @@ func TestEventStoreWrapper(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	streamID := stream.ID{
+	streamID := event.StreamID{
 		Type: "my-type",
 		Name: "my-instance",
 	}

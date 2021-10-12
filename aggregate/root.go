@@ -3,7 +3,8 @@ package aggregate
 import (
 	"fmt"
 
-	"github.com/get-eventually/go-eventually"
+	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/version"
 )
 
 // ID represents an Aggregate ID type.
@@ -33,7 +34,7 @@ type Applier interface {
 	// and should be, save for the Aggregate Root state mutation, free of side effects.
 	// For this reason, this method does not include a context.Context instance
 	// in the input parameters.
-	Apply(eventually.Event) error
+	Apply(event.Event) error
 }
 
 // Root is the interface describing an Aggregate Root instance.
@@ -45,19 +46,19 @@ type Root interface {
 	Applier
 
 	AggregateID() ID
-	Version() int64
+	Version() version.Version
 
-	updateVersion(int64)
-	flushRecordedEvents() []eventually.Event
-	recordThat(Applier, ...eventually.Event) error
+	updateVersion(version.Version)
+	flushRecordedEvents() []event.Event
+	recordThat(Applier, ...event.Event) error
 }
 
 // RecordThat records the Domain Event for the specified Aggregate Root.
 //
 // An error is typically returned if applying the Domain Event on the Aggregate
 // Root instance fails with an error.
-func RecordThat(root Root, event ...eventually.Event) error {
-	return root.recordThat(root, event...)
+func RecordThat(root Root, events ...event.Event) error {
+	return root.recordThat(root, events...)
 }
 
 // BaseRoot segregates and completes the aggregate.Root interface implementation
@@ -67,16 +68,16 @@ func RecordThat(root Root, event ...eventually.Event) error {
 // Root version, and the recorded-but-uncommitted Domain Events, through
 // the aggregate.RecordThat function.
 type BaseRoot struct {
-	version        int64
-	recordedEvents []eventually.Event
+	version        version.Version
+	recordedEvents []event.Event
 }
 
 // Version returns the current version of the Aggregate Root instance.
-func (br BaseRoot) Version() int64 { return br.version }
+func (br BaseRoot) Version() version.Version { return br.version }
 
-func (br *BaseRoot) updateVersion(v int64) { br.version = v }
+func (br *BaseRoot) updateVersion(v version.Version) { br.version = v }
 
-func (br *BaseRoot) recordThat(aggregate Applier, events ...eventually.Event) error {
+func (br *BaseRoot) recordThat(aggregate Applier, events ...event.Event) error {
 	for _, event := range events {
 		if err := aggregate.Apply(event); err != nil {
 			return fmt.Errorf("aggregate: failed to record event: %w", err)
@@ -89,7 +90,7 @@ func (br *BaseRoot) recordThat(aggregate Applier, events ...eventually.Event) er
 	return nil
 }
 
-func (br *BaseRoot) flushRecordedEvents() []eventually.Event {
+func (br *BaseRoot) flushRecordedEvents() []event.Event {
 	flushed := br.recordedEvents
 	br.recordedEvents = nil
 

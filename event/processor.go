@@ -88,9 +88,9 @@ func (r ProcessorRunner) Run(ctx context.Context) error {
 	group, ctx := errgroup.WithContext(ctx)
 
 	group.Go(func() error {
-		if r.Infof != nil {
-			r.Infof("ProcessorRunner started Subscription '%s'", r.Subscription.Name())
-		}
+		r.LogInfof(func(log eventually.LoggerFunc) {
+			log("ProcessorRunner started Subscription '%s'", r.Subscription.Name())
+		})
 
 		if err := r.Subscription.Start(ctx, eventStream); err != nil {
 			return errors.Wrap(err, "event.ProcessorRunner.Run: subscription exited with error")
@@ -119,18 +119,18 @@ func (r ProcessorRunner) Run(ctx context.Context) error {
 				continue
 			}
 
-			if r.Debugf != nil {
-				r.Debugf("Skip checkpoint of processed event, sequenceNumber: %d", event.SequenceNumber)
-			}
+			r.LogDebugf(func(log eventually.LoggerFunc) {
+				log("Skip checkpoint of processed event, sequenceNumber: %d", event.SequenceNumber)
+			})
 		}
 
 		return nil
 	})
 
 	for event := range toCheckpoint {
-		if r.Debugf != nil {
-			r.Debugf("Checkpointing processed event, sequenceNumber: %d", event.SequenceNumber)
-		}
+		r.LogDebugf(func(log eventually.LoggerFunc) {
+			log("Checkpointing processed event, sequenceNumber: %d", event.SequenceNumber)
+		})
 
 		if err := r.Subscription.Checkpoint(ctx, event); err != nil {
 			return errors.Wrap(err, "event.ProcessorRunner.Run: failed to checkpoint processed event")

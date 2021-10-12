@@ -6,8 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/get-eventually/go-eventually/eventstore"
-	"github.com/get-eventually/go-eventually/projection"
+	"github.com/get-eventually/go-eventually/event"
 	"github.com/get-eventually/go-eventually/query"
 )
 
@@ -27,7 +26,7 @@ func Projection() ProjectionInit { return ProjectionInit{} }
 // Domain Events are used in Event-sourced systems to represent a side effect
 // that has taken place in the system. Thus, they're also used by Projections
 // as a trigger to perform an update on their internal state.
-func (s ProjectionInit) Given(events ...eventstore.Event) ProjectionGiven {
+func (s ProjectionInit) Given(events ...event.Persisted) ProjectionGiven {
 	return ProjectionGiven{given: events}
 }
 
@@ -35,7 +34,7 @@ func (s ProjectionInit) Given(events ...eventstore.Event) ProjectionGiven {
 // have been provided using Given(), to represent the state of the Read Model/Projection
 // at the time of evaluating a Domain Query.
 type ProjectionGiven struct {
-	given []eventstore.Event
+	given []event.Persisted
 }
 
 // When provides the Domain Query to evaluate using the Read Model/Projection.
@@ -96,17 +95,17 @@ type ProjectionThen struct {
 
 // Using performs the specified expectations of the scenario, using the Projection
 // instance produced by the provided factory function.
-func (s ProjectionThen) Using(t *testing.T, projectionFactory func() projection.Projection) {
+func (s ProjectionThen) Using(t *testing.T, projectionFactory func() query.Projection) {
 	ctx := context.Background()
-	proj := projectionFactory()
+	projection := projectionFactory()
 
 	for _, event := range s.given {
-		if err := proj.Apply(ctx, event); !assert.NoError(t, err) {
+		if err := projection.Process(ctx, event); !assert.NoError(t, err) {
 			return
 		}
 	}
 
-	answer, err := proj.Handle(ctx, s.when)
+	answer, err := projection.Handle(ctx, s.when)
 
 	if !s.wantError {
 		assert.NoError(t, err)

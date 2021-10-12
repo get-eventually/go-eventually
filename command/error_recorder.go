@@ -7,7 +7,6 @@ import (
 
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/event"
-	"github.com/get-eventually/go-eventually/event/stream"
 	"github.com/get-eventually/go-eventually/version"
 )
 
@@ -61,13 +60,13 @@ func (er ErrorRecorder) streamType() string {
 	return FailedType
 }
 
-func (er ErrorRecorder) buildStreamID(cmd Command) stream.ID {
+func (er ErrorRecorder) buildStreamID(cmd Command) event.StreamID {
 	streamName := cmd.Payload.Name()
 	if er.StreamNameMapper != nil {
 		streamName = er.StreamNameMapper(cmd)
 	}
 
-	return stream.ID{
+	return event.StreamID{
 		Type: er.streamType(),
 		Name: streamName,
 	}

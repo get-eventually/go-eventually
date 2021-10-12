@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	"github.com/get-eventually/go-eventually/event"
-	"github.com/get-eventually/go-eventually/event/stream"
 	"github.com/get-eventually/go-eventually/version"
 )
 
@@ -46,10 +45,10 @@ func (es *TrackingEventStore) Recorded() []event.Persisted {
 // The recorded events can be accessed by calling Recorded().
 func (es *TrackingEventStore) Append(
 	ctx context.Context,
-	id stream.ID,
+	id event.StreamID,
 	expected version.Check,
 	events ...event.Event,
-) (uint64, error) {
+) (version.Version, error) {
 	es.mx.Lock()
 	defer es.mx.Unlock()
 
@@ -58,12 +57,12 @@ func (es *TrackingEventStore) Append(
 		return v, err
 	}
 
-	previousVersion := v - uint64(len(events))
+	previousVersion := v - version.Version(len(events))
 
 	for i, evt := range events {
 		es.recorded = append(es.recorded, event.Persisted{
 			Stream:  id,
-			Version: previousVersion + uint64(i) + 1,
+			Version: previousVersion + version.Version(i) + 1,
 			Event:   evt,
 		})
 	}

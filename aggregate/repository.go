@@ -8,8 +8,8 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/get-eventually/go-eventually/aggregate/snapshot"
-	"github.com/get-eventually/go-eventually/eventstore"
-	"github.com/get-eventually/go-eventually/eventstore/stream"
+	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/version"
 )
 
 // ErrRootNotFound is returned by the Repository when no Events for the
@@ -66,14 +66,14 @@ func RepositoryWithSnapshotPolicy(policy snapshot.Policy) RepositoryOption {
 // Use `NewRepository` to create a new instance of this type.
 type Repository struct {
 	aggregateType  Type
-	eventStore     eventstore.Store
+	eventStore     event.Store
 	snapshotStore  RepositorySnapshotStore
 	snapshotPolicy snapshot.Policy
 }
 
 // NewRepository creates a new instance for retrieving and saving Aggregate Roots
 // of the Aggregate type specified in the supplied Type argument.
-func NewRepository(aggregateType Type, eventStore eventstore.Store, options ...RepositoryOption) *Repository {
+func NewRepository(aggregateType Type, eventStore event.Store, options ...RepositoryOption) *Repository {
 	r := &Repository{
 		aggregateType:  aggregateType,
 		eventStore:     eventStore,
@@ -100,12 +100,12 @@ func (r *Repository) Add(ctx context.Context, root Root) error {
 		return nil
 	}
 
-	streamID := stream.ID{
+	streamID := event.StreamID{
 		Type: r.aggregateType.Name(),
 		Name: root.AggregateID().String(),
 	}
 
-	expectedVersion := eventstore.VersionCheck(root.Version() - int64(len(events)))
+	expectedVersion := version.CheckExact(root.Version() - version.Version(len(events)))
 
 	_, err := r.eventStore.Append(ctx, streamID, expectedVersion, events...)
 	if err != nil {
@@ -145,7 +145,7 @@ func (r Repository) Get(ctx context.Context, id ID) (Root, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	streamID := stream.ID{
+	streamID := event.StreamID{
 		Type: r.aggregateType.Name(),
 		Name: id.String(),
 	}
@@ -155,12 +155,12 @@ func (r Repository) Get(ctx context.Context, id ID) (Root, error) {
 		return nil, fmt.Errorf("aggregate.Repository: failed to fetch initial aggregate root state: %w", err)
 	}
 
-	eventStream := make(chan eventstore.Event, 1)
-	streamSelect := eventstore.Select{From: root.Version()}
+	eventStream := make(chan event.Persisted, 1)
+	selector := version.Selector{From: root.Version()}
 
 	group, ctx := errgroup.WithContext(ctx)
 	group.Go(func() error {
-		if err := r.eventStore.Stream(ctx, eventStream, stream.ByID(streamID), streamSelect); err != nil {
+		if err := r.eventStore.Stream(ctx, eventStream, streamID, selector); err != nil {
 			return fmt.Errorf("aggregate.Repository: failed while reading event from stream: %w", err)
 		}
 
@@ -188,7 +188,7 @@ func (r Repository) Get(ctx context.Context, id ID) (Root, error) {
 	return root, nil
 }
 
-func (r Repository) fetchAggregateRootState(ctx context.Context, id stream.ID) (Root, bool, error) {
+func (r Repository) fetchAggregateRootState(ctx context.Context, id event.StreamID) (Root, bool, error) {
 	state := r.aggregateType.instance()
 	isEmpty := true
 

@@ -24,6 +24,9 @@ var (
 	// EventVersionAttribute is the attribute identifier that contains the version of an Event.
 	EventVersionAttribute = attribute.Key("event.version")
 
+	// EventSequenceNumberAttribute is the attribute identifier that contains the sequence number of an Event.
+	EventSequenceNumberAttribute = attribute.Key("event.sequence_number")
+
 	// SelectFromAttribute is the attribute identifier that contains the version or
 	// sequence number lower bound used for Stream calls.
 	SelectFromAttribute = attribute.Key("select.from")
@@ -36,9 +39,9 @@ var (
 	// returned by the Event Store on Append calls.
 	VersionNewAttribute = attribute.Key("version.new")
 
-	// ProjectionNameAttribute is the attribute identifier that contains the name
+	// ProcessorNameAttribute is the attribute identifier that contains the name
 	// of a specific Projection.
-	ProjectionNameAttribute = attribute.Key("projection.name")
+	ProcessorNameAttribute = attribute.Key("processor.name")
 
 	// SubscriptionNameAttribute is the attribute identifier that contains
 	// the name of a subscription.

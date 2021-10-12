@@ -11,10 +11,8 @@ import (
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/event"
-	"github.com/get-eventually/go-eventually/eventstore"
-	"github.com/get-eventually/go-eventually/eventstore/stream"
+	"github.com/get-eventually/go-eventually/version"
 )
 
 var _ event.Store = &InstrumentedEventStore{}
@@ -73,7 +71,7 @@ func (es *InstrumentedEventStore) registerMetrics() error {
 }
 
 // InstrumentEventStore creates a new InstrumentedEventStore instance.
-func InstrumentEventStore(es eventstore.Store, opts ...Option) (*InstrumentedEventStore, error) {
+func InstrumentEventStore(es event.Store, opts ...Option) (*InstrumentedEventStore, error) {
 	cfg := newConfig(opts...)
 
 	ies := &InstrumentedEventStore{
@@ -103,34 +101,28 @@ func (es *InstrumentedEventStore) reportStreamMetrics(
 // a trace of the result.
 func (es *InstrumentedEventStore) Stream(
 	ctx context.Context,
-	eventStream eventstore.EventStream,
-	target stream.Target,
-	selectt eventstore.Select,
+	eventStream event.Stream,
+	eventStreamID event.StreamID,
+	selector version.Selector,
 ) (err error) {
 	attributes := []attribute.KeyValue{
-		SelectFromAttribute.Int64(selectt.From),
+		StreamTypeAttribute.String(eventStreamID.Type),
 	}
 
-	switch t := target.(type) {
-	case stream.All:
-		attributes = append(attributes, StreamTargetAttribute.String("<all>"))
-	case stream.ByType:
-		attributes = append(attributes, StreamTypeAttribute.String(string(t)))
-	case stream.ByTypes:
-		attributes = append(attributes, StreamTypeAttribute.Array([]string(t)))
-	case stream.ByID:
-		attributes = append(attributes, StreamTypeAttribute.String(t.Type), StreamNameAttribute.String(t.Name))
-	}
+	spanAttributes := append(attributes,
+		SelectFromAttribute.Int64(int64(selector.From)),
+		StreamNameAttribute.String(eventStreamID.Name),
+	)
 
 	start := time.Now()
 	defer func() {
 		es.reportStreamMetrics(ctx, start, err, attributes...)
 	}()
 
-	ctx, span := es.tracer.Start(ctx, "EventStore.Stream", trace.WithAttributes(attributes...))
+	ctx, span := es.tracer.Start(ctx, "EventStore.Stream", trace.WithAttributes(spanAttributes...))
 	defer span.End()
 
-	if err = es.eventStore.Stream(ctx, eventStream, target, selectt); err != nil {
+	if err = es.eventStore.Stream(ctx, eventStream, eventStreamID, selector); err != nil {
 		span.RecordError(err)
 	}
 
@@ -141,14 +133,20 @@ func (es *InstrumentedEventStore) Stream(
 // a trace of the result and increments the metric referenced by AppendMetric.
 func (es *InstrumentedEventStore) Append(
 	ctx context.Context,
-	id stream.ID,
-	expected eventstore.VersionCheck,
-	events ...eventually.Event,
-) (newVersion int64, err error) {
+	id event.StreamID,
+	expected version.Check,
+	events ...event.Event,
+) (newVersion version.Version, err error) {
 	attributes := []attribute.KeyValue{
 		StreamTypeAttribute.String(id.Type),
 		StreamNameAttribute.String(id.Name),
-		VersionCheckAttribute.Int64(int64(expected)),
+	}
+
+	switch v := expected.(type) {
+	case version.CheckAny:
+		attributes = append(attributes, VersionCheckAttribute.Int64(-1))
+	case version.CheckExact:
+		attributes = append(attributes, VersionCheckAttribute.Int64(int64(v)))
 	}
 
 	start := time.Now()
@@ -172,7 +170,7 @@ func (es *InstrumentedEventStore) Append(
 	if newVersion, err = es.eventStore.Append(ctx, id, expected, events...); err != nil {
 		span.RecordError(err)
 	} else {
-		span.SetAttributes(VersionNewAttribute.Int64(newVersion))
+		span.SetAttributes(VersionNewAttribute.Int64(int64(newVersion)))
 	}
 
 	return newVersion, err

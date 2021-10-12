@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/get-eventually/go-eventually/event"
-	"github.com/get-eventually/go-eventually/event/stream"
 	"github.com/get-eventually/go-eventually/extension/inmemory"
 	"github.com/get-eventually/go-eventually/internal"
 	"github.com/get-eventually/go-eventually/version"
@@ -25,7 +24,7 @@ func TestTrackingEventStore(t *testing.T) {
 		eventStore := inmemory.NewEventStore()
 		trackingEventStore := inmemory.NewTrackingEventStore(eventStore)
 
-		streamID := stream.ID{
+		streamID := event.StreamID{
 			Type: "test-type",
 			Name: "test-instance",
 		}

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/get-eventually/go-eventually/event"
-	"github.com/get-eventually/go-eventually/event/stream"
 	"github.com/get-eventually/go-eventually/version"
 )
 
@@ -35,10 +34,10 @@ type EventStoreWrapper struct {
 // applies it to all the Events provided and forwards it to the wrapped Event Store.
 func (esw EventStoreWrapper) Append(
 	ctx context.Context,
-	id stream.ID,
+	id event.StreamID,
 	expected version.Check,
 	events ...event.Event,
-) (uint64, error) {
+) (version.Version, error) {
 	// if request id is here, use that; otherwise, build a new id
 	causeID := esw.Generator()
 

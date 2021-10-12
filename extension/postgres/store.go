@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/get-eventually/go-eventually"
+	"github.com/get-eventually/go-eventually/event"
 	"github.com/get-eventually/go-eventually/eventstore"
 	"github.com/get-eventually/go-eventually/eventstore/stream"
 	"github.com/lib/pq"
@@ -105,11 +106,11 @@ func (st EventStore) Stream(
 // Alternatively, VersionCheckAny can be used if no Optimistic Concurrency check
 // should be carried out.
 //
-// NOTE: this implementation is not returning yet eventstore.ErrConflict in case
+// NOTE: this implementation is not returning yet version.ErrConflict in case
 // of conflicting expectations with the provided VersionCheck value.
 func (st EventStore) Append(
 	ctx context.Context,
-	id stream.ID,
+	id event.StreamID,
 	expected eventstore.VersionCheck,
 	events ...eventually.Event,
 ) (v int64, err error) {
@@ -146,7 +147,7 @@ func (st EventStore) Append(
 func (st *EventStore) appendEvent(
 	ctx context.Context,
 	tx *sql.Tx,
-	id stream.ID,
+	id event.StreamID,
 	expected eventstore.VersionCheck,
 	event eventually.Event,
 ) (int64, error) {

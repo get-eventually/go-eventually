@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/get-eventually/go-eventually/version"
 )
 
 var (
@@ -32,12 +34,12 @@ func NewInMemoryStore() *InMemoryStore {
 
 // Record adds or overwrites the previous Aggregate Root state in the store internal state.
 // This operation cannot fail.
-func (s *InMemoryStore) Record(ctx context.Context, id string, version int64, state interface{}) error {
+func (s *InMemoryStore) Record(ctx context.Context, id string, newVersion version.Version, state interface{}) error {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 
 	s.snapshotsByAggregateID[id] = Snapshot{
-		Version:    version,
+		Version:    newVersion,
 		State:      state,
 		RecordedAt: time.Now(),
 	}

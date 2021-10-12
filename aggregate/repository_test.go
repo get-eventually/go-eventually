@@ -8,10 +8,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/aggregate"
 	"github.com/get-eventually/go-eventually/aggregate/snapshot"
-	"github.com/get-eventually/go-eventually/eventstore/inmemory"
+	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/extension/inmemory"
 )
 
 // Aggregate definition, used in the tests -------------------------------------
@@ -41,7 +41,7 @@ type AggregateEventRecorded struct {
 
 func (AggregateEventRecorded) Name() string { return "aggregate_event_recorded" }
 
-func (a *Aggregate) Apply(evt eventually.Event) error {
+func (a *Aggregate) Apply(evt event.Event) error {
 	switch event := evt.Payload.(type) {
 	case AggregateCreated:
 		a.ID = aggregate.StringID(event.AggregateID)
@@ -57,10 +57,9 @@ func (a *Aggregate) Apply(evt eventually.Event) error {
 func NewAggregate(id string) (*Aggregate, error) {
 	var a Aggregate
 
-	err := aggregate.RecordThat(&a, eventually.Event{
+	if err := aggregate.RecordThat(&a, event.Event{
 		Payload: AggregateCreated{AggregateID: id},
-	})
-	if err != nil {
+	}); err != nil {
 		return nil, fmt.Errorf("aggregate_test.Aggrgate: failed to record event: %w", err)
 	}
 
@@ -68,7 +67,7 @@ func NewAggregate(id string) (*Aggregate, error) {
 }
 
 func (a *Aggregate) RecordEvent() error {
-	return aggregate.RecordThat(a, eventually.Event{
+	return aggregate.RecordThat(a, event.Event{
 		Payload: AggregateEventRecorded{AggregateID: a.ID.String()},
 	})
 }
