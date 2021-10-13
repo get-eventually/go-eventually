@@ -23,8 +23,7 @@ var firstInstance = stream.ID{
 	Name: "my-instance-for-latest-number",
 }
 
-//const defaultPostgresURL = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
-const defaultPostgresURL = "postgres://customer_delivery_planning_service:customer_delivery_planning_service@localhost:5432/postgres?sslmode=disable"
+const defaultPostgresURL = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
 
 func obtainEventStore(t *testing.T) (*sql.DB, postgres.EventStore) {
 	if testing.Short() {
