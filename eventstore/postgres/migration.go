@@ -11,7 +11,7 @@ import (
 	"github.com/get-eventually/go-eventually/eventstore/postgres/migrations"
 )
 
-// RunMigration performs the migrations for the Postgres database.
+// RunMigrations performs the migrations for the Postgres database.
 func RunMigrations(dsn string) error {
 	u, err := url.Parse(dsn)
 	if err != nil {
