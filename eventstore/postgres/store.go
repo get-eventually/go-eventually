@@ -6,12 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 
+	// Postgres driver for migrate.
+	_ "github.com/golang-migrate/migrate/database/postgres"
+	"github.com/lib/pq"
+
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/eventstore"
 	"github.com/get-eventually/go-eventually/eventstore/stream"
-	"github.com/lib/pq"
-
-	_ "github.com/golang-migrate/migrate/database/postgres" // postgres driver for migrate
 )
 
 var (
@@ -44,6 +45,7 @@ func WithAppendMiddleware(wrap func(AppendToStoreFunc) AppendToStoreFunc) Option
 	}
 }
 
+// NewEventStore creates a new EventStore using the database connection pool provided.
 func NewEventStore(db *sql.DB, options ...Option) EventStore {
 	store := EventStore{
 		db:       db,
@@ -84,28 +86,28 @@ func (st EventStore) Stream(
 
 	switch t := target.(type) {
 	case stream.All:
+		args = append(args, selectt.From)
 		query = `SELECT * FROM events
 		         WHERE global_sequence_number >= $1
 		         ORDER BY global_sequence_number ASC`
-		args = append(args, selectt.From)
 
 	case stream.ByType:
+		args = append(args, selectt.From, string(t))
 		query = `SELECT * FROM events
 		         WHERE global_sequence_number >= $1 AND stream_type = $2
 		         ORDER BY global_sequence_number ASC`
-		args = append(args, selectt.From, string(t))
 
 	case stream.ByTypes:
+		args = append(args, selectt.From, pq.Array(t))
 		query = `SELECT * FROM events
 		         WHERE global_sequence_number >= $1 AND stream_type = ANY($2)
 		         ORDER BY global_sequence_number ASC`
-		args = append(args, selectt.From, pq.Array(t))
 
 	case stream.ByID:
+		args = append(args, selectt.From, t.Type, t.Name)
 		query = `SELECT * FROM events
 				 WHERE "version" >= $1 AND stream_type = $2 AND stream_id = $3
 				 ORDER BY "version" ASC`
-		args = append(args, selectt.From, t.Type, t.Name)
 
 	default:
 		return fmt.Errorf("postgres.EventStore: unsupported stream target: %T", t)
