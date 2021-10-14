@@ -20,19 +20,47 @@ var (
 	_ eventstore.SequenceNumberGetter = &EventStore{}
 )
 
+// AppendToStoreFunc represents a function type for persisting an instance of eventually.Event in postgres.EventStore.
+type AppendToStoreFunc func(
+	ctx context.Context,
+	tx *sql.Tx,
+	id stream.ID,
+	expected eventstore.VersionCheck,
+	event eventually.Event,
+) (int64, error)
+
 // EventStore is an eventstore.Store implementation which uses
 // PostgreSQL as backend datastore.
 type EventStore struct {
-	db       *sql.DB
-	registry eventstore.Registry
+	db            *sql.DB
+	registry      eventstore.Registry
+	appendToStore AppendToStoreFunc
+}
+
+// Option defines a type for providing additional constructor adjustments for postgres.EventStore.
+type Option func(EventStore) EventStore
+
+// WithAppendMiddleware allows overriding the internal logic for appending events within a transaction.
+func WithAppendMiddleware(wrap func(AppendToStoreFunc) AppendToStoreFunc) Option {
+	return func(store EventStore) EventStore {
+		store.appendToStore = wrap(store.appendToStore)
+		return store
+	}
 }
 
 // NewEventStore creates a new EventStore using the database connection pool provided.
-func NewEventStore(db *sql.DB) EventStore {
-	return EventStore{
-		db:       db,
-		registry: eventstore.NewRegistry(json.Unmarshal),
+func NewEventStore(db *sql.DB, options ...Option) EventStore {
+	store := EventStore{
+		db:            db,
+		registry:      eventstore.NewRegistry(json.Unmarshal),
+		appendToStore: appendEvent,
 	}
+
+	for _, option := range options {
+		store = option(store)
+	}
+
+	return store
 }
 
 // Register registers Domain Events used by the application in order to decode events
@@ -129,7 +157,7 @@ func (st EventStore) Append(
 	}()
 
 	for _, event := range events {
-		if v, err = st.appendEvent(ctx, tx, id, expected, event); err != nil {
+		if v, err = st.appendToStore(ctx, tx, id, expected, event); err != nil {
 			return 0, err
 		}
 
@@ -145,7 +173,7 @@ func (st EventStore) Append(
 }
 
 // TODO(ar3s3ru): add the ErrConflict error in case of optimistic concurrency issues.
-func (st *EventStore) appendEvent(
+func appendEvent(
 	ctx context.Context,
 	tx *sql.Tx,
 	id stream.ID,

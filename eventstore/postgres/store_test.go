@@ -40,6 +40,29 @@ func obtainEventStore(t *testing.T) (*sql.DB, postgres.EventStore) {
 	db, err := sql.Open("postgres", url)
 	require.NoError(t, err)
 
+	handleError := func(err error) {
+		if !assert.NoError(t, err) {
+			t.FailNow()
+		}
+	}
+
+	tx, err := db.Begin()
+	require.NoError(t, err)
+
+	// Reset checkpoints for subscriptions.
+	_, err = tx.Exec("DELETE FROM subscriptions_checkpoints")
+	require.NoError(t, err)
+
+	// Reset committed events and streams.
+	_, err = tx.Exec("DELETE FROM streams")
+	require.NoError(t, err)
+
+	// Reset the global sequence number to 1.
+	_, err = tx.Exec("ALTER SEQUENCE events_global_sequence_number_seq RESTART WITH 1")
+	require.NoError(t, err)
+
+	handleError(tx.Commit())
+
 	return db, postgres.NewEventStore(db)
 }
 
@@ -50,29 +73,6 @@ func TestStoreSuite(t *testing.T) {
 	require.NoError(t, store.Register(internal.IntPayload(0)))
 
 	suite.Run(t, eventstore.NewStoreSuite(func() eventstore.Store {
-		handleError := func(err error) {
-			if !assert.NoError(t, err) {
-				t.FailNow()
-			}
-		}
-
-		tx, err := db.Begin()
-		require.NoError(t, err)
-
-		// Reset checkpoints for subscriptions.
-		_, err = tx.Exec("DELETE FROM subscriptions_checkpoints")
-		require.NoError(t, err)
-
-		// Reset committed events and streams.
-		_, err = tx.Exec("DELETE FROM streams")
-		require.NoError(t, err)
-
-		// Reset the global sequence number to 1.
-		_, err = tx.Exec("ALTER SEQUENCE events_global_sequence_number_seq RESTART WITH 1")
-		require.NoError(t, err)
-
-		handleError(tx.Commit())
-
 		return store
 	}))
 }
@@ -110,4 +110,42 @@ func TestLatestSequenceNumber(t *testing.T) {
 	actual, err := store.LatestSequenceNumber(ctx)
 	assert.NoError(t, err)
 	assert.Equal(t, latestSequenceNumber, actual)
+}
+
+func TestAppendToStoreWrapperOption(t *testing.T) {
+	db, _ := obtainEventStore(t)
+	defer func() { assert.NoError(t, db.Close()) }()
+
+	triggered := false
+
+	store := postgres.NewEventStore(
+		db,
+		postgres.WithAppendMiddleware(func(super postgres.AppendToStoreFunc) postgres.AppendToStoreFunc {
+			return func(
+				ctx context.Context,
+				tx *sql.Tx,
+				id stream.ID,
+				expected eventstore.VersionCheck,
+				event eventually.Event,
+			) (int64, error) {
+				triggered = true
+				return super(ctx, tx, id, expected, event)
+			}
+		}),
+	)
+
+	require.NoError(t, store.Register(internal.IntPayload(0)))
+
+	ctx := context.Background()
+
+	_, _ = store.Append(
+		ctx,
+		firstInstance,
+		eventstore.VersionCheck(int64(-1)),
+		eventually.Event{Payload: internal.IntPayload(13)},
+	)
+
+	latestSequenceNumber, _ := store.LatestSequenceNumber(ctx)
+	assert.Equal(t, int64(1), latestSequenceNumber)
+	assert.True(t, triggered)
 }
