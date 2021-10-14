@@ -59,6 +59,11 @@ jobs:
           fetch-depth: 0
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v2
-        run: make run-linters
         with:
           version: latest
+      - name: Run golangci-lint (postgres)
+        uses: golangci/golangci-lint-action@v2
+        with:
+          version: latest
+          working-directory: ./eventstore/postgres
+          args: -c ../../.golangci.yml
