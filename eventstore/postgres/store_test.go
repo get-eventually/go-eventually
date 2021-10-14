@@ -97,6 +97,7 @@ func TestLatestSequenceNumber(t *testing.T) {
 	}
 
 	ch := make(chan eventstore.Event, 1)
+
 	go func() {
 		require.NoError(t, store.Stream(ctx, ch, stream.All{}, eventstore.SelectFromBeginning))
 	}()
