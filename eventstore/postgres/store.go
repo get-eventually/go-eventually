@@ -37,7 +37,7 @@ type EventStore struct {
 
 type Option func (EventStore) EventStore
 
-func WithAppendToStoreWrapped(wrap func(AppendToStoreFunc) AppendToStoreFunc) Option {
+func WithAppendMiddleware(wrap func(AppendToStoreFunc) AppendToStoreFunc) Option {
 	return func(store EventStore) EventStore {
 		store.appendToStore = wrap(store.appendToStore)
 		return store
