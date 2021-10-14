@@ -20,7 +20,8 @@ var (
 	_ eventstore.SequenceNumberGetter = &EventStore{}
 )
 
-type AppendToStoreFunc func (
+// AppendToStoreFunc represents a function type for persisting an instance of eventually.Event in postgres.EventStore.
+type AppendToStoreFunc func(
 	ctx context.Context,
 	tx *sql.Tx,
 	id stream.ID,
@@ -31,13 +32,15 @@ type AppendToStoreFunc func (
 // EventStore is an eventstore.Store implementation which uses
 // PostgreSQL as backend datastore.
 type EventStore struct {
-	db       *sql.DB
-	registry eventstore.Registry
+	db            *sql.DB
+	registry      eventstore.Registry
 	appendToStore AppendToStoreFunc
 }
 
-type Option func (EventStore) EventStore
+// Option defines a type for providing additional constructor adjustments for postgres.EventStore.
+type Option func(EventStore) EventStore
 
+// WithAppendMiddleware allows overriding the internal logic for appending events within a transaction.
 func WithAppendMiddleware(wrap func(AppendToStoreFunc) AppendToStoreFunc) Option {
 	return func(store EventStore) EventStore {
 		store.appendToStore = wrap(store.appendToStore)
@@ -48,8 +51,8 @@ func WithAppendMiddleware(wrap func(AppendToStoreFunc) AppendToStoreFunc) Option
 // NewEventStore creates a new EventStore using the database connection pool provided.
 func NewEventStore(db *sql.DB, options ...Option) EventStore {
 	store := EventStore{
-		db:       db,
-		registry: eventstore.NewRegistry(json.Unmarshal),
+		db:            db,
+		registry:      eventstore.NewRegistry(json.Unmarshal),
 		appendToStore: appendEvent,
 	}
 

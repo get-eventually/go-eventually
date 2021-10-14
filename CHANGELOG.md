@@ -7,7 +7,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 ### Added
-- ...
+- An option to override Event appending logic in Postgres EventStore implementation. 
 
 ### Changed
 - ...

@@ -120,8 +120,14 @@ func TestAppendToStoreWrapperOption(t *testing.T) {
 
 	store := postgres.NewEventStore(
 		db,
-		postgres.WithAppendToStoreWrapped(func(super postgres.AppendToStoreFunc) postgres.AppendToStoreFunc {
-			return func(ctx context.Context, tx *sql.Tx, id stream.ID, expected eventstore.VersionCheck, event eventually.Event) (int64, error) {
+		postgres.WithAppendMiddleware(func(super postgres.AppendToStoreFunc) postgres.AppendToStoreFunc {
+			return func(
+				ctx context.Context,
+				tx *sql.Tx,
+				id stream.ID,
+				expected eventstore.VersionCheck,
+				event eventually.Event,
+			) (int64, error) {
 				triggered = true
 				return super(ctx, tx, id, expected, event)
 			}
