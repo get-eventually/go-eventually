@@ -53,7 +53,10 @@ func (esw EventStoreWrapper) Append(
 	}
 
 	for i, event := range events {
-		eventID := esw.Generator()
+		eventID, exists := event.Metadata[EventIDKey].(string)
+		if !exists {
+			eventID = esw.Generator()
+		}
 
 		event.Metadata = event.Metadata.
 			With(EventIDKey, eventID).

@@ -10,7 +10,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - An option to override Event appending logic in Postgres EventStore implementation. 
 
 ### Changed
-- ...
+- Existing `Event-Id` value in Event mMetadata does not get overwritten in correlation.EventStoreWrapper.
 
 ### Deprecated
 - ...
