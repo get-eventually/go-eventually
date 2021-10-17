@@ -1,10 +1,12 @@
--- NOTE: this function has been superseded by the version in 7_convert_payload_to_byte_array.up!
+ALTER TABLE events
+    ALTER COLUMN "event" TYPE BYTEA;
+
 CREATE OR REPLACE FUNCTION append_to_store(
     _stream_type  TEXT,
     stream_id     TEXT,
     version_check INTEGER,
     event_name    TEXT,
-    event_payload JSONB,
+    event_payload BYTEA,
     metadata      JSONB
 ) RETURNS TABLE (
     "version" INTEGER

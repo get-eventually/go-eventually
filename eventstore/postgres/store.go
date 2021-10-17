@@ -33,7 +33,7 @@ type AppendToStoreFunc func(
 // PostgreSQL as backend datastore.
 type EventStore struct {
 	db            *sql.DB
-	registry      eventstore.Registry
+	serde         Serde
 	appendToStore AppendToStoreFunc
 }
 
@@ -49,24 +49,19 @@ func WithAppendMiddleware(wrap func(AppendToStoreFunc) AppendToStoreFunc) Option
 }
 
 // NewEventStore creates a new EventStore using the database connection pool provided.
-func NewEventStore(db *sql.DB, options ...Option) EventStore {
+func NewEventStore(db *sql.DB, serde Serde, options ...Option) EventStore {
 	store := EventStore{
-		db:            db,
-		registry:      eventstore.NewRegistry(json.Unmarshal),
-		appendToStore: appendEvent,
+		db:    db,
+		serde: serde,
 	}
+
+	store.appendToStore = store.appendEvent
 
 	for _, option := range options {
 		store = option(store)
 	}
 
 	return store
-}
-
-// Register registers Domain Events used by the application in order to decode events
-// stored in the database by their name returned by the eventually.Payload trait.
-func (st EventStore) Register(events ...eventually.Payload) error {
-	return st.registry.Register(events...)
 }
 
 // Stream opens one or more Event Streams depending on the provided target.
@@ -122,7 +117,7 @@ func (st EventStore) Stream(
 	}
 
 	// FIXME(ar3s3ru): add logger support in the event store
-	return rowsToStream(rows, es, st.registry, nil)
+	return rowsToStream(rows, es, st.serde, nil)
 }
 
 // Append inserts the specified Domain Events into the Event Stream specified
@@ -173,16 +168,16 @@ func (st EventStore) Append(
 }
 
 // TODO(ar3s3ru): add the ErrConflict error in case of optimistic concurrency issues.
-func appendEvent(
+func (st EventStore) appendEvent(
 	ctx context.Context,
 	tx *sql.Tx,
 	id stream.ID,
 	expected eventstore.VersionCheck,
 	event eventually.Event,
 ) (int64, error) {
-	eventPayload, err := json.Marshal(event.Payload)
+	eventPayload, err := st.serde.Serialize(event.Payload.Name(), event.Payload)
 	if err != nil {
-		return 0, fmt.Errorf("postgres.EventStore: failed to unmarshal event payload to json: %w", err)
+		return 0, fmt.Errorf("postgres.EventStore: failed to serialize event payload: %w", err)
 	}
 
 	// To avoid null or JSONB issues.
@@ -192,7 +187,7 @@ func appendEvent(
 
 	metadata, err := json.Marshal(event.Metadata)
 	if err != nil {
-		return 0, fmt.Errorf("postgres.EventStore: failed to unmarshal metadata to json: %w", err)
+		return 0, fmt.Errorf("postgres.EventStore: failed to marshal metadata to json: %w", err)
 	}
 
 	var newVersion int64

@@ -1,15 +1,42 @@
-package eventstore
+package postgres
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 
 	"github.com/get-eventually/go-eventually"
 )
 
-// DeserializerFn is a function that deserializes a raw input into a Go type,
-// which is passed here as interface{}, typically by reference.
-type DeserializerFn func(msg []byte, v interface{}) error
+type Serializer interface {
+	Serialize(eventType string, event eventually.Payload) ([]byte, error)
+}
+
+type Deserializer interface {
+	Deserialize(eventType string, data []byte) (eventually.Payload, error)
+}
+
+type Serde interface {
+	Serializer
+	Deserializer
+}
+
+type FusedSerde struct {
+	Serializer
+	Deserializer
+}
+
+type SerializerFunc func(eventType string, event eventually.Payload) ([]byte, error)
+
+func (fn SerializerFunc) Serialize(eventType string, event eventually.Payload) ([]byte, error) {
+	return fn(eventType, event)
+}
+
+type DeserializerFunc func(eventType string, data []byte) (eventually.Payload, error)
+
+func (fn DeserializerFunc) Deserialize(eventType string, data []byte) (eventually.Payload, error) {
+	return fn(eventType, data)
+}
 
 // Registry contains type information about events to deserialize,
 // and the deserialization function, when retrieving events from an Event Store.
@@ -19,16 +46,14 @@ type DeserializerFn func(msg []byte, v interface{}) error
 // This component uses the event type identifier and reflection to deserialize
 // messages coming from the Event Store.
 type Registry struct {
-	deserializerFn  DeserializerFn
 	eventNameToType map[string]reflect.Type
 	eventTypeToName map[reflect.Type]string
 }
 
 // NewRegistry creates a new registry for deserializing event types, using
 // the provided deserializer.
-func NewRegistry(deserializer DeserializerFn) Registry {
+func NewRegistry() Registry {
 	return Registry{
-		deserializerFn:  deserializer,
 		eventNameToType: make(map[string]reflect.Type),
 		eventTypeToName: make(map[reflect.Type]string),
 	}
@@ -41,7 +66,7 @@ func NewRegistry(deserializer DeserializerFn) Registry {
 func (r Registry) Register(events ...eventually.Payload) error {
 	for _, event := range events {
 		if event == nil {
-			return fmt.Errorf("eventstore.Registry: expected event type, nil was provided instead")
+			return fmt.Errorf("postgres.Registry: expected event type, nil was provided instead")
 		}
 
 		eventName := event.Name()
@@ -55,7 +80,7 @@ func (r Registry) Register(events ...eventually.Payload) error {
 			}
 
 			return fmt.Errorf(
-				"eventstore.Registry: event '%s' has been already registered with a different type",
+				"postgres.Registry: event '%s' has been already registered with a different type",
 				eventName,
 			)
 		}
@@ -67,17 +92,26 @@ func (r Registry) Register(events ...eventually.Payload) error {
 	return nil
 }
 
+func (r Registry) Serialize(eventType string, event eventually.Payload) ([]byte, error) {
+	data, err := json.Marshal(event)
+	if err != nil {
+		return nil, fmt.Errorf("postgres.Registry: failed to serialize: %w", err)
+	}
+
+	return data, nil
+}
+
 // Deserialize attempts to deserialize a raw message with the type referenced by the
 // supplied event type identifier.
-func (r Registry) Deserialize(eventType string, payload []byte) (eventually.Payload, error) {
+func (r Registry) Deserialize(eventType string, data []byte) (eventually.Payload, error) {
 	payloadType, ok := r.eventNameToType[eventType]
 	if !ok {
-		return nil, fmt.Errorf("eventstore.Registry: received unregistered event, '%s'", eventType)
+		return nil, fmt.Errorf("postgres.Registry: received unregistered event, '%s'", eventType)
 	}
 
 	vp := reflect.New(payloadType)
-	if err := r.deserializerFn(payload, vp.Interface()); err != nil {
-		return nil, fmt.Errorf("eventstore.Registry: failed to deserialize event: %w", err)
+	if err := json.Unmarshal(data, vp.Interface()); err != nil {
+		return nil, fmt.Errorf("postgres.Registry: failed to deserialize event: %w", err)
 	}
 
 	return vp.Elem().Interface().(eventually.Payload), nil

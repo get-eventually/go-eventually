@@ -12,7 +12,7 @@ import (
 )
 
 func TestCheckpointer(t *testing.T) {
-	db, _ := obtainEventStore(t)
+	db, _, _ := obtainEventStore(t)
 	defer func() { assert.NoError(t, db.Close()) }()
 
 	log := zaplogger.Wrap(zap.NewNop())
