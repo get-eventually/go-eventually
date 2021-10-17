@@ -1,5 +1,5 @@
 ALTER TABLE events
-    ALTER COLUMN "event" TYPE BYTEA;
+    ALTER COLUMN "event" TYPE BYTEA USING decode("event"::TEXT, 'escape');
 
 CREATE OR REPLACE FUNCTION append_to_store(
     _stream_type  TEXT,
