@@ -26,13 +26,13 @@ type ErrorRecorder struct {
 	// Appender is the Event Store instance used for appending domain events.
 	Appender eventstore.Appender
 
-	// CaptureErrors specifies whether an error reported from the
-	// command.Handler should be captured (or "silenced") by this component
-	// and return nil instead.
+	// ShouldCaptureError is a function that should specify
+	// whether an error reported from the command.Handler should be captured (or "silenced")
+	// by this component and avoid returning it to the command caller.
 	//
 	// Default behavior is to return all errors from the command.Handler
 	// to the caller.
-	CaptureErrors bool
+	ShouldCaptureError func(err error) bool
 
 	// StreamType specifies the stream type used for the events produced by this component.
 	// If unspecified, FailedCommandType will be used by default.
@@ -75,10 +75,10 @@ func (er ErrorRecorder) buildStreamID(cmd eventually.Command) stream.ID {
 // in case of failure, appends the error and command to the Event Store
 // using the user-provided EventMapper.
 //
-// If CaptureError has been set to "false", the error coming from the command.Handler
+// If ShouldCaptureError has been set and returns "false", the error coming from the command.Handler
 // will be returned to the caller.
 //
-// If CaptureError has been set to "true", the error from the command.Handler is silenced
+// If ShouldCaptureError has been set and returns "true", the error from the command.Handler is silenced
 // but an error can still be returned if the append operation on the Event Store fails.
 func (er ErrorRecorder) Handle(ctx context.Context, cmd eventually.Command) error {
 	err := er.Handler.Handle(ctx, cmd)
@@ -91,13 +91,18 @@ func (er ErrorRecorder) Handle(ctx context.Context, cmd eventually.Command) erro
 		Payload: er.EventMapper(err, cmd),
 	}
 
+	captureError := false
+	if er.ShouldCaptureError != nil {
+		captureError = er.ShouldCaptureError(err)
+	}
+
 	_, appendErr := er.Appender.Append(ctx, streamID, eventstore.VersionCheckAny, event)
-	if appendErr != nil && er.CaptureErrors {
+	if appendErr != nil && captureError {
 		// Append error only returned if silencing command.Handler errors.
 		return fmt.Errorf("command.ErrorRecorder: failed to append command error to event store: %w", err)
 	}
 
-	if !er.CaptureErrors {
+	if !captureError {
 		return fmt.Errorf("command.ErrorRecorder: command handler failed: %w", err)
 	}
 

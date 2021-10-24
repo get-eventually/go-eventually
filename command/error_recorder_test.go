@@ -99,7 +99,7 @@ func TestErrorRecorder(t *testing.T) {
 		}, trackingEventStore.Recorded())
 	})
 
-	t.Run("when handler fails and CaptureError is set to true, no error is returned", func(t *testing.T) {
+	t.Run("when handler fails and ShouldCaptureError returns true, no error is returned", func(t *testing.T) {
 		eventStore := inmemory.NewEventStore()
 		trackingEventStore := inmemory.NewTrackingEventStore(eventStore)
 
@@ -109,11 +109,13 @@ func TestErrorRecorder(t *testing.T) {
 		}
 
 		handler := command.ErrorRecorder{
-			CaptureErrors: true,
 			Handler: command.HandlerFunc(func(ctx context.Context, cmd eventually.Command) error {
 				return expectedErr
 			}),
 			Appender: trackingEventStore,
+			ShouldCaptureError: func(err error) bool {
+				return true
+			},
 			EventMapper: func(err error, cmd eventually.Command) eventually.Payload {
 				return mockCommandHasFailed{
 					err:     err,
@@ -125,6 +127,53 @@ func TestErrorRecorder(t *testing.T) {
 		err := handler.Handle(context.Background(), expectedCommand)
 
 		assert.NoError(t, err)
+		assert.Equal(t, []eventstore.Event{
+			{
+				Version: 1,
+				Stream: stream.ID{
+					Type: command.FailedType,
+					Name: expectedCommand.Payload.Name(),
+				},
+				Event: eventually.Event{
+					Payload: mockCommandHasFailed{
+						err:     expectedErr,
+						command: expectedCommand.Payload.(mockCommand),
+					},
+				},
+			},
+		}, trackingEventStore.Recorded())
+	})
+
+	t.Run("when handler fails and ShouldCaptureError returns false, error is returned to caller", func(t *testing.T) {
+		eventStore := inmemory.NewEventStore()
+		trackingEventStore := inmemory.NewTrackingEventStore(eventStore)
+
+		expectedErr := errors.New("failed command")
+		unexpectedErr := errors.New("unexpected error")
+
+		expectedCommand := eventually.Command{
+			Payload: mockCommand{message: t.Name()},
+		}
+
+		handler := command.ErrorRecorder{
+			Handler: command.HandlerFunc(func(ctx context.Context, cmd eventually.Command) error {
+				return expectedErr
+			}),
+			Appender: trackingEventStore,
+			ShouldCaptureError: func(err error) bool {
+				return errors.Is(err, unexpectedErr) // This will return false
+			},
+			EventMapper: func(err error, cmd eventually.Command) eventually.Payload {
+				return mockCommandHasFailed{
+					err:     err,
+					command: cmd.Payload.(mockCommand),
+				}
+			},
+		}
+
+		err := handler.Handle(context.Background(), expectedCommand)
+
+		assert.ErrorIs(t, err, expectedErr)
 		assert.Equal(t, []eventstore.Event{
 			{
 				Version: 1,
