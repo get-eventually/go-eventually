@@ -60,7 +60,7 @@ func TestRegistry_Register(t *testing.T) {
 		name, tc := name, tc
 
 		t.Run(name, func(t *testing.T) {
-			r := postgres.NewRegistry()
+			r := postgres.NewJSONRegistry()
 			err := r.Register(tc.input...)
 
 			if tc.wantErr {
@@ -101,7 +101,7 @@ func TestRegistry_Deserialize(t *testing.T) {
 		name, tc := name, tc
 
 		t.Run(name, func(t *testing.T) {
-			r := postgres.NewRegistry()
+			r := postgres.NewJSONRegistry()
 
 			require.NoError(t, r.Register(
 				internal.IntPayload(0),

@@ -8,52 +8,62 @@ import (
 	"github.com/get-eventually/go-eventually"
 )
 
+// Serializer can be used by the EventStore to delegate serialization
+// of a Domain Event from the eventually.Payload format (domain object) to binary format.
 type Serializer interface {
 	Serialize(eventType string, event eventually.Payload) ([]byte, error)
 }
 
+// Deserializer can be used by the EventStore to delegate deserialization
+// of a Domain Event from binary format to its corresponding Domain Object.
 type Deserializer interface {
 	Deserialize(eventType string, data []byte) (eventually.Payload, error)
 }
 
+// Serde is a serializer/deserializer type that can be used by the EventStore
+// to serialize Domain Events to and deserialize Domain Events from the store.
 type Serde interface {
 	Serializer
 	Deserializer
 }
 
+// FusedSerde is a convenience type to fuse a Serializer and Deserializer
+// in a Serde instance.
 type FusedSerde struct {
 	Serializer
 	Deserializer
 }
 
+// SerializerFunc is a functional type that implements the Serializer interface.
 type SerializerFunc func(eventType string, event eventually.Payload) ([]byte, error)
 
+// Serialize delegates the function call to the inner function value.
 func (fn SerializerFunc) Serialize(eventType string, event eventually.Payload) ([]byte, error) {
 	return fn(eventType, event)
 }
 
+// DeserializerFunc is a functional type that implements the Deserializer interface.
 type DeserializerFunc func(eventType string, data []byte) (eventually.Payload, error)
 
+// Deserialize delegates the function call to the inner function value.
 func (fn DeserializerFunc) Deserialize(eventType string, data []byte) (eventually.Payload, error) {
 	return fn(eventType, data)
 }
 
-// Registry contains type information about events to deserialize,
-// and the deserialization function, when retrieving events from an Event Store.
+// JSONRegistry is a Serde type that serializes and deserializes
+// into and from the JSON representation of eventually.Payload types registered.
 //
 // Given the current limitation of Go with generics, the only way to provide
 // type information for deserialization is to use interfaces and reflection.
-// This component uses the event type identifier and reflection to deserialize
-// messages coming from the Event Store.
-type Registry struct {
+type JSONRegistry struct {
 	eventNameToType map[string]reflect.Type
 	eventTypeToName map[reflect.Type]string
 }
 
-// NewRegistry creates a new registry for deserializing event types, using
+// NewJSONRegistry creates a new registry for deserializing event types, using
 // the provided deserializer.
-func NewRegistry() Registry {
-	return Registry{
+func NewJSONRegistry() JSONRegistry {
+	return JSONRegistry{
 		eventNameToType: make(map[string]reflect.Type),
 		eventTypeToName: make(map[reflect.Type]string),
 	}
@@ -63,7 +73,7 @@ func NewRegistry() Registry {
 //
 // An error is returned if any of the provided events is nil, or if two different event types
 // with the same type identifier (from the Payload.Name() method) have been provided.
-func (r Registry) Register(events ...eventually.Payload) error {
+func (r JSONRegistry) Register(events ...eventually.Payload) error {
 	for _, event := range events {
 		if event == nil {
 			return fmt.Errorf("postgres.Registry: expected event type, nil was provided instead")
@@ -92,7 +102,8 @@ func (r Registry) Register(events ...eventually.Payload) error {
 	return nil
 }
 
-func (r Registry) Serialize(eventType string, event eventually.Payload) ([]byte, error) {
+// Serialize serializes a Domain Event using its JSON representation.
+func (r JSONRegistry) Serialize(eventType string, event eventually.Payload) ([]byte, error) {
 	data, err := json.Marshal(event)
 	if err != nil {
 		return nil, fmt.Errorf("postgres.Registry: failed to serialize: %w", err)
@@ -103,7 +114,7 @@ func (r Registry) Serialize(eventType string, event eventually.Payload) ([]byte,
 
 // Deserialize attempts to deserialize a raw message with the type referenced by the
 // supplied event type identifier.
-func (r Registry) Deserialize(eventType string, data []byte) (eventually.Payload, error) {
+func (r JSONRegistry) Deserialize(eventType string, data []byte) (eventually.Payload, error) {
 	payloadType, ok := r.eventNameToType[eventType]
 	if !ok {
 		return nil, fmt.Errorf("postgres.Registry: received unregistered event, '%s'", eventType)

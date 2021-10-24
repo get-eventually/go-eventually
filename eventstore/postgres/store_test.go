@@ -63,7 +63,7 @@ func obtainEventStore(t *testing.T) (*sql.DB, postgres.EventStore, postgres.Serd
 
 	handleError(tx.Commit())
 
-	serde := postgres.NewRegistry()
+	serde := postgres.NewJSONRegistry()
 	require.NoError(t, serde.Register(internal.IntPayload(0)))
 
 	return db, postgres.NewEventStore(db, serde), serde
