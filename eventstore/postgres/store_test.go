@@ -126,10 +126,12 @@ func TestAppendToStoreWrapperOption(t *testing.T) {
 				tx *sql.Tx,
 				id stream.ID,
 				expected eventstore.VersionCheck,
-				event eventually.Event,
+				eventName string,
+				payload []byte,
+				metadata []byte,
 			) (int64, error) {
 				triggered = true
-				return super(ctx, tx, id, expected, event)
+				return super(ctx, tx, id, expected, eventName, payload, metadata)
 			}
 		}),
 	)

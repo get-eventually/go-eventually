@@ -20,13 +20,16 @@ var (
 	_ eventstore.SequenceNumberGetter = &EventStore{}
 )
 
-// AppendToStoreFunc represents a function type for persisting an instance of eventually.Event in postgres.EventStore.
+// AppendToStoreFunc is the function type used by the postgres.EventStore
+// to delegate the append call to the database instace.
 type AppendToStoreFunc func(
 	ctx context.Context,
 	tx *sql.Tx,
 	id stream.ID,
 	expected eventstore.VersionCheck,
-	event eventually.Event,
+	eventName string,
+	payload []byte,
+	metadata []byte,
 ) (int64, error)
 
 // EventStore is an eventstore.Store implementation which uses
@@ -55,7 +58,7 @@ func NewEventStore(db *sql.DB, serde Serde, options ...Option) EventStore {
 		serde: serde,
 	}
 
-	store.appendToStore = store.appendEvent
+	store.appendToStore = performAppendQuery
 
 	for _, option := range options {
 		store = option(store)
@@ -152,7 +155,7 @@ func (st EventStore) Append(
 	}()
 
 	for _, event := range events {
-		if v, err = st.appendToStore(ctx, tx, id, expected, event); err != nil {
+		if v, err = st.appendEvent(ctx, tx, id, expected, event); err != nil {
 			return 0, err
 		}
 
@@ -165,6 +168,33 @@ func (st EventStore) Append(
 	}
 
 	return v, nil
+}
+
+func performAppendQuery(
+	ctx context.Context,
+	tx *sql.Tx,
+	id stream.ID,
+	expected eventstore.VersionCheck,
+	eventName string,
+	payload []byte,
+	metadata []byte,
+) (int64, error) {
+	var newVersion int64
+
+	if err := tx.QueryRowContext(
+		ctx,
+		"SELECT append_to_store($1, $2, $3, $4, $5, $6)",
+		id.Type,
+		id.Name,
+		int64(expected),
+		eventName,
+		payload,
+		metadata,
+	).Scan(&newVersion); err != nil {
+		return 0, fmt.Errorf("postgres.EventStore.performAppendQuery: failed to append event: %w", err)
+	}
+
+	return newVersion, nil
 }
 
 // TODO(ar3s3ru): add the ErrConflict error in case of optimistic concurrency issues.
@@ -190,24 +220,7 @@ func (st EventStore) appendEvent(
 		return 0, fmt.Errorf("postgres.EventStore: failed to marshal metadata to json: %w", err)
 	}
 
-	var newVersion int64
-
-	err = tx.QueryRowContext(
-		ctx,
-		"SELECT append_to_store($1, $2, $3, $4, $5, $6)",
-		id.Type,
-		id.Name,
-		int64(expected),
-		event.Payload.Name(),
-		eventPayload,
-		metadata,
-	).Scan(&newVersion)
-
-	if err != nil {
-		return 0, fmt.Errorf("postgres.EventStore: failed to append event: %w", err)
-	}
-
-	return newVersion, nil
+	return st.appendToStore(ctx, tx, id, expected, event.Payload.Name(), eventPayload, metadata)
 }
 
 // LatestSequenceNumber returns the latest Sequence Number used by a Domain Event
