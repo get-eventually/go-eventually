@@ -136,12 +136,13 @@ func TestAppendToStoreWrapperOption(t *testing.T) {
 
 	ctx := context.Background()
 
-	_, _ = store.Append(
+	_, err := store.Append(
 		ctx,
 		firstInstance,
 		eventstore.VersionCheck(int64(-1)),
 		eventually.Event{Payload: internal.IntPayload(13)},
 	)
+	assert.NoError(t, err)
 
 	latestSequenceNumber, _ := store.LatestSequenceNumber(ctx)
 	assert.Equal(t, int64(1), latestSequenceNumber)

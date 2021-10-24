@@ -1,7 +1,25 @@
+-- correlated_events_view is using the old event column. The quickest way
+-- to solve the conflicting issue is to drop the materialized view and rebuild it.
+DROP MATERIALIZED VIEW correlated_events_view;
+
+-- Change the events table into a byte array.
 ALTER TABLE events
     ALTER COLUMN "event" TYPE BYTEA USING decode("event"::TEXT, 'escape');
 
-CREATE OR REPLACE FUNCTION append_to_store(
+-- Recreate the materialized view.
+CREATE MATERIALIZED VIEW correlated_events_view AS
+    SELECT ce.correlation_id, e.*
+    FROM correlated_events ce INNER JOIN events e
+        ON e.stream_type = ce.event_stream_type
+        AND e.stream_id = ce.event_stream_id
+        AND e.version = ce.event_stream_version;
+
+-- Due to using the same name and number of parameters, it's better to drop
+-- the previous version of the function explicitly, and recreate it after
+-- with the new signature.
+DROP FUNCTION append_to_store(TEXT, TEXT, INTEGER, TEXT, JSONB, JSONB);
+
+CREATE FUNCTION append_to_store(
     _stream_type  TEXT,
     stream_id     TEXT,
     version_check INTEGER,

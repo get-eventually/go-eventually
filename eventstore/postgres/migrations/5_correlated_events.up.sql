@@ -11,10 +11,10 @@ CREATE TABLE correlated_events (
 
 CREATE MATERIALIZED VIEW correlated_events_view AS
     SELECT ce.correlation_id, e.*
-    FROM correlated_events ce
-        INNER JOIN events e ON e.stream_type = ce.event_stream_type
-            AND e.stream_id = ce.event_stream_id
-            AND e.version = ce.event_stream_version;
+    FROM correlated_events ce INNER JOIN events e
+        ON e.stream_type = ce.event_stream_type
+        AND e.stream_id = ce.event_stream_id
+        AND e.version = ce.event_stream_version;
 
 CREATE OR REPLACE FUNCTION project_correlated_event()
 RETURNS TRIGGER
