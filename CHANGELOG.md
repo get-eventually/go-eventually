@@ -14,6 +14,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - Existing `Event-Id` value in Event Metadata does not get overwritten in correlation.EventStoreWrapper.
 - `postgres.EventStore` now uses the `Serde` interface for serializing to and deserializing from byte array.
 - `postgres.Registry` is now called `postgres.JSONRegistry` and implements thenew `postgres.Serde` interface.
+- `CaptureErrors` in `command.ErrorRecorder` is now a function (`ShouldCaptureError`), to allow for a more flexible capture strategy.
 
 ### Deprecated
 - ...
