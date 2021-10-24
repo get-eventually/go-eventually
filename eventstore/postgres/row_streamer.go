@@ -10,7 +10,7 @@ import (
 	"github.com/get-eventually/go-eventually/logger"
 )
 
-func rowsToStream(rows *sql.Rows, es eventstore.EventStream, r eventstore.Registry, l logger.Logger) error {
+func rowsToStream(rows *sql.Rows, es eventstore.EventStream, deserializer Deserializer, l logger.Logger) error {
 	defer func() {
 		if err := rows.Close(); err != nil {
 			logger.Error(l, "Failed to close streamed event rows", logger.With("err", err))
@@ -37,7 +37,7 @@ func rowsToStream(rows *sql.Rows, es eventstore.EventStream, r eventstore.Regist
 			return fmt.Errorf("postgres.EventStore: failed to scan stream row into event struct: %w", err)
 		}
 
-		payload, err := r.Deserialize(eventName, rawPayload)
+		payload, err := deserializer.Deserialize(eventName, rawPayload)
 		if err != nil {
 			return fmt.Errorf("postgres.EventStore: failed to deserialize event: %w", err)
 		}

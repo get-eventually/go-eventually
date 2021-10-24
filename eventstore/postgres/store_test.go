@@ -25,7 +25,7 @@ var firstInstance = stream.ID{
 
 const defaultPostgresURL = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
 
-func obtainEventStore(t *testing.T) (*sql.DB, postgres.EventStore) {
+func obtainEventStore(t *testing.T) (*sql.DB, postgres.EventStore, postgres.Serde) {
 	if testing.Short() {
 		t.SkipNow()
 	}
@@ -63,14 +63,15 @@ func obtainEventStore(t *testing.T) (*sql.DB, postgres.EventStore) {
 
 	handleError(tx.Commit())
 
-	return db, postgres.NewEventStore(db)
+	serde := postgres.NewJSONRegistry()
+	require.NoError(t, serde.Register(internal.IntPayload(0)))
+
+	return db, postgres.NewEventStore(db, serde), serde
 }
 
 func TestStoreSuite(t *testing.T) {
-	db, store := obtainEventStore(t)
+	db, store, _ := obtainEventStore(t)
 	defer func() { assert.NoError(t, db.Close()) }()
-
-	require.NoError(t, store.Register(internal.IntPayload(0)))
 
 	suite.Run(t, eventstore.NewStoreSuite(func() eventstore.Store {
 		return store
@@ -78,10 +79,8 @@ func TestStoreSuite(t *testing.T) {
 }
 
 func TestLatestSequenceNumber(t *testing.T) {
-	db, store := obtainEventStore(t)
+	db, store, _ := obtainEventStore(t)
 	defer func() { assert.NoError(t, db.Close()) }()
-
-	require.NoError(t, store.Register(internal.IntPayload(0)))
 
 	ctx := context.Background()
 
@@ -113,37 +112,39 @@ func TestLatestSequenceNumber(t *testing.T) {
 }
 
 func TestAppendToStoreWrapperOption(t *testing.T) {
-	db, _ := obtainEventStore(t)
+	db, _, serde := obtainEventStore(t)
 	defer func() { assert.NoError(t, db.Close()) }()
 
 	triggered := false
 
 	store := postgres.NewEventStore(
 		db,
+		serde,
 		postgres.WithAppendMiddleware(func(super postgres.AppendToStoreFunc) postgres.AppendToStoreFunc {
 			return func(
 				ctx context.Context,
 				tx *sql.Tx,
 				id stream.ID,
 				expected eventstore.VersionCheck,
-				event eventually.Event,
+				eventName string,
+				payload []byte,
+				metadata []byte,
 			) (int64, error) {
 				triggered = true
-				return super(ctx, tx, id, expected, event)
+				return super(ctx, tx, id, expected, eventName, payload, metadata)
 			}
 		}),
 	)
 
-	require.NoError(t, store.Register(internal.IntPayload(0)))
-
 	ctx := context.Background()
 
-	_, _ = store.Append(
+	_, err := store.Append(
 		ctx,
 		firstInstance,
 		eventstore.VersionCheck(int64(-1)),
 		eventually.Event{Payload: internal.IntPayload(13)},
 	)
+	assert.NoError(t, err)
 
 	latestSequenceNumber, _ := store.LatestSequenceNumber(ctx)
 	assert.Equal(t, int64(1), latestSequenceNumber)
