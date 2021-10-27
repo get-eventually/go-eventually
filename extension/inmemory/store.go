@@ -2,9 +2,8 @@ package inmemory
 
 import (
 	"context"
+	"fmt"
 	"sync"
-
-	"github.com/pkg/errors"
 
 	"github.com/get-eventually/go-eventually/event"
 	"github.com/get-eventually/go-eventually/version"
@@ -31,7 +30,7 @@ func NewEventStore() *EventStore {
 
 func contextErr(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
-		return errors.Wrap(err, "inmemory.EventStore: context done")
+		return fmt.Errorf("inmemory.EventStore: context error: %w", err)
 	}
 
 	return nil
@@ -118,7 +117,7 @@ func (s *EventStore) Append(
 			Actual:   version.Version(currentVersion),
 		}
 
-		return 0, errors.Wrap(err, "inmemory.EventStore: failed to append events")
+		return 0, fmt.Errorf("inmemory.EventStore: failed to append events: %w", err)
 	}
 
 	nextOffset := int64(len(s.events))

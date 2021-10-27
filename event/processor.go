@@ -2,8 +2,8 @@ package event
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/get-eventually/go-eventually"
@@ -93,7 +93,7 @@ func (r ProcessorRunner) Run(ctx context.Context) error {
 		})
 
 		if err := r.Subscription.Start(ctx, eventStream); err != nil {
-			return errors.Wrap(err, "event.ProcessorRunner.Run: subscription exited with error")
+			return fmt.Errorf("event.ProcessorRunner.Run: subscription exited with error: %w", err)
 		}
 
 		return nil
@@ -111,7 +111,7 @@ func (r ProcessorRunner) Run(ctx context.Context) error {
 			ctx := contextWithPreferredCheckpointStrategy(ctx, &checkpoint) //nolint:govet // Shadowing is fine.
 
 			if err := r.Processor.Process(ctx, event); err != nil {
-				return errors.Wrap(err, "event.ProcessorRunner.Run: failed to process event")
+				return fmt.Errorf("event.ProcessorRunner.Run: failed to process event: %w", err)
 			}
 
 			if checkpoint {
@@ -133,7 +133,7 @@ func (r ProcessorRunner) Run(ctx context.Context) error {
 		})
 
 		if err := r.Subscription.Checkpoint(ctx, event); err != nil {
-			return errors.Wrap(err, "event.ProcessorRunner.Run: failed to checkpoint processed event")
+			return fmt.Errorf("event.ProcessorRunner.Run: failed to checkpoint processed event: %w", err)
 		}
 	}
 
