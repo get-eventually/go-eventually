@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/get-eventually/go-eventually/event"
-	"github.com/get-eventually/go-eventually/version"
+	"github.com/get-eventually/go-eventually/event/version"
 )
 
 var _ event.Appender = EventStoreWrapper{}

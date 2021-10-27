@@ -9,7 +9,7 @@ import (
 
 	"github.com/get-eventually/go-eventually/aggregate/snapshot"
 	"github.com/get-eventually/go-eventually/event"
-	"github.com/get-eventually/go-eventually/version"
+	"github.com/get-eventually/go-eventually/event/version"
 )
 
 // ErrRootNotFound is returned by the Repository when no Events for the

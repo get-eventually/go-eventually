@@ -12,7 +12,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/get-eventually/go-eventually/event"
-	"github.com/get-eventually/go-eventually/version"
+	"github.com/get-eventually/go-eventually/event/version"
 )
 
 var _ event.Store = &InstrumentedEventStore{}

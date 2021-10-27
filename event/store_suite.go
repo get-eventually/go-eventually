@@ -7,8 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/get-eventually/go-eventually/event/version"
 	"github.com/get-eventually/go-eventually/internal"
-	"github.com/get-eventually/go-eventually/version"
 )
 
 var (

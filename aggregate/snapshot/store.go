@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/get-eventually/go-eventually/version"
+	"github.com/get-eventually/go-eventually/event/version"
 )
 
 // ErrNotFound is returned by a snapshot.Getter when no recent snapshot

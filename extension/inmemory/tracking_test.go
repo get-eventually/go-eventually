@@ -7,9 +7,9 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/event/version"
 	"github.com/get-eventually/go-eventually/extension/inmemory"
 	"github.com/get-eventually/go-eventually/internal"
-	"github.com/get-eventually/go-eventually/version"
 )
 
 func TestTrackingEventStore(t *testing.T) {

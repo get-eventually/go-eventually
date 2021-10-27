@@ -9,8 +9,8 @@ import (
 	"github.com/get-eventually/go-eventually/aggregate"
 	"github.com/get-eventually/go-eventually/command"
 	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/event/version"
 	"github.com/get-eventually/go-eventually/extension/inmemory"
-	"github.com/get-eventually/go-eventually/version"
 )
 
 // CommandHandlerInit is the entrypoint of the Command Handler scenario API.

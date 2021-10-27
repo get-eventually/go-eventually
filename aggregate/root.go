@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/get-eventually/go-eventually/event"
-	"github.com/get-eventually/go-eventually/version"
+	"github.com/get-eventually/go-eventually/event/version"
 )
 
 // ID represents an Aggregate ID type.

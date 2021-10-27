@@ -9,10 +9,10 @@ import (
 
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/event/version"
 	"github.com/get-eventually/go-eventually/extension/correlation"
 	"github.com/get-eventually/go-eventually/extension/inmemory"
 	"github.com/get-eventually/go-eventually/internal"
-	"github.com/get-eventually/go-eventually/version"
 )
 
 const randomStringSize = 12

@@ -2,7 +2,7 @@ package event
 
 import (
 	"github.com/get-eventually/go-eventually"
-	"github.com/get-eventually/go-eventually/version"
+	"github.com/get-eventually/go-eventually/event/version"
 )
 
 type Event eventually.Message

@@ -3,7 +3,7 @@ package snapshot
 import (
 	"time"
 
-	"github.com/get-eventually/go-eventually/version"
+	"github.com/get-eventually/go-eventually/event/version"
 )
 
 // Policy represents the behavior of the Snapshot functionality,
