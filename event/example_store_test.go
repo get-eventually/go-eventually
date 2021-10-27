@@ -7,7 +7,7 @@ import (
 	"github.com/get-eventually/go-eventually/extension/inmemory"
 )
 
-func ExampleFused() {
+func ExampleFusedStore() {
 	eventStore := inmemory.NewEventStore()
 	correlatedEventStore := correlation.EventStoreWrapper{
 		Appender:  eventStore,
