@@ -22,10 +22,10 @@ func (queryHandler) Handle(ctx context.Context, q query.Query) (query.Answer, er
 	return q.(domainQuery).value + 1, nil
 }
 
-func TestSimpleBus(t *testing.T) {
-	t.Run("bus fails if query has not been registered", func(t *testing.T) {
+func TestInMemoryDispatcher(t *testing.T) {
+	t.Run("dispatcher fails if query has not been registered", func(t *testing.T) {
 		ctx := context.Background()
-		queryBus := query.NewSimpleBus()
+		queryBus := query.NewInMemoryDispatcher()
 
 		answer, err := queryBus.Dispatch(ctx, domainQuery{
 			name:  "fail-query",
@@ -36,9 +36,9 @@ func TestSimpleBus(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("bus returns answer if domain query is registered", func(t *testing.T) {
+	t.Run("dispatcher returns answer if domain query is registered", func(t *testing.T) {
 		ctx := context.Background()
-		queryBus := query.NewSimpleBus()
+		queryBus := query.NewInMemoryDispatcher()
 
 		queryBus.Register(queryHandler{})
 

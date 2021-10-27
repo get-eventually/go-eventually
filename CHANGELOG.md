@@ -15,6 +15,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
     - `projection.Runner` is now `event.ProcessorRunner`.
 - `eventstore` package has been removed, and type implementations and definitions moved to the `event` package instead.
 - `stream` package has been removed, the `stream.ID` type is now under `event.StreamID`.
+- `query.SimpleBus` has been renamed to `query.InMemoryDispatcher`.
 
 ### Deprecated
 - ...
