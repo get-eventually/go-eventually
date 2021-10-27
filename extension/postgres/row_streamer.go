@@ -7,13 +7,14 @@ import (
 
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/event"
-	"github.com/get-eventually/go-eventually/logger"
 )
 
-func rowsToStream(rows *sql.Rows, es event.Stream, deserializer Deserializer, l logger.Logger) error {
+func rowsToStream(rows *sql.Rows, es event.Stream, deserializer Deserializer, l eventually.Logger) error {
 	defer func() {
 		if err := rows.Close(); err != nil {
-			logger.Error(l, "Failed to close streamed event rows", logger.With("err", err))
+			l.LogErrorf(func(log eventually.LoggerFunc) {
+				log("Failed to close streamed event rows: %s", err)
+			})
 		}
 	}()
 
@@ -34,23 +35,23 @@ func rowsToStream(rows *sql.Rows, es event.Stream, deserializer Deserializer, l 
 			&rawMetadata,
 		)
 		if err != nil {
-			return fmt.Errorf("postgres.EventStore: failed to scan stream row into event struct: %w", err)
+			return fmt.Errorf("postgres.EventStore.rowsToStream: failed to scan stream row into event struct: %w", err)
 		}
 
 		payload, err := deserializer.Deserialize(eventName, rawPayload)
 		if err != nil {
-			return fmt.Errorf("postgres.EventStore: failed to deserialize event: %w", err)
+			return fmt.Errorf("postgres.EventStore.rowsToStream: failed to deserialize event: %w", err)
 		}
 
 		var metadata eventually.Metadata
 		if err := json.Unmarshal(rawMetadata, &metadata); err != nil {
-			return fmt.Errorf("postgres.EventStore: failed to unmarshal event metadata from json: %w", err)
+			return fmt.Errorf("postgres.EventStore.rowsToStream: failed to unmarshal event metadata from json: %w", err)
 		}
 
-		event.Payload = payload
-		event.Metadata = metadata
+		evt.Payload = payload
+		evt.Metadata = metadata
 
-		es <- event
+		es <- evt
 	}
 
 	return nil

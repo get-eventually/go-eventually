@@ -3,7 +3,6 @@ package postgres_test
 import (
 	"context"
 	"database/sql"
-	"math"
 	"os"
 	"testing"
 
@@ -11,10 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/event"
-	"github.com/get-eventually/go-eventually/eventstore"
-	"github.com/get-eventually/go-eventually/eventstore/stream"
+	"github.com/get-eventually/go-eventually/event/version"
 	"github.com/get-eventually/go-eventually/extension/postgres"
 	"github.com/get-eventually/go-eventually/internal"
 )
@@ -79,38 +76,38 @@ func TestStoreSuite(t *testing.T) {
 	}))
 }
 
-func TestLatestSequenceNumber(t *testing.T) {
-	db, store, _ := obtainEventStore(t)
-	defer func() { assert.NoError(t, db.Close()) }()
+// func TestLatestSequenceNumber(t *testing.T) {
+// 	db, store, _ := obtainEventStore(t)
+// 	defer func() { assert.NoError(t, db.Close()) }()
 
-	ctx := context.Background()
+// 	ctx := context.Background()
 
-	for i := 1; i < 10; i++ {
-		_, err := store.Append(
-			ctx,
-			firstInstance,
-			eventstore.VersionCheck(int64(i-1)),
-			eventually.Event{Payload: internal.IntPayload(i)},
-		)
+// 	for i := 1; i < 10; i++ {
+// 		_, err := store.Append(
+// 			ctx,
+// 			firstInstance,
+// 			eventstore.VersionCheck(int64(i-1)),
+// 			eventually.Event{Payload: internal.IntPayload(i)},
+// 		)
 
-		require.NoError(t, err)
-	}
+// 		require.NoError(t, err)
+// 	}
 
-	ch := make(chan eventstore.Event, 1)
+// 	ch := make(chan eventstore.Event, 1)
 
-	go func() {
-		require.NoError(t, store.Stream(ctx, ch, stream.All{}, eventstore.SelectFromBeginning))
-	}()
+// 	go func() {
+// 		require.NoError(t, store.Stream(ctx, ch, stream.All{}, eventstore.SelectFromBeginning))
+// 	}()
 
-	var latestSequenceNumber int64
-	for event := range ch {
-		latestSequenceNumber = int64(math.Max(float64(latestSequenceNumber), float64(event.SequenceNumber)))
-	}
+// 	var latestSequenceNumber int64
+// 	for event := range ch {
+// 		latestSequenceNumber = int64(math.Max(float64(latestSequenceNumber), float64(event.SequenceNumber)))
+// 	}
 
-	actual, err := store.LatestSequenceNumber(ctx)
-	assert.NoError(t, err)
-	assert.Equal(t, latestSequenceNumber, actual)
-}
+// 	actual, err := store.LatestSequenceNumber(ctx)
+// 	assert.NoError(t, err)
+// 	assert.Equal(t, latestSequenceNumber, actual)
+// }
 
 func TestAppendToStoreWrapperOption(t *testing.T) {
 	db, _, serde := obtainEventStore(t)
@@ -125,12 +122,12 @@ func TestAppendToStoreWrapperOption(t *testing.T) {
 			return func(
 				ctx context.Context,
 				tx *sql.Tx,
-				id stream.ID,
-				expected eventstore.VersionCheck,
+				id event.StreamID,
+				expected version.Check,
 				eventName string,
 				payload []byte,
 				metadata []byte,
-			) (int64, error) {
+			) (version.Version, error) {
 				triggered = true
 				return super(ctx, tx, id, expected, eventName, payload, metadata)
 			}
@@ -139,15 +136,14 @@ func TestAppendToStoreWrapperOption(t *testing.T) {
 
 	ctx := context.Background()
 
-	_, err := store.Append(
+	newVersion, err := store.Append(
 		ctx,
 		firstInstance,
-		eventstore.VersionCheck(int64(-1)),
-		eventually.Event{Payload: internal.IntPayload(13)},
+		version.Any,
+		event.Event{Payload: internal.IntPayload(13)},
 	)
-	assert.NoError(t, err)
 
-	latestSequenceNumber, _ := store.LatestSequenceNumber(ctx)
-	assert.Equal(t, int64(1), latestSequenceNumber)
+	assert.NoError(t, err)
+	assert.Equal(t, version.Version(1), newVersion)
 	assert.True(t, triggered)
 }

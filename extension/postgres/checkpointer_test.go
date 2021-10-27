@@ -5,22 +5,24 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 
+	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/extension/postgres"
-	"github.com/get-eventually/go-eventually/extension/zaplogger"
 )
 
 func TestCheckpointer(t *testing.T) {
 	db, _, _ := obtainEventStore(t)
 	defer func() { assert.NoError(t, db.Close()) }()
 
-	log := zaplogger.Wrap(zap.NewNop())
 	ctx := context.Background()
 
 	checkpointer := postgres.Checkpointer{
-		DB:     db,
-		Logger: log,
+		DB: db,
+		Logger: eventually.Logger{
+			Debugf: t.Logf,
+			Infof:  t.Logf,
+			Errorf: t.Errorf,
+		},
 	}
 
 	const subscriptionName = "test-subscription"

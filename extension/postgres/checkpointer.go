@@ -5,17 +5,14 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/get-eventually/go-eventually/logger"
-	"github.com/get-eventually/go-eventually/subscription/checkpoint"
+	"github.com/get-eventually/go-eventually"
 )
-
-var _ checkpoint.Checkpointer = Checkpointer{}
 
 // Checkpointer is a checkpoint.Checkpointer implementation using Postgres
 // as a storage backend.
 type Checkpointer struct {
 	DB     *sql.DB
-	Logger logger.Logger
+	Logger eventually.Logger
 }
 
 // Read reads the latest checkpointed sequence number of the subscription specified.
