@@ -7,12 +7,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
-	"github.com/get-eventually/go-eventually/eventstore/postgres"
+	"github.com/get-eventually/go-eventually/extension/postgres"
 	"github.com/get-eventually/go-eventually/extension/zaplogger"
 )
 
 func TestCheckpointer(t *testing.T) {
-	db, _ := obtainEventStore(t)
+	db, _, _ := obtainEventStore(t)
 	defer func() { assert.NoError(t, db.Close()) }()
 
 	log := zaplogger.Wrap(zap.NewNop())

@@ -12,9 +12,10 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/get-eventually/go-eventually"
+	"github.com/get-eventually/go-eventually/event"
 	"github.com/get-eventually/go-eventually/eventstore"
-	"github.com/get-eventually/go-eventually/eventstore/postgres"
 	"github.com/get-eventually/go-eventually/eventstore/stream"
+	"github.com/get-eventually/go-eventually/extension/postgres"
 	"github.com/get-eventually/go-eventually/internal"
 )
 
@@ -25,7 +26,7 @@ var firstInstance = event.StreamID{
 
 const defaultPostgresURL = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
 
-func obtainEventStore(t *testing.T) (*sql.DB, postgres.EventStore) {
+func obtainEventStore(t *testing.T) (*sql.DB, postgres.EventStore, postgres.Serde) {
 	if testing.Short() {
 		t.SkipNow()
 	}
@@ -40,48 +41,47 @@ func obtainEventStore(t *testing.T) (*sql.DB, postgres.EventStore) {
 	db, err := sql.Open("postgres", url)
 	require.NoError(t, err)
 
-	return db, postgres.NewEventStore(db)
+	handleError := func(err error) {
+		if !assert.NoError(t, err) {
+			t.FailNow()
+		}
+	}
+
+	tx, err := db.Begin()
+	require.NoError(t, err)
+
+	// Reset checkpoints for subscriptions.
+	_, err = tx.Exec("DELETE FROM subscriptions_checkpoints")
+	require.NoError(t, err)
+
+	// Reset committed events and streams.
+	_, err = tx.Exec("DELETE FROM streams")
+	require.NoError(t, err)
+
+	// Reset the global sequence number to 1.
+	_, err = tx.Exec("ALTER SEQUENCE events_global_sequence_number_seq RESTART WITH 1")
+	require.NoError(t, err)
+
+	handleError(tx.Commit())
+
+	serde := postgres.NewJSONRegistry()
+	require.NoError(t, serde.Register(internal.IntPayload(0)))
+
+	return db, postgres.NewEventStore(db, serde), serde
 }
 
 func TestStoreSuite(t *testing.T) {
-	db, store := obtainEventStore(t)
+	db, store, _ := obtainEventStore(t)
 	defer func() { assert.NoError(t, db.Close()) }()
 
-	require.NoError(t, store.Register(internal.IntPayload(0)))
-
-	suite.Run(t, eventstore.NewStoreSuite(func() eventstore.Store {
-		handleError := func(err error) {
-			if !assert.NoError(t, err) {
-				t.FailNow()
-			}
-		}
-
-		tx, err := db.Begin()
-		require.NoError(t, err)
-
-		// Reset checkpoints for subscriptions.
-		_, err = tx.Exec("DELETE FROM subscriptions_checkpoints")
-		require.NoError(t, err)
-
-		// Reset committed events and streams.
-		_, err = tx.Exec("DELETE FROM streams")
-		require.NoError(t, err)
-
-		// Reset the global sequence number to 1.
-		_, err = tx.Exec("ALTER SEQUENCE events_global_sequence_number_seq RESTART WITH 1")
-		require.NoError(t, err)
-
-		handleError(tx.Commit())
-
+	suite.Run(t, event.NewStoreSuite(func() event.Store {
 		return store
 	}))
 }
 
 func TestLatestSequenceNumber(t *testing.T) {
-	db, store := obtainEventStore(t)
+	db, store, _ := obtainEventStore(t)
 	defer func() { assert.NoError(t, db.Close()) }()
-
-	require.NoError(t, store.Register(internal.IntPayload(0)))
 
 	ctx := context.Background()
 
@@ -97,6 +97,7 @@ func TestLatestSequenceNumber(t *testing.T) {
 	}
 
 	ch := make(chan eventstore.Event, 1)
+
 	go func() {
 		require.NoError(t, store.Stream(ctx, ch, stream.All{}, eventstore.SelectFromBeginning))
 	}()
@@ -109,4 +110,44 @@ func TestLatestSequenceNumber(t *testing.T) {
 	actual, err := store.LatestSequenceNumber(ctx)
 	assert.NoError(t, err)
 	assert.Equal(t, latestSequenceNumber, actual)
+}
+
+func TestAppendToStoreWrapperOption(t *testing.T) {
+	db, _, serde := obtainEventStore(t)
+	defer func() { assert.NoError(t, db.Close()) }()
+
+	triggered := false
+
+	store := postgres.NewEventStore(
+		db,
+		serde,
+		postgres.WithAppendMiddleware(func(super postgres.AppendToStoreFunc) postgres.AppendToStoreFunc {
+			return func(
+				ctx context.Context,
+				tx *sql.Tx,
+				id stream.ID,
+				expected eventstore.VersionCheck,
+				eventName string,
+				payload []byte,
+				metadata []byte,
+			) (int64, error) {
+				triggered = true
+				return super(ctx, tx, id, expected, eventName, payload, metadata)
+			}
+		}),
+	)
+
+	ctx := context.Background()
+
+	_, err := store.Append(
+		ctx,
+		firstInstance,
+		eventstore.VersionCheck(int64(-1)),
+		eventually.Event{Payload: internal.IntPayload(13)},
+	)
+	assert.NoError(t, err)
+
+	latestSequenceNumber, _ := store.LatestSequenceNumber(ctx)
+	assert.Equal(t, int64(1), latestSequenceNumber)
+	assert.True(t, triggered)
 }

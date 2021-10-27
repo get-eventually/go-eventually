@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/event"
 	"github.com/get-eventually/go-eventually/extension/correlation"
 	"github.com/get-eventually/go-eventually/extension/inmemory"
@@ -41,12 +42,15 @@ func TestEventStoreWrapper(t *testing.T) {
 		Name: "my-instance",
 	}
 
+	metadataWithEventID := eventually.Metadata{}.With(correlation.EventIDKey, "abc123")
+
 	_, err := correlatedEventStore.Append(
 		ctx,
 		streamID,
 		version.CheckExact(0),
 		event.Event{Payload: internal.StringPayload("my-first-event")},
 		event.Event{Payload: internal.StringPayload("my-second-event")},
+		event.Event{Payload: internal.StringPayload("my-third-event"), Metadata: metadataWithEventID},
 	)
 
 	if !assert.NoError(t, err) {
@@ -59,9 +63,9 @@ func TestEventStoreWrapper(t *testing.T) {
 	})
 
 	assert.NoError(t, err)
-	assert.Len(t, events, 2)
+	assert.Len(t, events, 3)
 
-	firstEvent, secondEvent := events[0].Event, events[1].Event
+	firstEvent, secondEvent, thirdEvent := events[0].Event, events[1].Event, events[2].Event
 
 	correlation1, ok := correlation.Message(firstEvent).CorrelationID()
 	assert.True(t, ok)
@@ -85,4 +89,11 @@ func TestEventStoreWrapper(t *testing.T) {
 	assert.Equal(t, causation1, causation2)
 	assert.Equal(t, correlation1, causation1)
 	assert.NotEqual(t, id1, id2)
+
+	assert.Equal(t, extractEventID(metadataWithEventID), extractEventID(thirdEvent.Metadata))
+}
+
+func extractEventID(m eventually.Metadata) string {
+	eventID, _ := m[correlation.EventIDKey].(string)
+	return eventID
 }

@@ -6,38 +6,66 @@ import (
 	"encoding/json"
 	"fmt"
 
+	// Postgres driver for migrate.
+	_ "github.com/golang-migrate/migrate/database/postgres"
+	"github.com/lib/pq"
+
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/event"
 	"github.com/get-eventually/go-eventually/eventstore"
 	"github.com/get-eventually/go-eventually/eventstore/stream"
-	"github.com/lib/pq"
-
-	_ "github.com/golang-migrate/migrate/database/postgres" // postgres driver for migrate
 )
 
 var (
-	_ eventstore.Store                = &EventStore{}
-	_ eventstore.SequenceNumberGetter = &EventStore{}
+	_ event.Store = &EventStore{}
+	// _ eventstore.SequenceNumberGetter = &EventStore{}
 )
+
+// AppendToStoreFunc is the function type used by the postgres.EventStore
+// to delegate the append call to the database instace.
+type AppendToStoreFunc func(
+	ctx context.Context,
+	tx *sql.Tx,
+	id event.StreamID,
+	expected eventstore.VersionCheck,
+	eventName string,
+	payload []byte,
+	metadata []byte,
+) (int64, error)
 
 // EventStore is an eventstore.Store implementation which uses
 // PostgreSQL as backend datastore.
 type EventStore struct {
-	db       *sql.DB
-	registry eventstore.Registry
+	db            *sql.DB
+	serde         Serde
+	appendToStore AppendToStoreFunc
 }
 
-func NewEventStore(db *sql.DB) EventStore {
-	return EventStore{
-		db:       db,
-		registry: eventstore.NewRegistry(json.Unmarshal),
+// Option defines a type for providing additional constructor adjustments for postgres.EventStore.
+type Option func(EventStore) EventStore
+
+// WithAppendMiddleware allows overriding the internal logic for appending events within a transaction.
+func WithAppendMiddleware(wrap func(AppendToStoreFunc) AppendToStoreFunc) Option {
+	return func(store EventStore) EventStore {
+		store.appendToStore = wrap(store.appendToStore)
+		return store
 	}
 }
 
-// Register registers Domain Events used by the application in order to decode events
-// stored in the database by their name returned by the eventually.Payload trait.
-func (st EventStore) Register(events ...eventually.Payload) error {
-	return st.registry.Register(events...)
+// NewEventStore creates a new EventStore using the database connection pool provided.
+func NewEventStore(db *sql.DB, serde Serde, options ...Option) EventStore {
+	store := EventStore{
+		db:    db,
+		serde: serde,
+	}
+
+	store.appendToStore = performAppendQuery
+
+	for _, option := range options {
+		store = option(store)
+	}
+
+	return store
 }
 
 // Stream opens one or more Event Streams depending on the provided target.
@@ -60,28 +88,28 @@ func (st EventStore) Stream(
 
 	switch t := target.(type) {
 	case stream.All:
+		args = append(args, selectt.From)
 		query = `SELECT * FROM events
 		         WHERE global_sequence_number >= $1
 		         ORDER BY global_sequence_number ASC`
-		args = append(args, selectt.From)
 
 	case stream.ByType:
+		args = append(args, selectt.From, string(t))
 		query = `SELECT * FROM events
 		         WHERE global_sequence_number >= $1 AND stream_type = $2
 		         ORDER BY global_sequence_number ASC`
-		args = append(args, selectt.From, string(t))
 
 	case stream.ByTypes:
+		args = append(args, selectt.From, pq.Array(t))
 		query = `SELECT * FROM events
 		         WHERE global_sequence_number >= $1 AND stream_type = ANY($2)
 		         ORDER BY global_sequence_number ASC`
-		args = append(args, selectt.From, pq.Array(t))
 
 	case stream.ByID:
+		args = append(args, selectt.From, t.Type, t.Name)
 		query = `SELECT * FROM events
 				 WHERE "version" >= $1 AND stream_type = $2 AND stream_id = $3
 				 ORDER BY "version" ASC`
-		args = append(args, selectt.From, t.Type, t.Name)
 
 	default:
 		return fmt.Errorf("postgres.EventStore: unsupported stream target: %T", t)
@@ -93,7 +121,7 @@ func (st EventStore) Stream(
 	}
 
 	// FIXME(ar3s3ru): add logger support in the event store
-	return rowsToStream(rows, es, st.registry, nil)
+	return rowsToStream(rows, es, st.serde, nil)
 }
 
 // Append inserts the specified Domain Events into the Event Stream specified
@@ -143,17 +171,44 @@ func (st EventStore) Append(
 	return v, nil
 }
 
+func performAppendQuery(
+	ctx context.Context,
+	tx *sql.Tx,
+	id stream.ID,
+	expected eventstore.VersionCheck,
+	eventName string,
+	payload []byte,
+	metadata []byte,
+) (int64, error) {
+	var newVersion int64
+
+	if err := tx.QueryRowContext(
+		ctx,
+		"SELECT append_to_store($1, $2, $3, $4, $5, $6)",
+		id.Type,
+		id.Name,
+		int64(expected),
+		eventName,
+		payload,
+		metadata,
+	).Scan(&newVersion); err != nil {
+		return 0, fmt.Errorf("postgres.EventStore.performAppendQuery: failed to append event: %w", err)
+	}
+
+	return newVersion, nil
+}
+
 // TODO(ar3s3ru): add the ErrConflict error in case of optimistic concurrency issues.
-func (st *EventStore) appendEvent(
+func (st EventStore) appendEvent(
 	ctx context.Context,
 	tx *sql.Tx,
 	id event.StreamID,
 	expected eventstore.VersionCheck,
 	event eventually.Event,
 ) (int64, error) {
-	eventPayload, err := json.Marshal(event.Payload)
+	eventPayload, err := st.serde.Serialize(event.Payload.Name(), event.Payload)
 	if err != nil {
-		return 0, fmt.Errorf("postgres.EventStore: failed to unmarshal event payload to json: %w", err)
+		return 0, fmt.Errorf("postgres.EventStore: failed to serialize event payload: %w", err)
 	}
 
 	// To avoid null or JSONB issues.
@@ -163,27 +218,10 @@ func (st *EventStore) appendEvent(
 
 	metadata, err := json.Marshal(event.Metadata)
 	if err != nil {
-		return 0, fmt.Errorf("postgres.EventStore: failed to unmarshal metadata to json: %w", err)
+		return 0, fmt.Errorf("postgres.EventStore: failed to marshal metadata to json: %w", err)
 	}
 
-	var newVersion int64
-
-	err = tx.QueryRowContext(
-		ctx,
-		"SELECT append_to_store($1, $2, $3, $4, $5, $6)",
-		id.Type,
-		id.Name,
-		int64(expected),
-		event.Payload.Name(),
-		eventPayload,
-		metadata,
-	).Scan(&newVersion)
-
-	if err != nil {
-		return 0, fmt.Errorf("postgres.EventStore: failed to append event: %w", err)
-	}
-
-	return newVersion, nil
+	return st.appendToStore(ctx, tx, id, expected, event.Payload.Name(), eventPayload, metadata)
 }
 
 // LatestSequenceNumber returns the latest Sequence Number used by a Domain Event

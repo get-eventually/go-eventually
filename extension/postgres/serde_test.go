@@ -1,14 +1,13 @@
-package event_test
+package postgres_test
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/get-eventually/go-eventually"
-	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/extension/postgres"
 	"github.com/get-eventually/go-eventually/internal"
 )
 
@@ -61,7 +60,7 @@ func TestRegistry_Register(t *testing.T) {
 		name, tc := name, tc
 
 		t.Run(name, func(t *testing.T) {
-			r := event.NewRegistry(json.Unmarshal)
+			r := postgres.NewJSONRegistry()
 			err := r.Register(tc.input...)
 
 			if tc.wantErr {
@@ -102,7 +101,7 @@ func TestRegistry_Deserialize(t *testing.T) {
 		name, tc := name, tc
 
 		t.Run(name, func(t *testing.T) {
-			r := event.NewRegistry(json.Unmarshal)
+			r := postgres.NewJSONRegistry()
 
 			require.NoError(t, r.Register(
 				internal.IntPayload(0),

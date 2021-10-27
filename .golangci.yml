@@ -3,6 +3,7 @@ run:
   skip-dirs:
     - .github
     - resources
+    - migrations # NOTE: this is relative to eventstore/postgres
 
 linters-settings:
   dupl:
@@ -111,7 +112,7 @@ issues:
         - gomnd
         - funlen
 
-    - path: eventstore/store_suite\.go
+    - path: event/store_suite\.go
       linters:
         - gomnd
         - funlen

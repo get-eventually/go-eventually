@@ -8,10 +8,10 @@ import (
 	"github.com/golang-migrate/migrate"
 	bindata "github.com/golang-migrate/migrate/source/go_bindata"
 
-	"github.com/get-eventually/go-eventually/eventstore/postgres/migrations"
+	"github.com/get-eventually/go-eventually/extension/postgres/migrations"
 )
 
-// RunMigration performs the migrations for the Postgres database.
+// RunMigrations performs the migrations for the Postgres database.
 func RunMigrations(dsn string) error {
 	u, err := url.Parse(dsn)
 	if err != nil {
