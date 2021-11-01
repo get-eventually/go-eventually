@@ -29,10 +29,10 @@ type InstrumentedEventStore struct {
 	eventStore eventstore.Store
 
 	appendCount    metric.Int64Counter
-	appendDuration metric.Int64ValueRecorder
+	appendDuration metric.Int64Histogram
 
 	streamCount    metric.Int64Counter
-	streamDuration metric.Int64ValueRecorder
+	streamDuration metric.Int64Histogram
 }
 
 func (es *InstrumentedEventStore) registerMetrics() error {
@@ -45,7 +45,7 @@ func (es *InstrumentedEventStore) registerMetrics() error {
 		return fmt.Errorf("oteleventually: failed to register metric: %w", err)
 	}
 
-	if es.appendDuration, err = es.meter.NewInt64ValueRecorder(
+	if es.appendDuration, err = es.meter.NewInt64Histogram(
 		"eventually.events.append.duration.milliseconds",
 		metric.WithUnit(unit.Milliseconds),
 		metric.WithDescription("Duration in milliseconds of append operations performed"),
@@ -60,7 +60,7 @@ func (es *InstrumentedEventStore) registerMetrics() error {
 		return fmt.Errorf("oteleventually: failed to register metric: %w", err)
 	}
 
-	if es.streamDuration, err = es.meter.NewInt64ValueRecorder(
+	if es.streamDuration, err = es.meter.NewInt64Histogram(
 		"eventually.events.stream.duration.milliseconds",
 		metric.WithUnit(unit.Milliseconds),
 		metric.WithDescription("Duration in milliseconds of stream operations performed"),
@@ -116,7 +116,7 @@ func (es *InstrumentedEventStore) Stream(
 	case stream.ByType:
 		attributes = append(attributes, StreamTypeAttribute.String(string(t)))
 	case stream.ByTypes:
-		attributes = append(attributes, StreamTypeAttribute.Array([]string(t)))
+		attributes = append(attributes, StreamTypeAttribute.StringSlice(t))
 	case stream.ByID:
 		attributes = append(attributes, StreamTypeAttribute.String(t.Type), StreamNameAttribute.String(t.Name))
 	}
