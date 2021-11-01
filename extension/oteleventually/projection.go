@@ -87,7 +87,7 @@ func (ip *InstrumentedProjection) Apply(ctx context.Context, event eventstore.Ev
 		EventVersionAttribute.Int64(event.Version),
 	)
 
-	if eventStr, err := json.Marshal(event.Event); err == nil {
+	if eventStr, err := json.Marshal(event.Event); err == nil { //nolint:govet // Shadowing of the error is fine.
 		spanAttributes = append(spanAttributes, attribute.String("event", string(eventStr)))
 	}
 
