@@ -2,8 +2,6 @@ module github.com/get-eventually/go-eventually/eventstore/postgres
 
 go 1.15
 
-replace github.com/get-eventually/go-eventually => ../..
-
 require (
 	github.com/Microsoft/go-winio v0.4.16 // indirect
 	github.com/containerd/containerd v1.4.3 // indirect
