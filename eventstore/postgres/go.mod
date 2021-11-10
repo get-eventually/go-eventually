@@ -11,7 +11,7 @@ require (
 	github.com/docker/docker v20.10.2+incompatible // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
-	github.com/get-eventually/go-eventually v0.0.0-20210903204041-6da801fa7f4e
+	github.com/get-eventually/go-eventually v0.1.0-alpha.3
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-migrate/migrate v3.5.4+incompatible
 	github.com/gorilla/mux v1.8.0 // indirect
