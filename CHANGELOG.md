@@ -7,10 +7,12 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 ### Added
-- ...
+- Testcase for the Event Store testing suite to assert that `eventstore.Appender.Append` returns `eventstore.ErrConflict`.
+- `postgres.EventStore.Append` returns `eventstore.ErrConflict` in case of conflict now.
 
 ### Changed
-- ...
+- Metric types in `oteleventually` have been adapted to the latest `v0.24.0` version.
+- `eventstore.ErrConflict` has been renamed to `eventstore.ConflictError`.
 
 ### Deprecated
 - ...

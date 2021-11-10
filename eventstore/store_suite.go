@@ -23,6 +23,11 @@ var (
 		Name: "my-instance",
 	}
 
+	thirdInstance = stream.ID{
+		Type: "third-type",
+		Name: "my-instance",
+	}
+
 	expectedStreamAll = []Event{
 		{
 			Stream:         firstInstance,
@@ -236,6 +241,35 @@ func (ss *StoreSuite) TestStream() {
 	assert.Empty(t, streamSecondType)
 	assert.Empty(t, streamFirstInstance)
 	assert.Empty(t, streamSecondInstance)
+
+	// Testing eventstore.Appender interface and the optimistic concurrency handling.
+
+	newVersion, err := ss.eventStore.Append(
+		ctx,
+		thirdInstance,
+		VersionCheck(0), // No event expected on this Event Stream!
+		eventually.Event{Payload: internal.IntPayload(0)},
+	)
+
+	assert.Equal(t, int64(1), newVersion)
+	assert.NoError(t, err)
+
+	_, err = ss.eventStore.Append(
+		ctx,
+		thirdInstance,
+		VersionCheck(0), // Appending with the same expected version should fail!
+		eventually.Event{Payload: internal.IntPayload(0)},
+	)
+
+	expectedErr := ConflictError{
+		Expected: 0,
+		Actual:   1,
+	}
+
+	var actualErr ConflictError
+
+	assert.ErrorAs(t, err, &actualErr)
+	assert.Equal(t, expectedErr, actualErr)
 }
 
 func (ss *StoreSuite) appendEvents(ctx context.Context) error {

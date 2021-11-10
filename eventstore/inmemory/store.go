@@ -189,7 +189,7 @@ func (s *EventStore) ensureMapsAreCreated(typ string) {
 // Alternatively, -1 can be used if no Optimistic Concurrency check
 // should be carried out.
 //
-// An instance of ErrConflict will be returned if the optimistic locking
+// An instance of ConflictError will be returned if the optimistic locking
 // version check fails against the current version of the Event Stream.
 func (s *EventStore) Append(
 	ctx context.Context,
@@ -206,7 +206,7 @@ func (s *EventStore) Append(
 
 	currentVersion := eventstore.VersionCheck(len(s.byTypeAndInstance[id.Type][id.Name]))
 	if expected != eventstore.VersionCheckAny && currentVersion != expected {
-		return 0, fmt.Errorf("inmemory: failed to append events: %w", eventstore.ErrConflict{
+		return 0, fmt.Errorf("inmemory: failed to append events: %w", eventstore.ConflictError{
 			Expected: int64(expected),
 			Actual:   int64(currentVersion),
 		})
