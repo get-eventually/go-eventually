@@ -149,7 +149,7 @@ func handleAppendError(err error) error {
 		return fmt.Errorf("postgres.EventStore.handleAppendError: failed to parse conflict error actual version: %w", err)
 	}
 
-	return eventstore.ErrConflict{
+	return eventstore.ConflictError{
 		Expected: int64(expected),
 		Actual:   int64(actual),
 	}
@@ -164,9 +164,6 @@ func handleAppendError(err error) error {
 //
 // Alternatively, VersionCheckAny can be used if no Optimistic Concurrency check
 // should be carried out.
-//
-// NOTE: this implementation is not returning yet eventstore.ErrConflict in case
-// of conflicting expectations with the provided VersionCheck value.
 func (st EventStore) Append(
 	ctx context.Context,
 	id stream.ID,
@@ -229,7 +226,6 @@ func performAppendQuery(
 	return newVersion, nil
 }
 
-// TODO(ar3s3ru): add the ErrConflict error in case of optimistic concurrency issues.
 func (st EventStore) appendEvent(
 	ctx context.Context,
 	tx *sql.Tx,

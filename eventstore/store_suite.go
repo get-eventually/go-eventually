@@ -261,12 +261,12 @@ func (ss *StoreSuite) TestStream() {
 		eventually.Event{Payload: internal.IntPayload(0)},
 	)
 
-	expectedErr := ErrConflict{
+	expectedErr := ConflictError{
 		Expected: 0,
 		Actual:   1,
 	}
 
-	var actualErr ErrConflict
+	var actualErr ConflictError
 
 	assert.ErrorAs(t, err, &actualErr)
 	assert.Equal(t, expectedErr, actualErr)

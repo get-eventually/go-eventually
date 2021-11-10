@@ -12,6 +12,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 - Metric types in `oteleventually` have been adapted to the latest `v0.24.0` version.
+- `eventstore.ErrConflict` has been renamed to `eventstore.ConflictError`.
 
 ### Deprecated
 - ...

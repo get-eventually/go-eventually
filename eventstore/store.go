@@ -85,7 +85,7 @@ type Appender interface {
 	// Alternatively, VersionCheckAny can be used if no Optimistic Concurrency check
 	// should be carried out.
 	//
-	// An instance of ErrConflict will be returned if the optimistic locking
+	// An instance of ConflictError will be returned if the optimistic locking
 	// version check fails against the current version of the Event Stream.
 	Append(ctx context.Context, id stream.ID, versionCheck VersionCheck, events ...eventually.Event) (int64, error)
 }
