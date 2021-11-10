@@ -126,6 +126,7 @@ func (st EventStore) Stream(
 	return rowsToStream(rows, es, st.serde, nil)
 }
 
+//nolint:lll // It's ok to go over the 120 lines limit in this case.
 var conflictErrorRegex = regexp.MustCompile(`stream version check failed, expected: (?P<expected>\d), current: (?P<actual>\d)`)
 
 func handleAppendError(err error) error {
