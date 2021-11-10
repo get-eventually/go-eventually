@@ -4,7 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"regexp"
+	"strconv"
 
 	// Postgres driver for migrate.
 	_ "github.com/golang-migrate/migrate/database/postgres"
@@ -123,6 +126,35 @@ func (st EventStore) Stream(
 	return rowsToStream(rows, es, st.serde, nil)
 }
 
+var conflictErrorRegex = regexp.MustCompile(`stream version check failed, expected: (?P<expected>\d), current: (?P<actual>\d)`)
+
+func handleAppendError(err error) error {
+	var dbErr *pq.Error
+	if !errors.As(err, &dbErr) {
+		return err
+	}
+
+	matches := conflictErrorRegex.FindStringSubmatch(dbErr.Message)
+	if len(matches) == 0 {
+		return err
+	}
+
+	expected, err := strconv.Atoi(matches[conflictErrorRegex.SubexpIndex("expected")])
+	if err != nil {
+		return fmt.Errorf("postgres.EventStore.handleAppendError: failed to parse conflict error expected version: %w", err)
+	}
+
+	actual, err := strconv.Atoi(matches[conflictErrorRegex.SubexpIndex("actual")])
+	if err != nil {
+		return fmt.Errorf("postgres.EventStore.handleAppendError: failed to parse conflict error actual version: %w", err)
+	}
+
+	return eventstore.ErrConflict{
+		Expected: int64(expected),
+		Actual:   int64(actual),
+	}
+}
+
 // Append inserts the specified Domain Events into the Event Stream specified
 // by the current instance, returning the new version of the Event Stream.
 //
@@ -156,7 +188,7 @@ func (st EventStore) Append(
 
 	for _, event := range events {
 		if v, err = st.appendEvent(ctx, tx, id, expected, event); err != nil {
-			return 0, err
+			return 0, fmt.Errorf("postgres.EventStore: failed to append event: %w", handleAppendError(err))
 		}
 
 		// Update the expected version for the next event with the new version.
