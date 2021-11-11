@@ -87,7 +87,7 @@ func (er ErrorRecorder) Handle(ctx context.Context, cmd Command) error {
 	}
 
 	streamID := er.buildStreamID(cmd)
-	event := event.Event{
+	evt := event.Event{
 		Payload: er.EventMapper(err, cmd),
 	}
 
@@ -96,7 +96,7 @@ func (er ErrorRecorder) Handle(ctx context.Context, cmd Command) error {
 		captureError = er.ShouldCaptureError(err)
 	}
 
-	_, appendErr := er.Appender.Append(ctx, streamID, version.Any, event)
+	_, appendErr := er.Appender.Append(ctx, streamID, version.Any, evt)
 	if appendErr != nil && captureError {
 		// Append error only returned if silencing command.Handler errors.
 		return fmt.Errorf("command.ErrorRecorder: failed to append command error to event store: %w", err)

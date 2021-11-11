@@ -109,6 +109,7 @@ func (es *InstrumentedEventStore) Stream(
 		StreamTypeAttribute.String(eventStreamID.Type),
 	}
 
+	//nolint:gocritic // The append is not supposed to modify the original slice, but to create an extended one here.
 	spanAttributes := append(attributes,
 		SelectFromAttribute.Int64(int64(selector.From)),
 		StreamNameAttribute.String(eventStreamID.Name),

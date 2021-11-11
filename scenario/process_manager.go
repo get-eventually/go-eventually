@@ -44,10 +44,10 @@ type ProcessManagerGiven struct {
 }
 
 // When provides the persisted Domain Event the Process Manager should process.
-func (sc ProcessManagerGiven) When(event event.Persisted) *ProcessManagerWhen {
+func (sc ProcessManagerGiven) When(evt event.Persisted) *ProcessManagerWhen {
 	return &ProcessManagerWhen{
 		ProcessManagerGiven: sc,
-		when:                event,
+		when:                evt,
 	}
 }
 

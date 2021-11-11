@@ -131,24 +131,24 @@ func (st EventStore) appendEvent(
 	tx *sql.Tx,
 	id event.StreamID,
 	expected version.Check,
-	event event.Event,
+	evt event.Event,
 ) (version.Version, error) {
-	eventPayload, err := st.serde.Serialize(event.Payload.Name(), event.Payload)
+	eventPayload, err := st.serde.Serialize(evt.Payload.Name(), evt.Payload)
 	if err != nil {
 		return 0, fmt.Errorf("postgres.EventStore: failed to serialize event payload: %w", err)
 	}
 
 	// To avoid null or JSONB issues.
-	if event.Metadata == nil {
-		event.Metadata = map[string]interface{}{}
+	if evt.Metadata == nil {
+		evt.Metadata = map[string]interface{}{}
 	}
 
-	metadata, err := json.Marshal(event.Metadata)
+	metadata, err := json.Marshal(evt.Metadata)
 	if err != nil {
 		return 0, fmt.Errorf("postgres.EventStore: failed to marshal metadata to json: %w", err)
 	}
 
-	return st.appendToStore(ctx, tx, id, expected, event.Payload.Name(), eventPayload, metadata)
+	return st.appendToStore(ctx, tx, id, expected, evt.Payload.Name(), eventPayload, metadata)
 }
 
 //nolint:lll // It's ok to go over the 120 lines limit in this case.
