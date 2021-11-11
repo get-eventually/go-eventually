@@ -120,7 +120,11 @@ func (r ProcessorRunner) Run(ctx context.Context) error {
 			}
 
 			r.LogDebugf(func(log eventually.LoggerFunc) {
-				log("Skip checkpoint of processed event, sequenceNumber: %d", event.SequenceNumber)
+				log("Skip checkpoint of processed event, stream type: %s, stream name: %s, version: %d",
+					event.Stream.Type,
+					event.Stream.Name,
+					event.Version,
+				)
 			})
 		}
 
@@ -129,7 +133,11 @@ func (r ProcessorRunner) Run(ctx context.Context) error {
 
 	for event := range toCheckpoint {
 		r.LogDebugf(func(log eventually.LoggerFunc) {
-			log("Checkpointing processed event, sequenceNumber: %d", event.SequenceNumber)
+			log("Checkpointing processed event, stream type: %s, stream name: %s, version: %d",
+				event.Stream.Type,
+				event.Stream.Name,
+				event.Version,
+			)
 		})
 
 		if err := r.Subscription.Checkpoint(ctx, event); err != nil {

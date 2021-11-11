@@ -130,10 +130,9 @@ func (s *EventStore) Append(
 		// Sequence numbers and versions should all start from 1,
 		// hence why this block uses `+ 1`.
 		newPersistedEvents = append(newPersistedEvents, event.Persisted{
-			Stream:         id,
-			Version:        version.Version(currentVersion) + version.Version(i) + 1,
-			SequenceNumber: version.SequenceNumber(nextIndex) + 1,
-			Event:          evt,
+			Stream:  id,
+			Version: version.Version(currentVersion) + version.Version(i) + 1,
+			Event:   evt,
 		})
 
 		newIndexes = append(newIndexes, nextIndex)

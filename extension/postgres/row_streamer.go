@@ -25,16 +25,14 @@ func rowsToStream(rows *sql.Rows, es event.Stream, deserializer Deserializer, l 
 			rawPayload, rawMetadata json.RawMessage
 		)
 
-		err := rows.Scan(
-			&evt.SequenceNumber,
+		if err := rows.Scan(
 			&evt.Stream.Type,
 			&evt.Stream.Name,
 			&eventName,
 			&evt.Version,
 			&rawPayload,
 			&rawMetadata,
-		)
-		if err != nil {
+		); err != nil {
 			return fmt.Errorf("postgres.EventStore.rowsToStream: failed to scan stream row into event struct: %w", err)
 		}
 

@@ -84,7 +84,6 @@ func (ip *InstrumentedProcessor) Process(ctx context.Context, evt event.Persiste
 		StreamTypeAttribute.String(evt.Stream.Type),
 		StreamNameAttribute.String(evt.Stream.Name),
 		EventVersionAttribute.Int64(int64(evt.Version)),
-		EventSequenceNumberAttribute.Int64(int64(evt.SequenceNumber)),
 	)
 
 	if eventStr, err := json.Marshal(evt.Event); err == nil { //nolint:govet // Shadowing of the error is fine.

@@ -29,43 +29,37 @@ var (
 
 	expectedStreamFirstInstance = []Persisted{
 		{
-			Stream:         firstInstance,
-			Version:        1,
-			SequenceNumber: 1,
-			Event:          Event{Payload: internal.IntPayload(1)},
+			Stream:  firstInstance,
+			Version: 1,
+			Event:   Event{Payload: internal.IntPayload(1)},
 		},
 		{
-			Stream:         firstInstance,
-			Version:        2,
-			SequenceNumber: 3,
-			Event:          Event{Payload: internal.IntPayload(2)},
+			Stream:  firstInstance,
+			Version: 2,
+			Event:   Event{Payload: internal.IntPayload(2)},
 		},
 		{
-			Stream:         firstInstance,
-			Version:        3,
-			SequenceNumber: 5,
-			Event:          Event{Payload: internal.IntPayload(3)},
+			Stream:  firstInstance,
+			Version: 3,
+			Event:   Event{Payload: internal.IntPayload(3)},
 		},
 	}
 
 	expectedStreamSecondInstance = []Persisted{
 		{
-			Stream:         secondInstance,
-			Version:        1,
-			SequenceNumber: 2,
-			Event:          Event{Payload: internal.IntPayload(1)},
+			Stream:  secondInstance,
+			Version: 1,
+			Event:   Event{Payload: internal.IntPayload(1)},
 		},
 		{
-			Stream:         secondInstance,
-			Version:        2,
-			SequenceNumber: 4,
-			Event:          Event{Payload: internal.IntPayload(2)},
+			Stream:  secondInstance,
+			Version: 2,
+			Event:   Event{Payload: internal.IntPayload(2)},
 		},
 		{
-			Stream:         secondInstance,
-			Version:        3,
-			SequenceNumber: 6,
-			Event:          Event{Payload: internal.IntPayload(3)},
+			Stream:  secondInstance,
+			Version: 3,
+			Event:   Event{Payload: internal.IntPayload(3)},
 		},
 	}
 )

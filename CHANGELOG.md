@@ -23,6 +23,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
 ### Removed
 - `subscription` package has been removed.
 - First-level support from the library to stream from multiple targets (`stream.ByType`, `stream.All`, etc.) has been removed. The `event.Streamer` interface now only targets a _single Event Stream_; for everything else, use an `event.Subscription` implementation instead.
+- Global ordering has been dropped: no `SequenceNumber` is supported in `event.Persisted` anymore! Also, `extension/postgres` implementation does not have `global_sequence_number` column in the `events` table :fire:
+- Event Subscription Checkpoints are removed in `extension/postgres`; the way forward for creating Event Subscriptions in PostgreSQL is to use [Debezium](https://debezium.io/).
 
 ## [v0.1.0-alpha.3]
 ### Added
