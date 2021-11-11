@@ -24,15 +24,15 @@ type CheckExact Version
 
 func (CheckExact) isVersionCheck() {}
 
-// ErrConflict is an error returned by an Event Store when appending
+// ConflictError is an error returned by an Event Store when appending
 // some events using an expected Event Stream version that does not match
 // the current state of the Event Stream.
-type ErrConflict struct {
+type ConflictError struct {
 	Expected Version
 	Actual   Version
 }
 
-func (err ErrConflict) Error() string {
+func (err ConflictError) Error() string {
 	return fmt.Sprintf(
 		"version.Check: conflict detected; expected stream version: %d, actual: %d",
 		err.Expected,

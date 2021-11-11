@@ -4,10 +4,14 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"regexp"
+	"strconv"
 
 	// Postgres driver for migrate.
 	_ "github.com/golang-migrate/migrate/database/postgres"
+	"github.com/lib/pq"
 
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/event"
@@ -122,7 +126,6 @@ func performAppendQuery(
 	return version.Version(newVersion), nil
 }
 
-// TODO(ar3s3ru): add the ErrConflict error in case of optimistic concurrency issues.
 func (st EventStore) appendEvent(
 	ctx context.Context,
 	tx *sql.Tx,
@@ -146,6 +149,36 @@ func (st EventStore) appendEvent(
 	}
 
 	return st.appendToStore(ctx, tx, id, expected, event.Payload.Name(), eventPayload, metadata)
+}
+
+//nolint:lll // It's ok to go over the 120 lines limit in this case.
+var conflictErrorRegex = regexp.MustCompile(`stream version check failed, expected: (?P<expected>\d), current: (?P<actual>\d)`)
+
+func handleAppendError(err error) error {
+	var dbErr *pq.Error
+	if !errors.As(err, &dbErr) {
+		return err
+	}
+
+	matches := conflictErrorRegex.FindStringSubmatch(dbErr.Message)
+	if len(matches) == 0 {
+		return err
+	}
+
+	expected, err := strconv.Atoi(matches[conflictErrorRegex.SubexpIndex("expected")])
+	if err != nil {
+		return fmt.Errorf("postgres.EventStore.handleAppendError: failed to parse conflict error expected version: %w", err)
+	}
+
+	actual, err := strconv.Atoi(matches[conflictErrorRegex.SubexpIndex("actual")])
+	if err != nil {
+		return fmt.Errorf("postgres.EventStore.handleAppendError: failed to parse conflict error actual version: %w", err)
+	}
+
+	return version.ConflictError{
+		Expected: version.Version(expected),
+		Actual:   version.Version(actual),
+	}
 }
 
 // Append inserts the specified Domain Events into the Event Stream specified
@@ -181,7 +214,7 @@ func (st EventStore) Append(
 
 	for _, event := range events {
 		if newVersion, err = st.appendEvent(ctx, tx, id, expected, event); err != nil {
-			return 0, err
+			return 0, fmt.Errorf("postgres.EventStore: failed to append event: %w", handleAppendError(err))
 		}
 
 		// Update the expected version for the next event with the new version.
@@ -194,23 +227,3 @@ func (st EventStore) Append(
 
 	return newVersion, nil
 }
-
-// LatestSequenceNumber returns the latest Sequence Number used by a Domain Event
-// committed to the Event Store.
-// func (st EventStore) LatestSequenceNumber(ctx context.Context) (int64, error) {
-// 	row := st.db.QueryRowContext(
-// 		ctx,
-// 		"SELECT max(global_sequence_number) FROM events",
-// 	)
-
-// 	if err := row.Err(); err != nil {
-// 		return 0, fmt.Errorf("postgres.EventStore: failed to get latest sequence number: %w", err)
-// 	}
-
-// 	var sequenceNumber int64
-// 	if err := row.Scan(&sequenceNumber); err != nil {
-// 		return 0, fmt.Errorf("postgres.EventStore: failed to scan latest sequence number from sql row: %w", err)
-// 	}
-
-// 	return sequenceNumber, nil
-// }

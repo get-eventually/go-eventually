@@ -2,6 +2,7 @@ package oteleventually
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -26,7 +27,7 @@ type InstrumentedProcessor struct {
 	processor event.Processor
 
 	count    metric.Int64Counter
-	duration metric.Int64ValueRecorder
+	duration metric.Int64Histogram
 }
 
 func (ip *InstrumentedProcessor) registerMetrics() error {
@@ -39,7 +40,7 @@ func (ip *InstrumentedProcessor) registerMetrics() error {
 		return fmt.Errorf("oteleventually: failed to register metric: %w", err)
 	}
 
-	if ip.duration, err = ip.meter.NewInt64ValueRecorder(
+	if ip.duration, err = ip.meter.NewInt64Histogram(
 		"eventually.projection.duration.milliseconds",
 		metric.WithUnit(unit.Milliseconds),
 		metric.WithDescription("Duration in milliseconds of projection operations performed"),
@@ -84,8 +85,11 @@ func (ip *InstrumentedProcessor) Process(ctx context.Context, evt event.Persiste
 		StreamNameAttribute.String(evt.Stream.Name),
 		EventVersionAttribute.Int64(int64(evt.Version)),
 		EventSequenceNumberAttribute.Int64(int64(evt.SequenceNumber)),
-		attribute.Any("event", evt),
 	)
+
+	if eventStr, err := json.Marshal(evt.Event); err == nil { //nolint:govet // Shadowing of the error is fine.
+		spanAttributes = append(spanAttributes, attribute.String("event", string(eventStr)))
+	}
 
 	ctx, span := ip.tracer.Start(ctx, "Projection.Apply", trace.WithAttributes(spanAttributes...))
 	defer span.End()

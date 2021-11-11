@@ -112,7 +112,7 @@ func (s *EventStore) Append(
 
 	currentVersion := version.CheckExact(len(s.byTypeAndInstance[id.Type][id.Name]))
 	if expected != version.Any && currentVersion != expected {
-		err := version.ErrConflict{
+		err := version.ConflictError{
 			Expected: version.Version(expected.(version.CheckExact)),
 			Actual:   version.Version(currentVersion),
 		}

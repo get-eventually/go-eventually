@@ -24,6 +24,15 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - `subscription` package has been removed.
 - First-level support from the library to stream from multiple targets (`stream.ByType`, `stream.All`, etc.) has been removed. The `event.Streamer` interface now only targets a _single Event Stream_; for everything else, use an `event.Subscription` implementation instead.
 
+## [v0.1.0-alpha.3]
+### Added
+- Testcase for the Event Store testing suite to assert that `eventstore.Appender.Append` returns `eventstore.ErrConflict`.
+- `postgres.EventStore.Append` returns `eventstore.ErrConflict` in case of conflict now.
+
+### Changed
+- Metric types in `oteleventually` have been adapted to the latest `v0.24.0` version.
+- `eventstore.ErrConflict` has been renamed to `eventstore.ConflictError`.
+
 ## [v0.1.0-alpha.2]
 ### Added
 - An option to override Event appending logic in Postgres EventStore implementation.
@@ -42,6 +51,7 @@ A lot of changes have happened here, a lot of different API design iterations an
 Sorry :)
 
 <!-- @formatter:off -->
-[Unreleased]: https://github.com/get-eventually/go-eventually/compare/v0.1.0-alpha.2..HEAD
+[Unreleased]: https://github.com/get-eventually/go-eventually/compare/v0.1.0-alpha.3..HEAD
+[v0.1.0-alpha.3]: https://github.com/get-eventually/go-eventually/compare/v0.1.0-alpha.2..v0.1.0-alpha.3
 [v0.1.0-alpha.2]: https://github.com/get-eventually/go-eventually/compare/v0.1.0-alpha.1..v0.1.0-alpha.2
 [v0.1.0-alpha.1]: https://github.com/get-eventually/go-eventually/compare/8bb9190..v0.1.0-alpha.1
