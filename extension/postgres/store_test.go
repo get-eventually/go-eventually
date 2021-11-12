@@ -47,16 +47,8 @@ func obtainEventStore(t *testing.T) (*sql.DB, postgres.EventStore, postgres.Serd
 	tx, err := db.Begin()
 	require.NoError(t, err)
 
-	// Reset checkpoints for subscriptions.
-	_, err = tx.Exec("DELETE FROM subscriptions_checkpoints")
-	require.NoError(t, err)
-
 	// Reset committed events and streams.
 	_, err = tx.Exec("DELETE FROM streams")
-	require.NoError(t, err)
-
-	// Reset the global sequence number to 1.
-	_, err = tx.Exec("ALTER SEQUENCE events_global_sequence_number_seq RESTART WITH 1")
 	require.NoError(t, err)
 
 	handleError(tx.Commit())
@@ -75,39 +67,6 @@ func TestStoreSuite(t *testing.T) {
 		return store
 	}))
 }
-
-// func TestLatestSequenceNumber(t *testing.T) {
-// 	db, store, _ := obtainEventStore(t)
-// 	defer func() { assert.NoError(t, db.Close()) }()
-
-// 	ctx := context.Background()
-
-// 	for i := 1; i < 10; i++ {
-// 		_, err := store.Append(
-// 			ctx,
-// 			firstInstance,
-// 			eventstore.VersionCheck(int64(i-1)),
-// 			eventually.Event{Payload: internal.IntPayload(i)},
-// 		)
-
-// 		require.NoError(t, err)
-// 	}
-
-// 	ch := make(chan eventstore.Event, 1)
-
-// 	go func() {
-// 		require.NoError(t, store.Stream(ctx, ch, stream.All{}, eventstore.SelectFromBeginning))
-// 	}()
-
-// 	var latestSequenceNumber int64
-// 	for event := range ch {
-// 		latestSequenceNumber = int64(math.Max(float64(latestSequenceNumber), float64(event.SequenceNumber)))
-// 	}
-
-// 	actual, err := store.LatestSequenceNumber(ctx)
-// 	assert.NoError(t, err)
-// 	assert.Equal(t, latestSequenceNumber, actual)
-// }
 
 func TestAppendToStoreWrapperOption(t *testing.T) {
 	db, _, serde := obtainEventStore(t)
