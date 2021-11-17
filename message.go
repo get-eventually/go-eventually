@@ -33,3 +33,13 @@ func (m Metadata) With(key string, value interface{}) Metadata {
 
 	return m
 }
+
+// Merge merges the other Metadata provided in input with the current map.
+// Returns a pointer to the extended metadata map.
+func (m Metadata) Merge(other Metadata) Metadata {
+	for k, v := range other {
+		m[k] = v
+	}
+
+	return m
+}
