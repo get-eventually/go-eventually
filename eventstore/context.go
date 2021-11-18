@@ -44,13 +44,19 @@ func NewContextAware(appender Appender) ContextAware {
 //
 // The extended events are then appended to the Event Store using the base eventstore.Appender instance
 // provided during initialization.
-func (ca ContextAware) Append(ctx context.Context, id stream.ID, versionCheck VersionCheck, events ...eventually.Event) (int64, error) {
+func (ca ContextAware) Append(
+	ctx context.Context,
+	id stream.ID,
+	versionCheck VersionCheck,
+	events ...eventually.Event,
+) (int64, error) {
 	metadata, ok := ctx.Value(metadataContextKey{}).(eventually.Metadata)
 	if !ok {
 		return ca.Appender.Append(ctx, id, versionCheck, events...)
 	}
 
 	newEvents := make([]eventually.Event, 0, len(events))
+
 	for _, event := range events {
 		event.Metadata = event.Metadata.Merge(metadata)
 		newEvents = append(newEvents, event)
