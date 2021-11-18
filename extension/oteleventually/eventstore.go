@@ -170,6 +170,7 @@ func (es *InstrumentedEventStore) Append(
 
 	// Add span information to the events metadata.
 	newEvents := make([]eventually.Event, 0, len(events))
+
 	for _, event := range events {
 		event.Metadata = event.Metadata.
 			With("X-Eventually-TraceId", span.SpanContext().TraceID().String()).
