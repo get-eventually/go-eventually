@@ -8,6 +8,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 ### Added
 - `X-Eventually-TraceId` and `X-Eventually-SpanId` metadata keys are recorded when using `oteleventually.InstrumentedEventStore.Append`.
+- Add `eventstore.ContextAware` and `eventstore.ContextMetadata` to set some Metadata in the context to be applied to all Domain Events appended to the Event Store.
 
 ### Changed
 - ...
