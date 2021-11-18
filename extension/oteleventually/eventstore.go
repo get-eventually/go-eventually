@@ -168,7 +168,18 @@ func (es *InstrumentedEventStore) Append(
 	ctx, span := es.tracer.Start(ctx, "EventStore.Append", trace.WithAttributes(spanAttributes...))
 	defer span.End()
 
-	if newVersion, err = es.eventStore.Append(ctx, id, expected, events...); err != nil {
+	// Add span information to the events metadata.
+	newEvents := make([]eventually.Event, 0, len(events))
+
+	for _, event := range events {
+		event.Metadata = event.Metadata.
+			With("X-Eventually-TraceId", span.SpanContext().TraceID().String()).
+			With("X-Eventually-SpanId", span.SpanContext().SpanID().String())
+
+		newEvents = append(newEvents, event)
+	}
+
+	if newVersion, err = es.eventStore.Append(ctx, id, expected, newEvents...); err != nil {
 		span.RecordError(err)
 	} else {
 		span.SetAttributes(VersionNewAttribute.Int64(newVersion))
