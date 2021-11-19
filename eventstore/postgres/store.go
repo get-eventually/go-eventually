@@ -234,7 +234,7 @@ func (st EventStore) appendEvent(
 	expected eventstore.VersionCheck,
 	event eventually.Event,
 ) (int64, error) {
-	eventPayload, err := st.serde.Serialize(event.Payload.Name(), event.Payload)
+	eventPayload, err := st.serde.Serialize(event.Payload.Name(), id, event.Payload)
 	if err != nil {
 		return 0, fmt.Errorf("postgres.EventStore: failed to serialize event payload: %w", err)
 	}

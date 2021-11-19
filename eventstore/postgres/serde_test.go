@@ -8,6 +8,7 @@ import (
 
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/eventstore/postgres"
+	"github.com/get-eventually/go-eventually/eventstore/stream"
 	"github.com/get-eventually/go-eventually/internal"
 )
 
@@ -109,7 +110,12 @@ func TestRegistry_Deserialize(t *testing.T) {
 				event3{},
 			))
 
-			actual, err := r.Deserialize(tc.eventType, tc.input)
+			streamID := stream.ID{
+				Type: "test-type",
+				Name: t.Name(),
+			}
+
+			actual, err := r.Deserialize(tc.eventType, streamID, tc.input)
 
 			if tc.wantErr {
 				assert.Nil(t, actual)
