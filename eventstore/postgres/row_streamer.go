@@ -37,7 +37,7 @@ func rowsToStream(rows *sql.Rows, es eventstore.EventStream, deserializer Deseri
 			return fmt.Errorf("postgres.EventStore: failed to scan stream row into event struct: %w", err)
 		}
 
-		payload, err := deserializer.Deserialize(eventName, rawPayload)
+		payload, err := deserializer.Deserialize(eventName, event.Stream, rawPayload)
 		if err != nil {
 			return fmt.Errorf("postgres.EventStore: failed to deserialize event: %w", err)
 		}

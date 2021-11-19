@@ -6,18 +6,19 @@ import (
 	"reflect"
 
 	"github.com/get-eventually/go-eventually"
+	"github.com/get-eventually/go-eventually/eventstore/stream"
 )
 
 // Serializer can be used by the EventStore to delegate serialization
 // of a Domain Event from the eventually.Payload format (domain object) to binary format.
 type Serializer interface {
-	Serialize(eventType string, event eventually.Payload) ([]byte, error)
+	Serialize(eventType string, eventStreamID stream.ID, event eventually.Payload) ([]byte, error)
 }
 
 // Deserializer can be used by the EventStore to delegate deserialization
 // of a Domain Event from binary format to its corresponding Domain Object.
 type Deserializer interface {
-	Deserialize(eventType string, data []byte) (eventually.Payload, error)
+	Deserialize(eventType string, eventStreamID stream.ID, data []byte) (eventually.Payload, error)
 }
 
 // Serde is a serializer/deserializer type that can be used by the EventStore
@@ -35,19 +36,21 @@ type FusedSerde struct {
 }
 
 // SerializerFunc is a functional type that implements the Serializer interface.
-type SerializerFunc func(eventType string, event eventually.Payload) ([]byte, error)
+type SerializerFunc func(eventType string, eventStreamID stream.ID, event eventually.Payload) ([]byte, error)
 
 // Serialize delegates the function call to the inner function value.
-func (fn SerializerFunc) Serialize(eventType string, event eventually.Payload) ([]byte, error) {
-	return fn(eventType, event)
+//nolint:lll // It's only 3 characters longer than the linter limit, let's allow it.
+func (fn SerializerFunc) Serialize(eventType string, eventStreamID stream.ID, event eventually.Payload) ([]byte, error) {
+	return fn(eventType, eventStreamID, event)
 }
 
 // DeserializerFunc is a functional type that implements the Deserializer interface.
-type DeserializerFunc func(eventType string, data []byte) (eventually.Payload, error)
+type DeserializerFunc func(eventType string, eventStreamID stream.ID, data []byte) (eventually.Payload, error)
 
 // Deserialize delegates the function call to the inner function value.
-func (fn DeserializerFunc) Deserialize(eventType string, data []byte) (eventually.Payload, error) {
-	return fn(eventType, data)
+//nolint:lll // It's only 3 characters longer than the linter limit, let's allow it.
+func (fn DeserializerFunc) Deserialize(eventType string, eventStreamID stream.ID, data []byte) (eventually.Payload, error) {
+	return fn(eventType, eventStreamID, data)
 }
 
 // JSONRegistry is a Serde type that serializes and deserializes
@@ -103,7 +106,7 @@ func (r JSONRegistry) Register(events ...eventually.Payload) error {
 }
 
 // Serialize serializes a Domain Event using its JSON representation.
-func (r JSONRegistry) Serialize(eventType string, event eventually.Payload) ([]byte, error) {
+func (r JSONRegistry) Serialize(eventType string, eventStreamID stream.ID, event eventually.Payload) ([]byte, error) {
 	data, err := json.Marshal(event)
 	if err != nil {
 		return nil, fmt.Errorf("postgres.Registry: failed to serialize: %w", err)
@@ -114,7 +117,7 @@ func (r JSONRegistry) Serialize(eventType string, event eventually.Payload) ([]b
 
 // Deserialize attempts to deserialize a raw message with the type referenced by the
 // supplied event type identifier.
-func (r JSONRegistry) Deserialize(eventType string, data []byte) (eventually.Payload, error) {
+func (r JSONRegistry) Deserialize(eventType string, eventStreamID stream.ID, data []byte) (eventually.Payload, error) {
 	payloadType, ok := r.eventNameToType[eventType]
 	if !ok {
 		return nil, fmt.Errorf("postgres.Registry: received unregistered event, '%s'", eventType)
