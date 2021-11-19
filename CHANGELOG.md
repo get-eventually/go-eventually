@@ -11,7 +11,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - Add `eventstore.ContextAware` and `eventstore.ContextMetadata` to set some Metadata in the context to be applied to all Domain Events appended to the Event Store.
 
 ### Changed
-- ...
+- `postgres.Serializer` and `postgres.Deserializer` use `stream.ID` for the mapping function.
 
 ### Deprecated
 - ...
