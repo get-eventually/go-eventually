@@ -7,6 +7,7 @@ import (
 	"github.com/get-eventually/go-eventually"
 	"github.com/get-eventually/go-eventually/eventstore"
 	"github.com/get-eventually/go-eventually/eventstore/stream"
+	"github.com/get-eventually/go-eventually/logger"
 )
 
 // FailedType is the default stream type used by ErrorRecorder
@@ -49,9 +50,12 @@ type ErrorRecorder struct {
 	// NOTE: this is necessary for (de)-serialization purposes while generics are
 	// still missing in Go. This requirement might be removed in the future.
 	EventMapper func(err error, cmd eventually.Command) eventually.Payload
+
+	// Logger is an optional logger that can be used to report append errors and such.
+	Logger logger.Logger
 }
 
-func (er ErrorRecorder) streamType() string {
+func (er *ErrorRecorder) streamType() string {
 	if er.StreamType != "" {
 		return er.StreamType
 	}
@@ -59,7 +63,7 @@ func (er ErrorRecorder) streamType() string {
 	return FailedType
 }
 
-func (er ErrorRecorder) buildStreamID(cmd eventually.Command) stream.ID {
+func (er *ErrorRecorder) buildStreamID(cmd eventually.Command) stream.ID {
 	streamName := cmd.Payload.Name()
 	if er.StreamNameMapper != nil {
 		streamName = er.StreamNameMapper(cmd)
@@ -80,7 +84,7 @@ func (er ErrorRecorder) buildStreamID(cmd eventually.Command) stream.ID {
 //
 // If ShouldCaptureError has been set and returns "true", the error from the command.Handler is silenced
 // but an error can still be returned if the append operation on the Event Store fails.
-func (er ErrorRecorder) Handle(ctx context.Context, cmd eventually.Command) error {
+func (er *ErrorRecorder) Handle(ctx context.Context, cmd eventually.Command) error {
 	err := er.Handler.Handle(ctx, cmd)
 	if err == nil {
 		return nil
@@ -97,9 +101,16 @@ func (er ErrorRecorder) Handle(ctx context.Context, cmd eventually.Command) erro
 	}
 
 	_, appendErr := er.Appender.Append(ctx, streamID, eventstore.VersionCheckAny, event)
-	if appendErr != nil && captureError {
-		// Append error only returned if silencing command.Handler errors.
-		return fmt.Errorf("command.ErrorRecorder: failed to append command error to event store: %w", err)
+	if appendErr != nil {
+		logger.Error(er.Logger, "Failed to append command error to event store", logger.With("err", appendErr))
+
+		if captureError {
+			// Append error only returned if silencing command.Handler errors.
+			return fmt.Errorf(
+				"command.ErrorRecorder: failed to append command error to event store: %w [original: %s]",
+				appendErr, err,
+			)
+		}
 	}
 
 	if !captureError {
