@@ -12,6 +12,7 @@ import (
 	"github.com/get-eventually/go-eventually/eventstore"
 	"github.com/get-eventually/go-eventually/eventstore/inmemory"
 	"github.com/get-eventually/go-eventually/eventstore/stream"
+	"github.com/get-eventually/go-eventually/logger"
 )
 
 type mockCommand struct {
@@ -36,7 +37,7 @@ func TestErrorRecorder(t *testing.T) {
 		eventStore := inmemory.NewEventStore()
 		trackingEventStore := inmemory.NewTrackingEventStore(eventStore)
 
-		handler := command.ErrorRecorder{
+		handler := &command.ErrorRecorder{
 			Handler: command.HandlerFunc(func(ctx context.Context, cmd eventually.Command) error {
 				return nil
 			}),
@@ -47,6 +48,7 @@ func TestErrorRecorder(t *testing.T) {
 					command: cmd.Payload.(mockCommand),
 				}
 			},
+			Logger: logger.NewTest(t),
 		}
 
 		err := handler.Handle(context.Background(), eventually.Command{
@@ -66,7 +68,7 @@ func TestErrorRecorder(t *testing.T) {
 			Payload: mockCommand{message: t.Name()},
 		}
 
-		handler := command.ErrorRecorder{
+		handler := &command.ErrorRecorder{
 			Handler: command.HandlerFunc(func(ctx context.Context, cmd eventually.Command) error {
 				return expectedErr
 			}),
@@ -77,6 +79,7 @@ func TestErrorRecorder(t *testing.T) {
 					command: cmd.Payload.(mockCommand),
 				}
 			},
+			Logger: logger.NewTest(t),
 		}
 
 		err := handler.Handle(context.Background(), expectedCommand)
@@ -108,7 +111,7 @@ func TestErrorRecorder(t *testing.T) {
 			Payload: mockCommand{message: t.Name()},
 		}
 
-		handler := command.ErrorRecorder{
+		handler := &command.ErrorRecorder{
 			Handler: command.HandlerFunc(func(ctx context.Context, cmd eventually.Command) error {
 				return expectedErr
 			}),
@@ -122,6 +125,7 @@ func TestErrorRecorder(t *testing.T) {
 					command: cmd.Payload.(mockCommand),
 				}
 			},
+			Logger: logger.NewTest(t),
 		}
 
 		err := handler.Handle(context.Background(), expectedCommand)
@@ -155,7 +159,7 @@ func TestErrorRecorder(t *testing.T) {
 			Payload: mockCommand{message: t.Name()},
 		}
 
-		handler := command.ErrorRecorder{
+		handler := &command.ErrorRecorder{
 			Handler: command.HandlerFunc(func(ctx context.Context, cmd eventually.Command) error {
 				return expectedErr
 			}),
@@ -169,6 +173,7 @@ func TestErrorRecorder(t *testing.T) {
 					command: cmd.Payload.(mockCommand),
 				}
 			},
+			Logger: logger.NewTest(t),
 		}
 
 		err := handler.Handle(context.Background(), expectedCommand)
@@ -202,7 +207,7 @@ func TestErrorRecorder(t *testing.T) {
 			Payload: mockCommand{message: t.Name()},
 		}
 
-		handler := command.ErrorRecorder{
+		handler := &command.ErrorRecorder{
 			Handler: command.HandlerFunc(func(ctx context.Context, cmd eventually.Command) error {
 				return expectedErr
 			}),
@@ -214,6 +219,7 @@ func TestErrorRecorder(t *testing.T) {
 					command: cmd.Payload.(mockCommand),
 				}
 			},
+			Logger: logger.NewTest(t),
 		}
 
 		err := handler.Handle(context.Background(), expectedCommand)
@@ -246,7 +252,7 @@ func TestErrorRecorder(t *testing.T) {
 			Payload: mockCommand{message: t.Name()},
 		}
 
-		handler := command.ErrorRecorder{
+		handler := &command.ErrorRecorder{
 			Handler: command.HandlerFunc(func(ctx context.Context, cmd eventually.Command) error {
 				return expectedErr
 			}),
@@ -261,6 +267,7 @@ func TestErrorRecorder(t *testing.T) {
 					command: cmd.Payload.(mockCommand),
 				}
 			},
+			Logger: logger.NewTest(t),
 		}
 
 		err := handler.Handle(context.Background(), expectedCommand)

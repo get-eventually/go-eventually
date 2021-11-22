@@ -10,6 +10,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - ...
 ### Changed
 - Add `logger.Logger` to `command.ErrorRecorder` to report errors when appending Command failures to the Event Store.
+- `command.ErrorRecorder` must be passed by reference to implement `command.Handler` interface now (size of the struct increased).
 
 ### Deprecated
 - ...

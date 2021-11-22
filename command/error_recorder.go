@@ -55,7 +55,7 @@ type ErrorRecorder struct {
 	Logger logger.Logger
 }
 
-func (er ErrorRecorder) streamType() string {
+func (er *ErrorRecorder) streamType() string {
 	if er.StreamType != "" {
 		return er.StreamType
 	}
@@ -63,7 +63,7 @@ func (er ErrorRecorder) streamType() string {
 	return FailedType
 }
 
-func (er ErrorRecorder) buildStreamID(cmd eventually.Command) stream.ID {
+func (er *ErrorRecorder) buildStreamID(cmd eventually.Command) stream.ID {
 	streamName := cmd.Payload.Name()
 	if er.StreamNameMapper != nil {
 		streamName = er.StreamNameMapper(cmd)
@@ -84,7 +84,7 @@ func (er ErrorRecorder) buildStreamID(cmd eventually.Command) stream.ID {
 //
 // If ShouldCaptureError has been set and returns "true", the error from the command.Handler is silenced
 // but an error can still be returned if the append operation on the Event Store fails.
-func (er ErrorRecorder) Handle(ctx context.Context, cmd eventually.Command) error {
+func (er *ErrorRecorder) Handle(ctx context.Context, cmd eventually.Command) error {
 	err := er.Handler.Handle(ctx, cmd)
 	if err == nil {
 		return nil
@@ -106,7 +106,10 @@ func (er ErrorRecorder) Handle(ctx context.Context, cmd eventually.Command) erro
 
 		if captureError {
 			// Append error only returned if silencing command.Handler errors.
-			return fmt.Errorf("command.ErrorRecorder: failed to append command error to event store: %w [original: %s]", appendErr, err)
+			return fmt.Errorf(
+				"command.ErrorRecorder: failed to append command error to event store: %w [original: %s]",
+				appendErr, err,
+			)
 		}
 	}
 
