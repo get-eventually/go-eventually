@@ -2,7 +2,6 @@ package oteleventually
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -86,10 +85,6 @@ func (ip *InstrumentedProjection) Apply(ctx context.Context, event eventstore.Ev
 		StreamNameAttribute.String(event.Stream.Name),
 		EventVersionAttribute.Int64(event.Version),
 	)
-
-	if eventStr, err := json.Marshal(event.Event); err == nil { //nolint:govet // Shadowing of the error is fine.
-		spanAttributes = append(spanAttributes, attribute.String("event", string(eventStr)))
-	}
 
 	ctx, span := ip.tracer.Start(ctx, "Projection.Apply", trace.WithAttributes(spanAttributes...))
 	defer span.End()

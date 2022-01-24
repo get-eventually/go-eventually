@@ -17,6 +17,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Removed
 - Remove the `events` field from `oteleventually.InstrumentedEventStore` due to the potential size of the field and issues with exporting the trace (which wouldn't fit an UDP packet).
+- Remove the `event` field from `oteleventually.InstrumentedProjection`.
 
 ## [v0.1.0-alpha.4]
 ### Added
