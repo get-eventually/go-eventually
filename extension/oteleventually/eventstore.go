@@ -2,7 +2,6 @@ package oteleventually
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -160,12 +159,7 @@ func (es *InstrumentedEventStore) Append(
 		}
 	}()
 
-	spanAttributes := attributes
-	if b, err := json.Marshal(events); b != nil && err == nil { //nolint:govet // err shadowing is fine.
-		spanAttributes = append(spanAttributes, attribute.String("events", string(b)))
-	}
-
-	ctx, span := es.tracer.Start(ctx, "EventStore.Append", trace.WithAttributes(spanAttributes...))
+	ctx, span := es.tracer.Start(ctx, "EventStore.Append", trace.WithAttributes(attributes...))
 	defer span.End()
 
 	// Add span information to the events metadata.
