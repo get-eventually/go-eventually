@@ -158,7 +158,9 @@ func (es *InstrumentedEventStore) Append(
 		}
 	}()
 
-	spanAttributes := append(attributes, StreamNameAttribute.String(id.Name))
+	spanAttributes := attributes
+	spanAttributes = append(spanAttributes, StreamNameAttribute.String(id.Name))
+
 	ctx, span := es.tracer.Start(ctx, "EventStore.Append", trace.WithAttributes(spanAttributes...))
 	defer span.End()
 
