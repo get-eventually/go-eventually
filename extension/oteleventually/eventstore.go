@@ -145,7 +145,6 @@ func (es *InstrumentedEventStore) Append(
 ) (newVersion int64, err error) {
 	attributes := []attribute.KeyValue{
 		StreamTypeAttribute.String(id.Type),
-		StreamNameAttribute.String(id.Name),
 		VersionCheckAttribute.Int64(int64(expected)),
 	}
 
@@ -159,7 +158,8 @@ func (es *InstrumentedEventStore) Append(
 		}
 	}()
 
-	ctx, span := es.tracer.Start(ctx, "EventStore.Append", trace.WithAttributes(attributes...))
+	spanAttributes := append(attributes, StreamNameAttribute.String(id.Name))
+	ctx, span := es.tracer.Start(ctx, "EventStore.Append", trace.WithAttributes(spanAttributes...))
 	defer span.End()
 
 	// Add span information to the events metadata.
