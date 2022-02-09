@@ -109,6 +109,8 @@ func (es *InstrumentedEventStore) Stream(
 		SelectFromAttribute.Int64(selectt.From),
 	}
 
+	spanAttributes := attributes
+
 	switch t := target.(type) {
 	case stream.All:
 		attributes = append(attributes, StreamTargetAttribute.String("<all>"))
@@ -117,15 +119,18 @@ func (es *InstrumentedEventStore) Stream(
 	case stream.ByTypes:
 		attributes = append(attributes, StreamTypeAttribute.StringSlice(t))
 	case stream.ByID:
-		attributes = append(attributes, StreamTypeAttribute.String(t.Type), StreamNameAttribute.String(t.Name))
+		attributes = append(attributes, StreamTypeAttribute.String(t.Type))
+		spanAttributes = append(spanAttributes, StreamNameAttribute.String(t.Name))
 	}
+
+	spanAttributes = append(spanAttributes, attributes...)
 
 	start := time.Now()
 	defer func() {
 		es.reportStreamMetrics(ctx, start, err, attributes...)
 	}()
 
-	ctx, span := es.tracer.Start(ctx, "EventStore.Stream", trace.WithAttributes(attributes...))
+	ctx, span := es.tracer.Start(ctx, "EventStore.Stream", trace.WithAttributes(spanAttributes...))
 	defer span.End()
 
 	if err = es.eventStore.Stream(ctx, eventStream, target, selectt); err != nil {
@@ -145,7 +150,6 @@ func (es *InstrumentedEventStore) Append(
 ) (newVersion int64, err error) {
 	attributes := []attribute.KeyValue{
 		StreamTypeAttribute.String(id.Type),
-		StreamNameAttribute.String(id.Name),
 		VersionCheckAttribute.Int64(int64(expected)),
 	}
 
@@ -159,7 +163,9 @@ func (es *InstrumentedEventStore) Append(
 		}
 	}()
 
-	ctx, span := es.tracer.Start(ctx, "EventStore.Append", trace.WithAttributes(attributes...))
+	spanAttributes := append(attributes, StreamNameAttribute.String(id.Name)) //nolint:gocritic // Intended behavior.
+
+	ctx, span := es.tracer.Start(ctx, "EventStore.Append", trace.WithAttributes(spanAttributes...))
 	defer span.End()
 
 	// Add span information to the events metadata.
