@@ -130,7 +130,7 @@ func (es *InstrumentedEventStore) Stream(
 		es.reportStreamMetrics(ctx, start, err, attributes...)
 	}()
 
-	ctx, span := es.tracer.Start(ctx, "EventStore.Stream", trace.WithAttributes(attributes...))
+	ctx, span := es.tracer.Start(ctx, "EventStore.Stream", trace.WithAttributes(spanAttributes...))
 	defer span.End()
 
 	if err = es.eventStore.Stream(ctx, eventStream, target, selectt); err != nil {
