@@ -20,7 +20,7 @@ type Repository[I ID, T Root[I]] interface {
 	Saver[I, T]
 }
 
-type FusedRepository[I ID, T Root[I]] interface {
+type FusedRepository[I ID, T Root[I]] struct {
 	Getter[I, T]
 	Saver[I, T]
 }

@@ -17,7 +17,7 @@ type InMemoryEventStore struct {
 	events map[event.StreamID][]event.Envelope
 }
 
-// NewEventStore creates a new empty EventStore instance.
+// NewInMemoryEventStore creates a new empty test.InMemoryEventStore instance.
 func NewInMemoryEventStore() *InMemoryEventStore {
 	return &InMemoryEventStore{
 		events: make(map[event.StreamID][]event.Envelope),
@@ -26,7 +26,7 @@ func NewInMemoryEventStore() *InMemoryEventStore {
 
 func contextErr(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
-		return fmt.Errorf("inmemory.EventStore: context error: %w", err)
+		return fmt.Errorf("test.InMemoryEventStore: context error: %w", err)
 	}
 
 	return nil

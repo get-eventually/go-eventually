@@ -45,3 +45,10 @@ type Envelope[T Message] struct {
 	Message  T
 	Metadata Metadata
 }
+
+func (e Envelope[T]) ToGenericEnvelope() GenericEnvelope {
+	return Envelope[Message]{
+		Message:  e.Message,
+		Metadata: e.Metadata,
+	}
+}

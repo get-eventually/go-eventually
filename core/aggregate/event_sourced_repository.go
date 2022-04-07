@@ -10,8 +10,12 @@ import (
 	"github.com/get-eventually/go-eventually/core/version"
 )
 
+// Factory is a function that creates new zero-valued
+// instances of an aggregate.Root implementation.
 type Factory[I ID, T Root[I]] func() T
 
+// EventSourcedRepository provides an aggregate.Repository interface implementation
+// that uses an event.Store to store and load the state of the Aggregate Root.
 type EventSourcedRepository[I ID, T Root[I]] struct {
 	eventStore event.Store
 	factory    Factory[I, T]
