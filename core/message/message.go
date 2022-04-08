@@ -39,7 +39,7 @@ func (m Metadata) Merge(other Metadata) Metadata {
 	return m
 }
 
-type GenericEnvelope = Envelope[Message]
+type GenericEnvelope Envelope[Message]
 
 type Envelope[T Message] struct {
 	Message  T
@@ -47,7 +47,7 @@ type Envelope[T Message] struct {
 }
 
 func (e Envelope[T]) ToGenericEnvelope() GenericEnvelope {
-	return Envelope[Message]{
+	return GenericEnvelope{
 		Message:  e.Message,
 		Metadata: e.Metadata,
 	}
