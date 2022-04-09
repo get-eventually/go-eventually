@@ -10,6 +10,18 @@ import (
 	"github.com/get-eventually/go-eventually/core/version"
 )
 
+func RehydrateFromEvents[I ID](root Root[I], eventStream event.StreamRead) error {
+	for event := range eventStream {
+		if err := root.Apply(event.Message); err != nil {
+			return fmt.Errorf("aggregate.RehydrateFromEvents: failed to record event: %w", err)
+		}
+
+		root.setVersion(event.Version)
+	}
+
+	return nil
+}
+
 // Factory is a function that creates new zero-valued
 // instances of an aggregate.Root implementation.
 type Factory[I ID, T Root[I]] func() T
@@ -51,7 +63,7 @@ func (repo EventSourcedRepository[I, T]) Get(ctx context.Context, id I) (T, erro
 
 	root := repo.factory()
 
-	if err := root.rehydrate(root, eventStream); err != nil {
+	if err := RehydrateFromEvents[I](root, eventStream); err != nil {
 		return zeroValue, fmt.Errorf("%T: failed to rehydrate aggregate root: %w", repo, err)
 	}
 

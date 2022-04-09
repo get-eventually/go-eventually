@@ -7,6 +7,14 @@ import (
 	"github.com/get-eventually/go-eventually/core/version"
 )
 
+// ID represents an Aggregate ID type.
+//
+// Aggregate IDs should be able to be marshaled into a string format,
+// in order to be saved onto a named Event Stream.
+type ID interface {
+	fmt.Stringer
+}
+
 // Aggregate is the segregated interface, part of the Aggregate Root interface,
 // that describes the left-folding behavior of Domain Events to update the
 // Aggregate Root state.
@@ -42,7 +50,6 @@ type Root[I ID] interface {
 
 	setVersion(version.Version)
 	recordThat(Aggregate, ...event.Envelope) error
-	rehydrate(Aggregate, event.StreamRead) error
 }
 
 // RecordThat records the Domain Event for the specified Aggregate Root.
@@ -85,18 +92,6 @@ func (br *BaseRoot) recordThat(aggregate Aggregate, events ...event.Envelope) er
 		}
 
 		br.recordedEvents = append(br.recordedEvents, event)
-		br.version++
-	}
-
-	return nil
-}
-
-func (br *BaseRoot) rehydrate(aggregate Aggregate, eventStream event.StreamRead) error {
-	for event := range eventStream {
-		if err := aggregate.Apply(event.Message); err != nil {
-			return fmt.Errorf("%T: failed to record event: %w", br, err)
-		}
-
 		br.version++
 	}
 
