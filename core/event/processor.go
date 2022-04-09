@@ -30,16 +30,16 @@ type Subscription interface {
 // ProcessorRunner is an infrastructural component that orchestrates the
 // processing of a Domain Event using the provided Event Processor and Subscription,
 // to subscribe to incoming events from the Event Store.
-type ProcessorRunner[P Processor, S Subscription] struct {
-	Processor    P
-	Subscription S
+type ProcessorRunner struct {
+	Processor
+	Subscription
 
 	BufferSize int
 
 	Logger func(string, ...any)
 }
 
-func (r ProcessorRunner[P, S]) log(format string, args ...any) {
+func (r ProcessorRunner) log(format string, args ...any) {
 	if r.Logger == nil {
 		return
 	}
@@ -59,7 +59,7 @@ func (r ProcessorRunner[P, S]) log(format string, args ...any) {
 // To stop the Runner, cancel the provided context.
 // If the error returned upon exit is context.Canceled, that usually represent
 // a case of normal operation, so it could be treated as a non-error.
-func (r ProcessorRunner[P, S]) Run(ctx context.Context) error {
+func (r ProcessorRunner) Run(ctx context.Context) error {
 	if r.BufferSize == 0 {
 		r.BufferSize = DefaultRunnerBufferSize
 	}
@@ -73,7 +73,7 @@ func (r ProcessorRunner[P, S]) Run(ctx context.Context) error {
 		r.log("ProcessorRunner started Subscription '%s'", r.Subscription.Name())
 
 		if err := r.Subscription.Start(ctx, eventStream); err != nil {
-			return fmt.Errorf("event.ProcessorRunner.Run: subscription exited with error: %w", err)
+			return fmt.Errorf("%T: subscription exited with error: %w", r, err)
 		}
 
 		return nil
@@ -84,7 +84,7 @@ func (r ProcessorRunner[P, S]) Run(ctx context.Context) error {
 
 		for event := range eventStream {
 			if err := r.Processor.Process(ctx, event); err != nil {
-				return fmt.Errorf("event.ProcessorRunner.Run: failed to process event: %w", err)
+				return fmt.Errorf("%T: failed to process event: %w", r, err)
 			}
 
 			toCheckpoint <- event
@@ -97,7 +97,7 @@ func (r ProcessorRunner[P, S]) Run(ctx context.Context) error {
 		r.log("Checkpointing processed event, stream id: %s, version: %d", event.StreamID, event.Version)
 
 		if err := r.Subscription.Checkpoint(ctx, event); err != nil {
-			return fmt.Errorf("event.ProcessorRunner.Run: failed to checkpoint processed event: %w", err)
+			return fmt.Errorf("%T: failed to checkpoint processed event: %w", r, err)
 		}
 	}
 
