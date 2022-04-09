@@ -23,7 +23,7 @@ func (pf ProcessorFunc) Process(ctx context.Context, event Persisted) error {
 
 type Subscription interface {
 	Name() string
-	Start(ctx context.Context, eventStream Stream) error
+	Start(ctx context.Context, eventStream StreamWrite) error
 	Checkpoint(ctx context.Context, event Persisted) error
 }
 

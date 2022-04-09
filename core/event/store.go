@@ -8,14 +8,14 @@ import (
 	"github.com/get-eventually/go-eventually/core/version"
 )
 
-type Stream chan<- Persisted
+type StreamWrite chan<- Persisted
 
 type StreamRead <-chan Persisted
 
 // StreamToSlice synchronously exhausts an EventStream to an event.Persisted slice,
 // and returns an error if the EventStream origin, passed here as a closure,
 // fails with an error.
-func StreamToSlice(ctx context.Context, f func(ctx context.Context, stream Stream) error) ([]Persisted, error) {
+func StreamToSlice(ctx context.Context, f func(ctx context.Context, stream StreamWrite) error) ([]Persisted, error) {
 	ch := make(chan Persisted, 1)
 	group, ctx := errgroup.WithContext(ctx)
 
@@ -30,7 +30,7 @@ func StreamToSlice(ctx context.Context, f func(ctx context.Context, stream Strea
 }
 
 type Streamer interface {
-	Stream(ctx context.Context, stream Stream, id StreamID, selector version.Selector) error
+	Stream(ctx context.Context, stream StreamWrite, id StreamID, selector version.Selector) error
 }
 
 type Appender interface {

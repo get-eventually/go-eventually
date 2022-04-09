@@ -42,7 +42,7 @@ func contextErr(ctx context.Context) error {
 // This method fails only when the context is canceled.
 func (es *InMemoryEventStore) Stream(
 	ctx context.Context,
-	eventStream event.Stream,
+	eventStream event.StreamWrite,
 	id event.StreamID,
 	selector version.Selector,
 ) error {
