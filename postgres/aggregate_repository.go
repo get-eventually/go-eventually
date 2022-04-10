@@ -1,4 +1,4 @@
-package postgresql
+package postgres
 
 import (
 	"context"
@@ -6,11 +6,12 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/jackc/pgx/v4"
+
 	"github.com/get-eventually/go-eventually/core/aggregate"
 	"github.com/get-eventually/go-eventually/core/event"
+	"github.com/get-eventually/go-eventually/core/message"
 	"github.com/get-eventually/go-eventually/core/version"
-
-	"github.com/jackc/pgx/v4"
 )
 
 type AggregateSerializer[ID aggregate.ID, T aggregate.Root[ID]] interface {
@@ -18,7 +19,7 @@ type AggregateSerializer[ID aggregate.ID, T aggregate.Root[ID]] interface {
 }
 
 type AggregateDeserializer[ID aggregate.ID, T aggregate.Root[ID]] interface {
-	aggregate.Deserializer[ID, T, []byte]
+	aggregate.Deserializer[ID, []byte, T]
 }
 
 type AggregateSerde[ID aggregate.ID, T aggregate.Root[ID]] interface {
@@ -27,17 +28,22 @@ type AggregateSerde[ID aggregate.ID, T aggregate.Root[ID]] interface {
 }
 
 type AggregateRepository[ID aggregate.ID, T aggregate.Root[ID]] struct {
-	Conn           *pgx.Conn
-	Table          string
-	AggregateSerde AggregateSerde[ID, T]
-	MessageSerde   MessageSerde
+	Conn              *pgx.Conn
+	AggregateTypeName string
+	AggregateSerde    AggregateSerde[ID, T]
+	MessageSerde      MessageSerde
 }
 
 func (repo AggregateRepository[ID, T]) Get(ctx context.Context, id ID) (T, error) {
 	var zeroValue T
 
-	conn := repo.Conn
-	row := conn.QueryRow(ctx, "SELECT version, state FROM $1 WHERE aggregate_id = $2", repo.Table, id.String())
+	row := repo.Conn.QueryRow(
+		ctx,
+		`SELECT version, state
+		FROM aggregates
+		WHERE aggregate_id = $1 AND "type" = $2`,
+		id.String(), repo.AggregateTypeName,
+	)
 
 	var (
 		v     version.Version
@@ -49,38 +55,64 @@ func (repo AggregateRepository[ID, T]) Get(ctx context.Context, id ID) (T, error
 		return zeroValue, aggregate.ErrRootNotFound
 	}
 	if err != nil {
-		return zeroValue, fmt.Errorf("%T.Get: failed to fetch aggregate state from database: %w", repo, err)
+		return zeroValue, fmt.Errorf(
+			"postgres.AggregateRepository.Get: failed to fetch aggregate state from database: %w",
+			err,
+		)
 	}
 
-	root, err := repo.AggregateSerde.Deserialize(v, state)
+	root, err := aggregate.RehydrateFromState[ID, []byte, T](v, state, repo.AggregateSerde)
 	if err != nil {
-		return zeroValue, fmt.Errorf("%T.Get: failed to deserialize state into aggregate root object: %w", repo, err)
+		return zeroValue, fmt.Errorf(
+			"postgres.AggregateRepository.Get: failed to deserialize state into aggregate root object: %w",
+			err,
+		)
 	}
 
 	return root, nil
 }
 
 func (repo AggregateRepository[ID, T]) saveErr(msg string, args ...any) error {
-	return fmt.Errorf("%T.Save: "+msg, args)
+	return fmt.Errorf("postgres.AggregateRepository.Save: "+msg, args...)
 }
 
-func (repo AggregateRepository[ID, T]) saveAggregateState(ctx context.Context, tx pgx.Tx, root T) error {
+func (repo AggregateRepository[ID, T]) saveAggregateState(
+	ctx context.Context,
+	tx pgx.Tx,
+	expectedVersion version.Version,
+	root T,
+) error {
 	state, err := repo.AggregateSerde.Serialize(root)
 	if err != nil {
 		return repo.saveErr("failed to serialize aggregate root into wire format, %w", err)
 	}
 
+	// TODO(ar3s3ru): need to add version check... maybe using a procedure?
+
 	if _, err = tx.Exec(
 		ctx,
-		`INSERT INTO $1 (aggregate_id, version, state) VALUES ($2, $3, $4)
-		ON CONFLICT (aggregate_id) DO
-		UPDATE SET version = $3, state = $4`,
-		repo.Table, root.AggregateID().String(), root.Version(), state,
+		`INSERT INTO aggregates (aggregate_id, "type", "version", "state") VALUES ($1, $2, $3, $4)
+		ON CONFLICT (aggregate_id, "type") DO
+		UPDATE SET "version" = $3, "state" = $4`,
+		root.AggregateID().String(), repo.AggregateTypeName, root.Version(), state,
 	); err != nil {
 		return repo.saveErr("failed to save new aggregate state, %w", err)
 	}
 
 	return nil
+}
+
+func (repo AggregateRepository[ID, T]) deserializeMetadata(metadata message.Metadata) ([]byte, error) {
+	if metadata == nil {
+		return nil, nil
+	}
+
+	data, err := json.Marshal(metadata)
+	if err != nil {
+		return nil, repo.saveErr("failed to serialize metadata to json, %w", err)
+	}
+
+	return data, nil
 }
 
 func (repo AggregateRepository[ID, T]) appendDomainEvent(
@@ -92,20 +124,20 @@ func (repo AggregateRepository[ID, T]) appendDomainEvent(
 ) error {
 	msg := event.Message
 
-	data, err := repo.MessageSerde.Serialize(msg.Name(), eventStreamID, msg)
+	data, err := repo.MessageSerde.Serialize(msg)
 	if err != nil {
 		return repo.saveErr("failed to serialize domain event, %w", err)
 	}
 
-	metadata, err := json.Marshal(event.Metadata)
+	metadata, err := repo.deserializeMetadata(event.Metadata)
 	if err != nil {
-		return repo.saveErr("failed to serialize metadata to json, %w", err)
+		return err
 	}
 
 	if _, err = tx.Exec(
 		ctx,
-		"INSERT INTO events (event_stream_id, version, event, metadata) VALUES ($1, $2, $3, $4)",
-		eventStreamID, eventVersion, data, metadata,
+		`INSERT INTO events (event_stream_id, "type", "version", event, metadata) VALUES ($1, $2, $3, $4, $5)`,
+		eventStreamID, msg.Name(), eventVersion, data, metadata,
 	); err != nil {
 		return repo.saveErr("failed to append new domain event to event store, %w", err)
 	}
@@ -153,8 +185,9 @@ func (repo AggregateRepository[ID, T]) Save(ctx context.Context, root T) error {
 	}()
 
 	eventsToCommit := root.FlushRecordedEvents()
+	expectedRootVersion := root.Version() - version.Version(len(eventsToCommit))
 
-	if err := repo.saveAggregateState(ctx, tx, root); err != nil {
+	if err := repo.saveAggregateState(ctx, tx, expectedRootVersion, root); err != nil {
 		return err
 	}
 
