@@ -30,13 +30,19 @@ func TestEventSourcedRepository(t *testing.T) {
 	)
 
 	_, err := userRepository.Get(ctx, id)
-	assert.ErrorIs(t, err, aggregate.ErrRootNotFound)
+	if !assert.ErrorIs(t, err, aggregate.ErrRootNotFound) {
+		return
+	}
 
 	usr, err := user.Create(id, firstName, lastName, email, birthDate)
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		return
+	}
 
 	err = userRepository.Save(ctx, usr)
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		return
+	}
 
 	got, err := userRepository.Get(ctx, usr.AggregateID())
 	assert.NoError(t, err)
