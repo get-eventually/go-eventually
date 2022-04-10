@@ -80,7 +80,7 @@ func TestAggregateRepository(t *testing.T) {
 		},
 	}
 
-	t.Run("it works", func(t *testing.T) {
+	t.Run("it can load and save aggregates from the database", func(t *testing.T) {
 		var (
 			id        = uuid.New()
 			firstName = "John"

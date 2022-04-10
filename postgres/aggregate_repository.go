@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
+	"strconv"
 
+	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
 
 	"github.com/get-eventually/go-eventually/core/aggregate"
@@ -76,6 +79,37 @@ func (repo AggregateRepository[ID, T]) saveErr(msg string, args ...any) error {
 	return fmt.Errorf("postgres.AggregateRepository.Save: "+msg, args...)
 }
 
+//nolint:lll // It's ok to go over the 120 lines limit in this case.
+var versionConflictErrorRegex = regexp.MustCompile(`aggregate version check failed, expected: (?P<expected>\d), got: (?P<got>\d)`)
+
+func isVersionConflictError(err error) (version.ConflictError, bool) {
+	var pgErr *pgconn.PgError
+
+	if err == nil || !errors.As(err, &pgErr) {
+		return version.ConflictError{}, false
+	}
+
+	matches := versionConflictErrorRegex.FindStringSubmatch(pgErr.Message)
+	if len(matches) == 0 {
+		return version.ConflictError{}, false
+	}
+
+	expected, err := strconv.Atoi(matches[versionConflictErrorRegex.SubexpIndex("expected")])
+	if err != nil {
+		return version.ConflictError{}, false
+	}
+
+	got, err := strconv.Atoi(matches[versionConflictErrorRegex.SubexpIndex("got")])
+	if err != nil {
+		return version.ConflictError{}, false
+	}
+
+	return version.ConflictError{
+		Expected: version.Version(expected),
+		Actual:   version.Version(got),
+	}, true
+}
+
 func (repo AggregateRepository[ID, T]) saveAggregateState(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -87,15 +121,17 @@ func (repo AggregateRepository[ID, T]) saveAggregateState(
 		return repo.saveErr("failed to serialize aggregate root into wire format, %w", err)
 	}
 
-	// TODO(ar3s3ru): need to add version check... maybe using a procedure?
-
-	if _, err = tx.Exec(
+	_, err = tx.Exec(
 		ctx,
-		`INSERT INTO aggregates (aggregate_id, "type", "version", "state") VALUES ($1, $2, $3, $4)
-		ON CONFLICT (aggregate_id, "type") DO
-		UPDATE SET "version" = $3, "state" = $4`,
-		root.AggregateID().String(), repo.AggregateTypeName, root.Version(), state,
-	); err != nil {
+		`CALL upsert_aggregate($1::TEXT, $2::TEXT, $3::INTEGER, $4::INTEGER, $5::BYTEA)`,
+		root.AggregateID().String(), repo.AggregateTypeName, expectedVersion, root.Version(), state,
+	)
+
+	if vc, ok := isVersionConflictError(err); ok {
+		return repo.saveErr("failed to save new aggregate state, %w", vc)
+	}
+
+	if err != nil {
 		return repo.saveErr("failed to save new aggregate state, %w", err)
 	}
 
