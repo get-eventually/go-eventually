@@ -1,4 +1,4 @@
-GO_TEST_FLAGS := -v -race -coverpkg=./... -coverprofile=coverage.out
+GO_TEST_FLAGS := -v -race -coverprofile=coverage.out
 GOLANGCI_YML  ?= $(shell find ~+ -name .golangci.yml)
 
 .PHONY: run-linter

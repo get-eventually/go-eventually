@@ -7,8 +7,8 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/genproto/googleapis/type/date"
 
-	"github.com/get-eventually/go-eventually/core/aggregate"
 	"github.com/get-eventually/go-eventually/core/message"
+	"github.com/get-eventually/go-eventually/core/serde"
 	"github.com/get-eventually/go-eventually/postgres/internal/user/proto"
 )
 
@@ -27,9 +27,9 @@ func dateToTime(d *date.Date) time.Time {
 	)
 }
 
-var ProtoSerde = aggregate.Serde[uuid.UUID, *User, *proto.User]{
-	Serializer:   aggregate.SerializerFunc[uuid.UUID, *User, *proto.User](protoSerializer),
-	Deserializer: aggregate.DeserializerFunc[uuid.UUID, *proto.User, *User](protoDeserializer),
+var ProtoSerde = serde.Fused[*User, *proto.User]{
+	Serializer:   serde.SerializerFunc[*User, *proto.User](protoSerializer),
+	Deserializer: serde.DeserializerFunc[*User, *proto.User](protoDeserializer),
 }
 
 func protoSerializer(user *User) (*proto.User, error) {
@@ -59,9 +59,9 @@ func protoDeserializer(src *proto.User) (*User, error) {
 	return user, nil
 }
 
-var EventProtoSerde = message.GenericSerde[*proto.Event]{
-	Serializer:   message.SerializerFunc[message.Message, *proto.Event](protoEventSerializer),
-	Deserializer: message.DeserializerFunc[*proto.Event, message.Message](protoEventDeserializer),
+var EventProtoSerde = serde.Fused[message.Message, *proto.Event]{
+	Serializer:   serde.SerializerFunc[message.Message, *proto.Event](protoEventSerializer),
+	Deserializer: serde.DeserializerFunc[message.Message, *proto.Event](protoEventDeserializer),
 }
 
 func protoEventSerializer(msg message.Message) (*proto.Event, error) {

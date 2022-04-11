@@ -10,7 +10,6 @@ import (
 	"github.com/jackc/pgx/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/get-eventually/go-eventually/core/aggregate"
 	"github.com/get-eventually/go-eventually/core/message"
@@ -18,6 +17,7 @@ import (
 	"github.com/get-eventually/go-eventually/postgres"
 	"github.com/get-eventually/go-eventually/postgres/internal/user"
 	"github.com/get-eventually/go-eventually/postgres/internal/user/proto"
+	"github.com/get-eventually/go-eventually/serdes"
 )
 
 const defaultPostgresURL = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
@@ -41,43 +41,14 @@ func TestAggregateRepository(t *testing.T) {
 	repository := postgres.AggregateRepository[uuid.UUID, *user.User]{
 		Conn:          conn,
 		AggregateType: user.Type,
-		// TODO(ar3s3ru): would be nice to expose a generic Protobuf serde wrapper.
-		AggregateSerde: aggregate.Serde[uuid.UUID, *user.User, []byte]{
-			Serializer: aggregate.SerializerFunc[uuid.UUID, *user.User, []byte](func(src *user.User) ([]byte, error) {
-				model, err := user.ProtoSerde.Serialize(src)
-				if err != nil {
-					return nil, err
-				}
-
-				return protojson.Marshal(model)
-			}),
-			Deserializer: aggregate.DeserializerFunc[uuid.UUID, []byte, *user.User](func(src []byte) (*user.User, error) {
-				model := &proto.User{}
-				if err := protojson.Unmarshal(src, model); err != nil {
-					return nil, err
-				}
-
-				return user.ProtoSerde.Deserialize(model)
-			}),
-		},
-		MessageSerde: message.Serde[message.Message, []byte]{
-			Serializer: message.SerializerFunc[message.Message, []byte](func(msg message.Message) ([]byte, error) {
-				evt, err := user.EventProtoSerde.Serialize(msg)
-				if err != nil {
-					return nil, err
-				}
-
-				return protojson.Marshal(evt)
-			}),
-			Deserializer: message.DeserializerFunc[[]byte, message.Message](func(data []byte) (message.Message, error) {
-				evt := &proto.Event{}
-				if err := protojson.Unmarshal(data, evt); err != nil {
-					return nil, err
-				}
-
-				return user.EventProtoSerde.Deserialize(evt)
-			}),
-		},
+		AggregateSerde: serdes.NewProtoJSON[*user.User, *proto.User](
+			user.ProtoSerde,
+			func() *proto.User { return &proto.User{} },
+		),
+		MessageSerde: serdes.NewProtoJSON[message.Message, *proto.Event](
+			user.EventProtoSerde,
+			func() *proto.Event { return &proto.Event{} },
+		),
 	}
 
 	t.Run("it can load and save aggregates from the database", func(t *testing.T) {

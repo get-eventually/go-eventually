@@ -14,27 +14,15 @@ import (
 	"github.com/get-eventually/go-eventually/core/aggregate"
 	"github.com/get-eventually/go-eventually/core/event"
 	"github.com/get-eventually/go-eventually/core/message"
+	"github.com/get-eventually/go-eventually/core/serde"
 	"github.com/get-eventually/go-eventually/core/version"
 )
-
-type AggregateSerializer[ID aggregate.ID, T aggregate.Root[ID]] interface {
-	aggregate.Serializer[ID, T, []byte]
-}
-
-type AggregateDeserializer[ID aggregate.ID, T aggregate.Root[ID]] interface {
-	aggregate.Deserializer[ID, []byte, T]
-}
-
-type AggregateSerde[ID aggregate.ID, T aggregate.Root[ID]] interface {
-	AggregateSerializer[ID, T]
-	AggregateDeserializer[ID, T]
-}
 
 type AggregateRepository[ID aggregate.ID, T aggregate.Root[ID]] struct {
 	Conn           *pgx.Conn
 	AggregateType  aggregate.Type[ID, T]
-	AggregateSerde AggregateSerde[ID, T]
-	MessageSerde   MessageSerde
+	AggregateSerde serde.Bytes[T]
+	MessageSerde   serde.Bytes[message.Message]
 }
 
 func (repo AggregateRepository[ID, T]) Get(ctx context.Context, id ID) (T, error) {
@@ -64,7 +52,7 @@ func (repo AggregateRepository[ID, T]) Get(ctx context.Context, id ID) (T, error
 		)
 	}
 
-	root, err := aggregate.RehydrateFromState[ID, []byte, T](v, state, repo.AggregateSerde)
+	root, err := aggregate.RehydrateFromState[ID, T, []byte](v, state, repo.AggregateSerde)
 	if err != nil {
 		return zeroValue, fmt.Errorf(
 			"postgres.AggregateRepository.Get: failed to deserialize state into aggregate root object: %w",
