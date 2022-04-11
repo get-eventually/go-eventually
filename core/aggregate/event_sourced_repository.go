@@ -43,6 +43,12 @@ func NewEventSourcedRepository[I ID, T Root[I]](eventStore event.Store, typ Type
 	}
 }
 
+// Get returns the Aggregate Root with the specified id.
+//
+// aggregate.ErrRootNotFound is returned if no Aggregate Root was found with that id.
+//
+// An error is returned if the underlying Event Store fails, or if an error
+// occurs while trying to rehydrate the Aggregate Root state from its Event Stream.
 func (repo EventSourcedRepository[I, T]) Get(ctx context.Context, id I) (T, error) {
 	var zeroValue T
 
@@ -78,6 +84,10 @@ func (repo EventSourcedRepository[I, T]) Get(ctx context.Context, id I) (T, erro
 	return root, nil
 }
 
+// Save stores the Aggregate Root to the Event Store, by adding the
+// new, uncommitted Domain Events recorded through the Root, if any.
+//
+// An error is returned if the underlying Event Store fails.
 func (repo EventSourcedRepository[I, T]) Save(ctx context.Context, root T) error {
 	events := root.FlushRecordedEvents()
 	if len(events) == 0 {

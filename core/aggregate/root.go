@@ -32,6 +32,10 @@ type Aggregate interface {
 	Apply(event.Event) error
 }
 
+// Internal contains some Aggregate Root methods that are used
+// by internal packages and modules for this library.
+//
+// Direct usage of these methods are discouraged.
 type Internal interface {
 	FlushRecordedEvents() []event.Envelope
 }
@@ -89,6 +93,10 @@ type BaseRoot struct {
 // Version returns the current version of the Aggregate Root instance.
 func (br BaseRoot) Version() version.Version { return br.version }
 
+// FlushRecordedEvents returns the list of uncommitted, recorded Domain Events
+// through the Aggregate Root.
+//
+// The internal list kept by aggregate.BaseRoot is reset.
 func (br *BaseRoot) FlushRecordedEvents() []event.Envelope {
 	flushed := br.recordedEvents
 	br.recordedEvents = nil
