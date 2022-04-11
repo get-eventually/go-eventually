@@ -31,10 +31,10 @@ type AggregateSerde[ID aggregate.ID, T aggregate.Root[ID]] interface {
 }
 
 type AggregateRepository[ID aggregate.ID, T aggregate.Root[ID]] struct {
-	Conn              *pgx.Conn
-	AggregateTypeName string
-	AggregateSerde    AggregateSerde[ID, T]
-	MessageSerde      MessageSerde
+	Conn           *pgx.Conn
+	AggregateType  aggregate.Type[ID, T]
+	AggregateSerde AggregateSerde[ID, T]
+	MessageSerde   MessageSerde
 }
 
 func (repo AggregateRepository[ID, T]) Get(ctx context.Context, id ID) (T, error) {
@@ -45,7 +45,7 @@ func (repo AggregateRepository[ID, T]) Get(ctx context.Context, id ID) (T, error
 		`SELECT version, state
 		FROM aggregates
 		WHERE aggregate_id = $1 AND "type" = $2`,
-		id.String(), repo.AggregateTypeName,
+		id.String(), repo.AggregateType.Name,
 	)
 
 	var (
@@ -124,7 +124,7 @@ func (repo AggregateRepository[ID, T]) saveAggregateState(
 	_, err = tx.Exec(
 		ctx,
 		`CALL upsert_aggregate($1::TEXT, $2::TEXT, $3::INTEGER, $4::INTEGER, $5::BYTEA)`,
-		root.AggregateID().String(), repo.AggregateTypeName, expectedVersion, root.Version(), state,
+		root.AggregateID().String(), repo.AggregateType.Name, expectedVersion, root.Version(), state,
 	)
 
 	if vc, ok := isVersionConflictError(err); ok {

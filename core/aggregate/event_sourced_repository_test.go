@@ -24,10 +24,7 @@ func TestEventSourcedRepository(t *testing.T) {
 
 	ctx := context.Background()
 	eventStore := test.NewInMemoryEventStore()
-	userRepository := aggregate.NewEventSourcedRepository[uuid.UUID](
-		eventStore,
-		func() *user.User { return &user.User{} },
-	)
+	userRepository := aggregate.NewEventSourcedRepository(eventStore, user.Type)
 
 	_, err := userRepository.Get(ctx, id)
 	if !assert.ErrorIs(t, err, aggregate.ErrRootNotFound) {

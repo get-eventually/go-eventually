@@ -49,9 +49,7 @@ func TestCommandHandler(t *testing.T) {
 					UUIDGenerator: func() uuid.UUID {
 						return id
 					},
-					UserRepository: aggregate.NewEventSourcedRepository[uuid.UUID](s, func() *user.User {
-						return &user.User{}
-					}),
+					UserRepository: aggregate.NewEventSourcedRepository(s, user.Type),
 				}
 			})
 	})
@@ -91,9 +89,7 @@ func TestCommandHandler(t *testing.T) {
 					UUIDGenerator: func() uuid.UUID {
 						return id
 					},
-					UserRepository: aggregate.NewEventSourcedRepository[uuid.UUID](s, func() *user.User {
-						return &user.User{}
-					}),
+					UserRepository: aggregate.NewEventSourcedRepository(s, user.Type),
 				}
 			})
 	})

@@ -39,8 +39,8 @@ func TestAggregateRepository(t *testing.T) {
 	require.NoError(t, err)
 
 	repository := postgres.AggregateRepository[uuid.UUID, *user.User]{
-		Conn:              conn,
-		AggregateTypeName: "User",
+		Conn:          conn,
+		AggregateType: user.Type,
 		// TODO(ar3s3ru): would be nice to expose a generic Protobuf serde wrapper.
 		AggregateSerde: aggregate.Serde[uuid.UUID, *user.User, []byte]{
 			Serializer: aggregate.SerializerFunc[uuid.UUID, *user.User, []byte](func(src *user.User) ([]byte, error) {

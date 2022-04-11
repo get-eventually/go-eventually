@@ -45,11 +45,26 @@ type Root[I ID] interface {
 	Aggregate
 	Internal
 
+	// AggregateID returns the Aggregate Root identifier.
 	AggregateID() I
+
+	// Version returns the current Aggregate Root version.
+	// The version gets updated each time a new event is recorded
+	// through the aggregate.RecordThat function.
 	Version() version.Version
 
 	setVersion(version.Version)
 	recordThat(Aggregate, ...event.Envelope) error
+}
+
+// Type represents the type of an Aggregate, which will expose the
+// name of the Aggregate (used as Event Store type).
+//
+// If your Aggregate implementation uses pointers, use the factory to
+// return a non-nil instance of the type.
+type Type[I ID, T Root[I]] struct {
+	Name    string
+	Factory func() T
 }
 
 // RecordThat records the Domain Event for the specified Aggregate Root.

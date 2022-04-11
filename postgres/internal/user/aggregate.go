@@ -10,6 +10,11 @@ import (
 	"github.com/get-eventually/go-eventually/core/event"
 )
 
+var Type = aggregate.Type[uuid.UUID, *User]{
+	Name:    "User",
+	Factory: func() *User { return &User{} },
+}
+
 type WasCreated struct {
 	ID        uuid.UUID
 	FirstName string

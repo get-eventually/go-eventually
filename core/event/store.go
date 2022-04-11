@@ -8,6 +8,8 @@ import (
 	"github.com/get-eventually/go-eventually/core/version"
 )
 
+type Stream = chan Persisted
+
 type StreamWrite chan<- Persisted
 
 type StreamRead <-chan Persisted

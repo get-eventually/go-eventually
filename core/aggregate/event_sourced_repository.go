@@ -30,16 +30,16 @@ type Factory[I ID, T Root[I]] func() T
 // that uses an event.Store to store and load the state of the Aggregate Root.
 type EventSourcedRepository[I ID, T Root[I]] struct {
 	eventStore event.Store
-	factory    Factory[I, T]
+	typ        Type[I, T]
 }
 
-func NewEventSourcedRepository[I ID, T Root[I]](
-	eventStore event.Store,
-	factory Factory[I, T],
-) EventSourcedRepository[I, T] {
+// NewEventSourcedRepository returns a new EventSourcedRepository implementation
+// to store and load Aggregate Roots, specified by the aggregate.Type,
+// using the provided event.Store implementation.
+func NewEventSourcedRepository[I ID, T Root[I]](eventStore event.Store, typ Type[I, T]) EventSourcedRepository[I, T] {
 	return EventSourcedRepository[I, T]{
 		eventStore: eventStore,
-		factory:    factory,
+		typ:        typ,
 	}
 }
 
@@ -50,7 +50,7 @@ func (repo EventSourcedRepository[I, T]) Get(ctx context.Context, id I) (T, erro
 	defer cancel()
 
 	streamID := event.StreamID(id.String())
-	eventStream := make(chan event.Persisted, 1)
+	eventStream := make(event.Stream, 1)
 
 	group, ctx := errgroup.WithContext(ctx)
 	group.Go(func() error {
@@ -61,7 +61,7 @@ func (repo EventSourcedRepository[I, T]) Get(ctx context.Context, id I) (T, erro
 		return nil
 	})
 
-	root := repo.factory()
+	root := repo.typ.Factory()
 
 	if err := rehydrateFromEvents[I](root, eventStream); err != nil {
 		return zeroValue, fmt.Errorf("%T: failed to rehydrate aggregate root: %w", repo, err)
