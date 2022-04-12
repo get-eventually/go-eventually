@@ -1,13 +1,9 @@
 CREATE TABLE aggregates (
-    aggregate_id  TEXT    NOT NULL,
+    aggregate_id TEXT    NOT NULL PRIMARY KEY,
     "type"       TEXT    NOT NULL,
     "version"    INTEGER NOT NULL CHECK ("version" > 0),
-    "state"      BYTEA   NOT NULL,
-
-    PRIMARY KEY (aggregate_id, "type")
+    "state"      BYTEA   NOT NULL
 );
-
-CREATE INDEX aggregate_id_idx ON aggregates (aggregate_id);
 
 CREATE PROCEDURE upsert_aggregate(
     _aggregate_id TEXT,
@@ -25,7 +21,7 @@ BEGIN
     SELECT a."version"
     INTO current_aggregate_version
     FROM aggregates a
-    WHERE a.aggregate_id = _aggregate_id AND a.type = _type;
+    WHERE a.aggregate_id = _aggregate_id;
 
     IF (NOT FOUND AND _expected_version <> 0) OR (current_aggregate_version <> _expected_version)
     THEN
@@ -34,7 +30,13 @@ BEGIN
 
     INSERT INTO aggregates (aggregate_id, "type", "version", "state")
     VALUES (_aggregate_id, _type, _new_version, _state)
-    ON CONFLICT (aggregate_id, "type") DO
+    ON CONFLICT (aggregate_id) DO
     UPDATE SET "version" = _new_version, "state" = _state;
+
+    -- An Aggregate Root is also an Event Stream.
+    INSERT INTO event_streams (event_stream_id, "version")
+    VALUES (_aggregate_id, _new_version)
+    ON CONFLICT (event_stream_id) DO
+    UPDATE SET "version" = _new_version;
 END;
 $$;
