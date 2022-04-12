@@ -8,6 +8,8 @@ import (
 	"github.com/get-eventually/go-eventually/core/serde"
 )
 
+// NewProtoSerializer returns a serializer function where the input data (Src)
+// gets serialized to Protobuf byte-array data using a destination model type (Dst).
 func NewProtoSerializer[Src any, Dst proto.Message](
 	serializer serde.Serializer[Src, Dst],
 ) serde.SerializerFunc[Src, []byte] {
@@ -26,6 +28,12 @@ func NewProtoSerializer[Src any, Dst proto.Message](
 	}
 }
 
+// NewProtoDeserializer returns a deserializer function where a byte-array
+// is deserialized into a destination model type (Dst) using Protobuf and then converted
+// into the desired inpud data structure (Src).
+//
+// A data factory function is required for creating new instances of type `Dst`
+// (especially if pointer semantics is used).
 func NewProtoDeserializer[Src any, Dst proto.Message](
 	deserializer serde.Deserializer[Src, Dst],
 	protoFactory func() Dst,
@@ -47,6 +55,8 @@ func NewProtoDeserializer[Src any, Dst proto.Message](
 	}
 }
 
+// NewProto returns a new serde instance where some data (`Src`) gets serialized to
+// and deserialized from Protobuf using a supporting data structure (`Dst`).
 func NewProto[Src any, Dst proto.Message](
 	serdes serde.Serde[Src, Dst],
 	protoFactory func() Dst,
