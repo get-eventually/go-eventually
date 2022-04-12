@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"time"
 
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
@@ -143,7 +144,7 @@ func (repo AggregateRepository[ID, T]) appendDomainEvent(
 	ctx context.Context,
 	tx pgx.Tx,
 	eventStreamID event.StreamID,
-	eventVersion version.Version,
+	eventVersion, lastAggregateVersion version.Version,
 	event event.Envelope,
 ) error {
 	msg := event.Message
@@ -153,7 +154,11 @@ func (repo AggregateRepository[ID, T]) appendDomainEvent(
 		return repo.saveErr("failed to serialize domain event, %w", err)
 	}
 
-	metadata, err := repo.deserializeMetadata(event.Metadata)
+	enrichedMetadata := event.Metadata.
+		With("Recorded-At", time.Now().Format(time.RFC3339Nano)).
+		With("Recorded-With-Aggregate-Version", strconv.Itoa(int(lastAggregateVersion)))
+
+	metadata, err := repo.deserializeMetadata(enrichedMetadata)
 	if err != nil {
 		return err
 	}
@@ -182,7 +187,8 @@ func (repo AggregateRepository[ID, T]) appendDomainEvents(
 	for i, event := range events {
 		eventVersion := currentAggregateVersion + version.Version(i) + 1
 
-		if err := repo.appendDomainEvent(ctx, tx, eventStreamID, eventVersion, event); err != nil {
+		err := repo.appendDomainEvent(ctx, tx, eventStreamID, eventVersion, lastAggregateVersion, event)
+		if err != nil {
 			return err
 		}
 	}
