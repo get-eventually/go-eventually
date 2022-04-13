@@ -22,35 +22,7 @@ import (
 
 const defaultPostgresURL = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
 
-func TestAggregateRepository(t *testing.T) {
-	if testing.Short() {
-		t.SkipNow()
-	}
-
-	url, ok := os.LookupEnv("DATABASE_URL")
-	if !ok {
-		url = defaultPostgresURL
-	}
-
-	require.NoError(t, postgres.RunMigrations(url))
-
-	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, url)
-	require.NoError(t, err)
-
-	repository := postgres.AggregateRepository[uuid.UUID, *user.User]{
-		Conn:          conn,
-		AggregateType: user.Type,
-		AggregateSerde: serdes.NewProtoJSON[*user.User, *proto.User](
-			user.ProtoSerde,
-			func() *proto.User { return &proto.User{} },
-		),
-		MessageSerde: serdes.NewProtoJSON[message.Message, *proto.Event](
-			user.EventProtoSerde,
-			func() *proto.Event { return &proto.Event{} },
-		),
-	}
-
+func testUserRepository(t *testing.T, ctx context.Context, repository aggregate.Repository[uuid.UUID, *user.User]) {
 	t.Run("it can load and save aggregates from the database", func(t *testing.T) {
 		var (
 			id        = uuid.New()
@@ -113,4 +85,36 @@ func TestAggregateRepository(t *testing.T) {
 		assert.ErrorAs(t, err, &conflictErr)
 		assert.Equal(t, expectedErr, conflictErr)
 	})
+}
+
+func TestAggregateRepository(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+
+	url, ok := os.LookupEnv("DATABASE_URL")
+	if !ok {
+		url = defaultPostgresURL
+	}
+
+	require.NoError(t, postgres.RunMigrations(url))
+
+	ctx := context.Background()
+	conn, err := pgx.Connect(ctx, url)
+	require.NoError(t, err)
+
+	repository := postgres.AggregateRepository[uuid.UUID, *user.User]{
+		Conn:          conn,
+		AggregateType: user.Type,
+		AggregateSerde: serdes.NewProtoJSON[*user.User, *proto.User](
+			user.ProtoSerde,
+			func() *proto.User { return &proto.User{} },
+		),
+		MessageSerde: serdes.NewProtoJSON[message.Message, *proto.Event](
+			user.EventProtoSerde,
+			func() *proto.Event { return &proto.Event{} },
+		),
+	}
+
+	testUserRepository(t, ctx, repository)
 }

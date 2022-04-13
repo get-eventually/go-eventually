@@ -2,14 +2,9 @@ package postgres
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"regexp"
-	"strconv"
-	"time"
 
-	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
 
 	"github.com/get-eventually/go-eventually/core/aggregate"
@@ -68,37 +63,6 @@ func (repo AggregateRepository[ID, T]) saveErr(msg string, args ...any) error {
 	return fmt.Errorf("postgres.AggregateRepository.Save: "+msg, args...)
 }
 
-//nolint:lll // It's ok to go over the 120 lines limit in this case.
-var versionConflictErrorRegex = regexp.MustCompile(`aggregate version check failed, expected: (?P<expected>\d), got: (?P<got>\d)`)
-
-func isVersionConflictError(err error) (version.ConflictError, bool) {
-	var pgErr *pgconn.PgError
-
-	if err == nil || !errors.As(err, &pgErr) {
-		return version.ConflictError{}, false
-	}
-
-	matches := versionConflictErrorRegex.FindStringSubmatch(pgErr.Message)
-	if len(matches) == 0 {
-		return version.ConflictError{}, false
-	}
-
-	expected, err := strconv.Atoi(matches[versionConflictErrorRegex.SubexpIndex("expected")])
-	if err != nil {
-		return version.ConflictError{}, false
-	}
-
-	got, err := strconv.Atoi(matches[versionConflictErrorRegex.SubexpIndex("got")])
-	if err != nil {
-		return version.ConflictError{}, false
-	}
-
-	return version.ConflictError{
-		Expected: version.Version(expected),
-		Actual:   version.Version(got),
-	}, true
-}
-
 func (repo AggregateRepository[ID, T]) saveAggregateState(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -127,82 +91,13 @@ func (repo AggregateRepository[ID, T]) saveAggregateState(
 	return nil
 }
 
-func (repo AggregateRepository[ID, T]) deserializeMetadata(metadata message.Metadata) ([]byte, error) {
-	if metadata == nil {
-		return nil, nil
-	}
-
-	data, err := json.Marshal(metadata)
-	if err != nil {
-		return nil, repo.saveErr("failed to serialize metadata to json, %w", err)
-	}
-
-	return data, nil
-}
-
-func (repo AggregateRepository[ID, T]) appendDomainEvent(
-	ctx context.Context,
-	tx pgx.Tx,
-	eventStreamID event.StreamID,
-	eventVersion, lastAggregateVersion version.Version,
-	event event.Envelope,
-) error {
-	msg := event.Message
-
-	data, err := repo.MessageSerde.Serialize(msg)
-	if err != nil {
-		return repo.saveErr("failed to serialize domain event, %w", err)
-	}
-
-	enrichedMetadata := event.Metadata.
-		With("Recorded-At", time.Now().Format(time.RFC3339Nano)).
-		With("Recorded-With-Aggregate-Version", strconv.Itoa(int(lastAggregateVersion)))
-
-	metadata, err := repo.deserializeMetadata(enrichedMetadata)
-	if err != nil {
-		return err
-	}
-
-	if _, err = tx.Exec(
-		ctx,
-		`INSERT INTO events (event_stream_id, "type", "version", event, metadata) VALUES ($1, $2, $3, $4, $5)`,
-		eventStreamID, msg.Name(), eventVersion, data, metadata,
-	); err != nil {
-		return repo.saveErr("failed to append new domain event to event store, %w", err)
-	}
-
-	return nil
-}
-
-func (repo AggregateRepository[ID, T]) appendDomainEvents(
-	ctx context.Context,
-	tx pgx.Tx,
-	aggregateID ID,
-	lastAggregateVersion version.Version,
-	events ...event.Envelope,
-) error {
-	eventStreamID := event.StreamID(aggregateID.String())
-	currentAggregateVersion := lastAggregateVersion - version.Version(len(events))
-
-	for i, event := range events {
-		eventVersion := currentAggregateVersion + version.Version(i) + 1
-
-		err := repo.appendDomainEvent(ctx, tx, eventStreamID, eventVersion, lastAggregateVersion, event)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func (repo AggregateRepository[ID, T]) Save(ctx context.Context, root T) error {
 	conn := repo.Conn
 
 	tx, err := conn.BeginTx(ctx, pgx.TxOptions{
 		IsoLevel:       pgx.ReadCommitted,
 		AccessMode:     pgx.ReadWrite,
-		DeferrableMode: pgx.NotDeferrable,
+		DeferrableMode: pgx.Deferrable,
 	})
 
 	if err != nil {
@@ -221,7 +116,10 @@ func (repo AggregateRepository[ID, T]) Save(ctx context.Context, root T) error {
 		return err
 	}
 
-	if err := repo.appendDomainEvents(ctx, tx, root.AggregateID(), root.Version(), eventsToCommit...); err != nil {
+	eventStreamID := event.StreamID(root.AggregateID().String())
+
+	err = appendDomainEvents(ctx, tx, repo.MessageSerde, eventStreamID, root.Version(), eventsToCommit...)
+	if err != nil {
 		return err
 	}
 
