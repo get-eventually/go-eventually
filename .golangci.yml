@@ -49,7 +49,6 @@ linters-settings:
 linters:
   disable-all: true
   enable:
-    - bodyclose
     - deadcode
     - dogsled
     - dupl
@@ -74,7 +73,6 @@ linters:
     - goprintffuncname
     - gosec
     - gosimple
-    - govet
     - ifshort
     - ineffassign
     - lll
@@ -82,25 +80,30 @@ linters:
     - misspell
     - nakedret
     - nestif
-    - nilerr
     - nolintlint
     - prealloc
     - revive
     # These two linters are useful for the Postgres Event Store implementation.
-    - rowserrcheck
-    - sqlclosecheck
     - staticcheck
-    - structcheck
     - stylecheck
     - testpackage
     - typecheck
     - unconvert
-    - unparam
     - unused
     - varcheck
-    - wastedassign
     - whitespace
     - wsl
+    # These linters are disabled due to Go 1.18 issues with go/ssa package.
+    # More context here: https://github.com/golangci/golangci-lint/issues/2649
+    #
+    # - bodyclose
+    # - govet
+    # - nilerr
+    # - rowserrcheck
+    # - sqlclosecheck
+    # - structcheck
+    # - unparam
+    # - wastedassign
 
 issues:
   exclude-use-default: false
