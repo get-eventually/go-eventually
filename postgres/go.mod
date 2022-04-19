@@ -3,8 +3,6 @@ module github.com/get-eventually/go-eventually/postgres
 go 1.18
 
 require (
-	github.com/get-eventually/go-eventually/core v0.2.0
-	github.com/get-eventually/go-eventually/serdes v0.2.0
 	github.com/golang-migrate/migrate/v4 v4.15.1
 	github.com/google/uuid v1.3.0
 	github.com/jackc/pgconn v1.11.0
@@ -16,6 +14,7 @@ require (
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/get-eventually/go-eventually/core v0.0.0-20220413212503-633b9afde533 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.0 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect

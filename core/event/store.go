@@ -8,10 +8,14 @@ import (
 	"github.com/get-eventually/go-eventually/core/version"
 )
 
+// Stream represents a stream of persisted Domain Events coming from some
+// stream-able source of data, like an Event Store.
 type Stream = chan Persisted
 
+// StreamWrite provides write-only access to an event.Stream object.
 type StreamWrite chan<- Persisted
 
+// StreamRead provides read-only access to an event.Stream object.
 type StreamRead <-chan Persisted
 
 // StreamToSlice synchronously exhausts an EventStream to an event.Persisted slice,
