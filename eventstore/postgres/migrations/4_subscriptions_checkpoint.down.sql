@@ -1,2 +1,0 @@
-DROP FUNCTION get_or_create_subscription_checkpoint;
-DROP TABLE subscriptions_checkpoints;

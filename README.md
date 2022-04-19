@@ -21,9 +21,9 @@
         src="https://img.shields.io/github/workflow/status/get-eventually/go-eventually/Main%20Workflow?style=flat-square">
     </a>
     <!-- Code Coverage -->
-    <a href="https://sonarcloud.io/project/activity?custom_metrics=coverage&graph=custom&id=eventually-rs_eventually-go">
+    <a href="https://sonarcloud.io/project/activity?custom_metrics=coverage&graph=custom&id=get-eventually_go-eventually">
         <img alt="Sonar Coverage"
-        src="https://img.shields.io/sonar/coverage/eventually-rs_eventually-go?server=https%3A%2F%2Fsonarcloud.io&style=flat-square">
+        src="https://img.shields.io/sonar/coverage/get-eventually_go-eventually?server=https%3A%2F%2Fsonarcloud.io&style=flat-square">
     </a>
     <!-- pkg.go.dev -->
     <a href="https://pkg.go.dev/github.com/get-eventually/go-eventually">
@@ -33,7 +33,7 @@
     <!-- License -->
     <a href="./LICENSE">
         <img alt="GitHub license"
-        src="https://img.shields.io/github/license/eventually-rs/eventually-rs?style=flat-square">
+        src="https://img.shields.io/github/license/get-eventually/go-eventually?style=flat-square">
     </a>
     <!-- Discord -->
     <a href="https://discord.gg/yww3mXHbRF">
@@ -49,7 +49,7 @@ Idiomatic library to help you build Event Sourced application in Go.
 
 ## Please note
 
-The library is currently under development and not ready yet for production use-cases.
+The library is currently under development, and not yet 100% ready for production use-cases.
 
 ### Note on semantic versioning
 
