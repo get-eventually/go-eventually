@@ -5,15 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
+
 ## [Unreleased]
 ### Added
-- ...
+- Usage of Go workspaces for local development.
+- New `core/message` package for defining messages.
+- `core/serde` package for serialization and deserialization of types.
+- `serdes` module using `core/serde` with some common protocol implementations: **Protobuf**, **ProtoJSON** and **JSON**.
+- `postgres.AggregateRepository` implementation to load/save Aggregates directly, and still saving recorded Domain Events in a separate table (`events`).
+
+### Changed
+- `aggregate` package uses Go generics for `aggregate.Repository` and `aggregate.Root` interfaces.
+- `eventually.Payload` is now `message.Message`.
+- `eventually.Message` is now `message.Envelope`.
+- `eventstore.Event` is now `event.Persisted`.
+- `eventstore.Store` is now `event.Store`.
+- `command.Command[T]` is now using `message.Message[T]`.
+- `command.Handler` is now generic over its `command.Command` input.
+- `scenario` package is now under `core/test/scenario`.
+- `scenario.CommandHandler` now uses generics for command and command handler assertion.
+- `postgres` module now uses `pgx` to handle connection with the PostgreSQL database, instead of `database/sql`.
+- `postgres.EventStore` uses `serde.Serializer` interface to serialize/deserialize Domain Events to `[]byte`.
+
+### Removed
+- `SequenceNumber` from the `event.Persisted` struct (was previously `eventstore.Event`).
+- `eventstore.SequenceNumberGetter`, to follow the previous `SequenceNumber` removal.
+- `command.Dispatcher` interface, as implementing it with generics is currently not possible.
+
+## [Pre-v0.2.0 unreleased changes]
 ### Changed
 - Add `logger.Logger` to `command.ErrorRecorder` to report errors when appending Command failures to the Event Store.
 - `command.ErrorRecorder` must be passed by reference to implement `command.Handler` interface now (size of the struct increased).
-
-### Deprecated
-- ...
 
 ### Removed
 - Remove the `events` field from `oteleventually.InstrumentedEventStore` due to the potential size of the field and issues with exporting the trace (which wouldn't fit an UDP packet).
@@ -56,7 +78,8 @@ A lot of changes have happened here, a lot of different API design iterations an
 Sorry :)
 
 <!-- @formatter:off -->
-[Unreleased]: https://github.com/get-eventually/go-eventually/compare/v0.1.0-alpha.4..HEAD
+[Unreleased]: https://github.com/get-eventually/go-eventually/compare/eb0deb0..HEAD
+[Pre-v0.2.0 unreleased changes]: https://github.com/get-eventually/go-eventually/compare/eb0deb0..HEAD
 [v0.1.0-alpha.4]: https://github.com/get-eventually/go-eventually/compare/v0.1.0-alpha.4..v0.1.0-alpha.3
 [v0.1.0-alpha.3]: https://github.com/get-eventually/go-eventually/compare/v0.1.0-alpha.2..v0.1.0-alpha.3
 [v0.1.0-alpha.2]: https://github.com/get-eventually/go-eventually/compare/v0.1.0-alpha.1..v0.1.0-alpha.2
