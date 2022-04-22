@@ -339,10 +339,10 @@ github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa/go.mod h1:KnogPXt
 github.com/gabriel-vasile/mimetype v1.3.1/go.mod h1:fA8fi6KUiG7MgQQ+mEWotXoEOvmxRtOJlERCzSmRvr8=
 github.com/gabriel-vasile/mimetype v1.4.0/go.mod h1:fA8fi6KUiG7MgQQ+mEWotXoEOvmxRtOJlERCzSmRvr8=
 github.com/garyburd/redigo v0.0.0-20150301180006-535138d7bcd7/go.mod h1:NR3MbYisc3/PwhQ00EMzDiPmrwpPxAn5GI05/YaO1SY=
-github.com/get-eventually/go-eventually/core v0.0.0-20220413212503-633b9afde533 h1:iYzkC5piSXI4iHDE7MR+bb6ZvGBm3nPsQhBqVzoVw2I=
-github.com/get-eventually/go-eventually/core v0.0.0-20220413212503-633b9afde533/go.mod h1:N0lo6MJvLVwFGJntJPvauACiLIn8wmviQnKRsmKF630=
-github.com/get-eventually/go-eventually/serdes v0.0.0-20220419153751-dc03eb4319b8 h1:0j8M9bx61OVAYgMcRxKJ767ue3TvNE4Hf2kUFVtjjDg=
-github.com/get-eventually/go-eventually/serdes v0.0.0-20220419153751-dc03eb4319b8/go.mod h1:BIC/x2S4D8lyAKyFButq4J2uIbyP944tK0+BsZmQ5iM=
+github.com/get-eventually/go-eventually/core v0.0.0-20220419190440-4927cf7af022 h1:hPD7dqzeZ18soG4b/qr04LH5Hi2Sh5bfaU9zVRcO1po=
+github.com/get-eventually/go-eventually/core v0.0.0-20220419190440-4927cf7af022/go.mod h1:N0lo6MJvLVwFGJntJPvauACiLIn8wmviQnKRsmKF630=
+github.com/get-eventually/go-eventually/serdes v0.0.0-20220419190440-4927cf7af022 h1:DkrDVQG3xpoTZ6HK7BeZ0XJXCWK0+rriomkTHLNnIRk=
+github.com/get-eventually/go-eventually/serdes v0.0.0-20220419190440-4927cf7af022/go.mod h1:/IWJRsix3JX8mwhyDbVk8BqEU0bTliVSnosePUQM5GU=
 github.com/ghodss/yaml v0.0.0-20150909031657-73d445a93680/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
 github.com/go-fonts/dejavu v0.1.0/go.mod h1:4Wt4I4OU2Nq9asgDCteaAaWZOV24E+0/Pwo0gppep4g=
@@ -471,8 +471,8 @@ github.com/google/go-cmp v0.5.2/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/
 github.com/google/go-cmp v0.5.3/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/google/go-cmp v0.5.4/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/google/go-cmp v0.5.5/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
-github.com/google/go-cmp v0.5.6 h1:BKbKCqvP6I+rmFHt06ZmyQtvB8xAkWdhFyr0ZUNZcxQ=
 github.com/google/go-cmp v0.5.6/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
+github.com/google/go-cmp v0.5.7 h1:81/ik6ipDQS2aGcBfIN5dHDB36BwrStyeAQquSYCV4o=
 github.com/google/go-github/v35 v35.2.0/go.mod h1:s0515YVTI+IMrDoy9Y4pHt9ShGpzHvHO8rZ7L7acgvs=
 github.com/google/go-querystring v1.0.0/go.mod h1:odCYkC5MyYFN7vkCjXpyrEuKhc/BUO6wN/zVPAxq5ck=
 github.com/google/gofuzz v1.0.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
