@@ -13,6 +13,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - `core/serde` package for serialization and deserialization of types.
 - `serdes` module using `core/serde` with some common protocol implementations: **Protobuf**, **ProtoJSON** and **JSON**.
 - `postgres.AggregateRepository` implementation to load/save Aggregates directly, and still saving recorded Domain Events in a separate table (`events`).
+- `oteleventually.InstrumentedRepository` provides an `aggregate.Repository` instrumentation.
 
 ### Changed
 - `aggregate` package uses Go generics for `aggregate.Repository` and `aggregate.Root` interfaces.
@@ -26,6 +27,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - `scenario.CommandHandler` now uses generics for command and command handler assertion.
 - `postgres` module now uses `pgx` to handle connection with the PostgreSQL database, instead of `database/sql`.
 - `postgres.EventStore` uses `serde.Serializer` interface to serialize/deserialize Domain Events to `[]byte`.
+- `oteleventually.InstrumentedEventStore` is now adapted to the new `event.Store` interface.
 
 ### Removed
 - `SequenceNumber` from the `event.Persisted` struct (was previously `eventstore.Event`).

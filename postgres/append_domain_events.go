@@ -7,11 +7,12 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/jackc/pgx/v4"
+
 	"github.com/get-eventually/go-eventually/core/event"
 	"github.com/get-eventually/go-eventually/core/message"
 	"github.com/get-eventually/go-eventually/core/serde"
 	"github.com/get-eventually/go-eventually/core/version"
-	"github.com/jackc/pgx/v4"
 )
 
 func serializeMetadata(metadata message.Metadata) ([]byte, error) {
