@@ -49,7 +49,7 @@ func (ir *InstrumentedRepository[I, T]) registerMetrics(meter metric.Meter) erro
 	}
 
 	if ir.saveDuration, err = meter.SyncInt64().Histogram(
-		"eventually.repository..save.duration.milliseconds",
+		"eventually.repository.save.duration.milliseconds",
 		instrument.WithUnit(unit.Milliseconds),
 		instrument.WithDescription("Duration in milliseconds of aggregate.Repository.Save operations performed."),
 	); err != nil {
