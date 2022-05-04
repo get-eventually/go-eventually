@@ -25,7 +25,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - `command.Handler` is now generic over its `command.Command` input.
 - `scenario` package is now under `core/test/scenario`.
 - `scenario.CommandHandler` now uses generics for command and command handler assertion.
-- `postgres` module now uses `pgx` to handle connection with the PostgreSQL database, instead of `database/sql`.
+- `postgres` module now uses `pgx` and `pgxpool` to handle connection with the PostgreSQL database, instead of `database/sql`.
 - `postgres.EventStore` uses `serde.Serializer` interface to serialize/deserialize Domain Events to `[]byte`.
 - `oteleventually.InstrumentedEventStore` is now adapted to the new `event.Store` interface.
 

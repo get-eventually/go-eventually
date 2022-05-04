@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
 
 	"github.com/get-eventually/go-eventually/core/event"
 	"github.com/get-eventually/go-eventually/core/message"
@@ -17,7 +18,7 @@ import (
 var _ event.Store = EventStore{}
 
 type EventStore struct {
-	Conn  *pgx.Conn
+	Conn  *pgxpool.Pool
 	Serde serde.Bytes[message.Message]
 }
 
