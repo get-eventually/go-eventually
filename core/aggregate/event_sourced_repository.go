@@ -10,7 +10,8 @@ import (
 	"github.com/get-eventually/go-eventually/core/version"
 )
 
-func rehydrateFromEvents[I ID](root Root[I], eventStream event.StreamRead) error {
+// RehydrateFromEvents rehydrates an Aggregate Root from a read-only Event Stream.
+func RehydrateFromEvents[I ID](root Root[I], eventStream event.StreamRead) error {
 	for event := range eventStream {
 		if err := root.Apply(event.Message); err != nil {
 			return fmt.Errorf("aggregate.RehydrateFromEvents: failed to record event: %w", err)
@@ -69,7 +70,7 @@ func (repo EventSourcedRepository[I, T]) Get(ctx context.Context, id I) (T, erro
 
 	root := repo.typ.Factory()
 
-	if err := rehydrateFromEvents[I](root, eventStream); err != nil {
+	if err := RehydrateFromEvents[I](root, eventStream); err != nil {
 		return zeroValue, fmt.Errorf("%T: failed to rehydrate aggregate root: %w", repo, err)
 	}
 
