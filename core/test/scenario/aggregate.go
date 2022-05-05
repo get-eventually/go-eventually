@@ -30,15 +30,6 @@ func AggregateRoot[I aggregate.ID, T aggregate.Root[I]](typ aggregate.Type[I, T]
 	}
 }
 
-// Given sets the Command Handler scenario preconditions.
-//
-// Domain Events are used in Event-sourced systems to represent a side effect
-// that has taken place in the system. In order to set a given state for the
-// system to be in while testing a specific Command evaluation, you should
-// specify the Domain Events that have happened thus far.
-//
-// When you're testing Commands with a clean-slate system, you should either specify
-// no Domain Events, or skip directly to When().
 func (sc AggregateRootInit[I, T]) Given(events ...event.Persisted) AggregateRootGiven[I, T] {
 	return AggregateRootGiven[I, T]{
 		typ:   sc.typ,
@@ -46,7 +37,13 @@ func (sc AggregateRootInit[I, T]) Given(events ...event.Persisted) AggregateRoot
 	}
 }
 
-func (sc AggregateRootInit[I, T]) When(fn func() (T, error)) AggregateRootWhen[I, T] {}
+func (sc AggregateRootInit[I, T]) When(fn func() (T, error)) AggregateRootWhen[I, T] {
+	return AggregateRootWhen[I, T]{
+		typ:   sc.typ,
+		given: nil,
+		fn:    fn,
+	}
+}
 
 type AggregateRootGiven[I aggregate.ID, T aggregate.Root[I]] struct {
 	typ   aggregate.Type[I, T]
@@ -92,6 +89,25 @@ func (sc AggregateRootWhen[I, T]) Then(v version.Version, events ...event.Envelo
 	}
 }
 
+func (sc AggregateRootWhen[I, T]) ThenFails() AggregateRootThen[I, T] {
+	return AggregateRootThen[I, T]{
+		typ:       sc.typ,
+		given:     sc.given,
+		fn:        sc.fn,
+		wantError: true,
+	}
+}
+
+func (sc AggregateRootWhen[I, T]) ThenError(err error) AggregateRootThen[I, T] {
+	return AggregateRootThen[I, T]{
+		typ:           sc.typ,
+		given:         sc.given,
+		fn:            sc.fn,
+		expectedError: err,
+		wantError:     true,
+	}
+}
+
 type AggregateRootThen[I aggregate.ID, T aggregate.Root[I]] struct {
 	typ           aggregate.Type[I, T]
 	given         []event.Persisted
@@ -104,10 +120,11 @@ type AggregateRootThen[I aggregate.ID, T aggregate.Root[I]] struct {
 
 func (sc AggregateRootThen[I, T]) AssertOn(t *testing.T) {
 	root, err := sc.fn()
-	recordedEvents := root.FlushRecordedEvents()
 
 	if !sc.wantError {
 		assert.NoError(t, err)
+
+		recordedEvents := root.FlushRecordedEvents()
 		assert.Equal(t, sc.expected, recordedEvents)
 		assert.Equal(t, sc.version, root.Version())
 
