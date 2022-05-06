@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
 
 	"github.com/get-eventually/go-eventually/core/aggregate"
 	"github.com/get-eventually/go-eventually/core/event"
@@ -15,7 +16,7 @@ import (
 )
 
 type AggregateRepository[ID aggregate.ID, T aggregate.Root[ID]] struct {
-	Conn           *pgx.Conn
+	Conn           *pgxpool.Pool
 	AggregateType  aggregate.Type[ID, T]
 	AggregateSerde serde.Bytes[T]
 	MessageSerde   serde.Bytes[message.Message]

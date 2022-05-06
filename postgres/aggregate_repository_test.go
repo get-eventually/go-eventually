@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -100,7 +100,7 @@ func TestAggregateRepository(t *testing.T) {
 	require.NoError(t, postgres.RunMigrations(url))
 
 	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, url)
+	conn, err := pgxpool.Connect(ctx, url)
 	require.NoError(t, err)
 
 	repository := postgres.AggregateRepository[uuid.UUID, *user.User]{

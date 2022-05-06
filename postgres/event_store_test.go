@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/stretchr/testify/require"
 
 	"github.com/get-eventually/go-eventually/core/aggregate"
@@ -33,7 +33,7 @@ func TestEventStore(t *testing.T) {
 	require.NoError(t, postgres.RunMigrations(url))
 
 	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, url)
+	conn, err := pgxpool.Connect(ctx, url)
 	require.NoError(t, err)
 
 	eventStore := postgres.EventStore{
