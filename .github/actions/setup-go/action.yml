@@ -1,0 +1,33 @@
+name: "Set up Go"
+description: "Install Go and set up cache"
+
+inputs:
+  cache-key-prefix:
+    description: "Cache key prefix"
+    required: false
+    default: setup-go-with-cache-${{ github.workflow }}-${{ github.job }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install Go
+      uses: actions/setup-go@v3
+      with:
+        go-version-file: .go-version
+    - name: Get Go cache paths
+      id: go-cache
+      shell: bash
+      run: |-
+        echo "::set-output name=cache::$(go env GOCACHE)"
+        echo "::set-output name=modcache::$(go env GOMODCACHE)"
+    - name: Set up Go cache
+      uses: actions/cache@v3.0.7
+      with:
+        key: |-
+          ${{ inputs.cache-key-prefix }}-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+        restore-keys: |-
+          ${{ inputs.cache-key-prefix }}-${{ runner.os }}-${{ github.run_id }}-
+          ${{ inputs.cache-key-prefix }}-${{ runner.os }}-
+        path: |-
+          ${{ steps.go-cache.outputs.cache }}
+          ${{ steps.go-cache.outputs.modcache }}
