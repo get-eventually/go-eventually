@@ -7,6 +7,9 @@ import (
 	"github.com/get-eventually/go-eventually/core/version"
 )
 
+// RehydrateFromState rehydrates an aggregate.Root instance
+// using a state type, typically coming from an external state type (e.g. Protobuf type)
+// and aggregate.Repository implementation (e.g. postgres.AggregateRepository).
 func RehydrateFromState[I ID, Src Root[I], Dst any](
 	v version.Version,
 	dst Dst,
@@ -16,7 +19,7 @@ func RehydrateFromState[I ID, Src Root[I], Dst any](
 
 	src, err := deserializer.Deserialize(dst)
 	if err != nil {
-		return zeroValue, fmt.Errorf("aggregate.RehydrateFromState: failed to deserialize source into destination root, %w", err)
+		return zeroValue, fmt.Errorf("aggregate.RehydrateFromState: failed to deserialize src into dst root, %w", err)
 	}
 
 	src.setVersion(v)

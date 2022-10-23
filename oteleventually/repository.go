@@ -93,6 +93,7 @@ func (ir *InstrumentedRepository[I, T]) Get(ctx context.Context, id I) (result T
 		AggregateTypeAttribute.String(ir.aggregateType.Name),
 	}
 
+	//nolint:gocritic // Not appending to the same slice done on purpose.
 	spanAttributes := append(attributes,
 		AggregateIDAttribute.String(id.String()),
 	)
@@ -125,6 +126,7 @@ func (ir *InstrumentedRepository[I, T]) Save(ctx context.Context, root T) (err e
 		AggregateTypeAttribute.String(ir.aggregateType.Name),
 	}
 
+	//nolint:gocritic // Not appending to the same slice done on purpose.
 	spanAttributes := append(attributes,
 		AggregateIDAttribute.String(root.AggregateID().String()),
 		AggregateVersionAttribute.Int64(int64(root.Version())),

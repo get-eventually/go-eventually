@@ -52,14 +52,19 @@ func StreamToSlice(ctx context.Context, f func(ctx context.Context, stream Strea
 	return events, group.Wait()
 }
 
+// Streamer is an event.Store trait used to open a specific Event Stream and stream it back
+// in the application.
 type Streamer interface {
 	Stream(ctx context.Context, stream StreamWrite, id StreamID, selector version.Selector) error
 }
 
+// Appender is an event.Store trait used to append new Domain Events in the Event Stream.
 type Appender interface {
 	Append(ctx context.Context, id StreamID, expected version.Check, events ...Envelope) (version.Version, error)
 }
 
+// Store represents an Event Store, a stateful data source where Domain Events
+// can be safely stored, and easily replayed.
 type Store interface {
 	Appender
 	Streamer

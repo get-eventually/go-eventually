@@ -15,6 +15,13 @@ import (
 	"github.com/get-eventually/go-eventually/core/version"
 )
 
+// AggregateRepository implements the aggregate.Repository interface
+// for PostgreSQL databases.
+//
+// This implementation uses the "aggregates" table in the database
+// as its main operational table. At the same time, it also writes
+// to both "events" and "event_streams" to append the Domain events
+// recorded by Aggregate Roots. These updates are performed within the same transaction.
 type AggregateRepository[ID aggregate.ID, T aggregate.Root[ID]] struct {
 	Conn           *pgxpool.Pool
 	AggregateType  aggregate.Type[ID, T]
@@ -22,6 +29,8 @@ type AggregateRepository[ID aggregate.ID, T aggregate.Root[ID]] struct {
 	MessageSerde   serde.Bytes[message.Message]
 }
 
+// Get returns the aggregate.Root instance specified by the provided id.
+// Returns aggregate.ErrRootNotFound if the Aggregate Root doesn't exist.
 func (repo AggregateRepository[ID, T]) Get(ctx context.Context, id ID) (T, error) {
 	var zeroValue T
 
@@ -38,11 +47,9 @@ func (repo AggregateRepository[ID, T]) Get(ctx context.Context, id ID) (T, error
 		state []byte
 	)
 
-	err := row.Scan(&v, &state)
-	if errors.Is(err, pgx.ErrNoRows) {
+	if err := row.Scan(&v, &state); errors.Is(err, pgx.ErrNoRows) {
 		return zeroValue, aggregate.ErrRootNotFound
-	}
-	if err != nil {
+	} else if err != nil {
 		return zeroValue, fmt.Errorf(
 			"postgres.AggregateRepository.Get: failed to fetch aggregate state from database: %w",
 			err,
@@ -92,6 +99,7 @@ func (repo AggregateRepository[ID, T]) saveAggregateState(
 	return nil
 }
 
+// Save saves the new state of the provided aggregate.Root instance.
 func (repo AggregateRepository[ID, T]) Save(ctx context.Context, root T) error {
 	conn := repo.Conn
 
@@ -100,7 +108,6 @@ func (repo AggregateRepository[ID, T]) Save(ctx context.Context, root T) error {
 		AccessMode:     pgx.ReadWrite,
 		DeferrableMode: pgx.Deferrable,
 	})
-
 	if err != nil {
 		return repo.saveErr("failed to open db transaction, %w", err)
 	}
