@@ -128,7 +128,7 @@ func (sc AggregateRootWhen[I, T]) ThenFails() AggregateRootThen[I, T] {
 	}
 }
 
-// ThenFails specifies an unsuccessful outcome of the scenario, where the domain
+// ThenError specifies an unsuccessful outcome of the scenario, where the domain
 // command execution fails with an error.
 //
 // Use this method when you want to assert that the error retured by the domain
