@@ -143,7 +143,5 @@ func (ies *InstrumentedEventStore) Append(
 		span.End()
 	}()
 
-	newVersion, err = ies.eventStore.Append(ctx, id, expected, events...)
-
-	return
+	return ies.eventStore.Append(ctx, id, expected, events...)
 }
