@@ -4,10 +4,13 @@ run:
     - .github
     - resources
     - migrations # NOTE: this is relative to eventstore/postgres
+    - postgres/internal/user
 
 linters-settings:
   dupl:
     threshold: 100
+  funlen:
+    lines: 65
   gci:
     sections:
       - standard

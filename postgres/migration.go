@@ -7,6 +7,7 @@ import (
 	"net/url"
 
 	"github.com/golang-migrate/migrate/v4"
+	// Necessary to load the postgres driver used by migrate.
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 )
@@ -14,6 +15,10 @@ import (
 //go:embed migrations/*.sql
 var fs embed.FS
 
+// RunMigrations runs the latest migrations for the postgres integration.
+//
+// Make sure to run these in the entrypoint of your application, ideally
+// before building a postgres interface implementation.
 func RunMigrations(dsn string) error {
 	wrapErr := func(err error, msg string) error {
 		return fmt.Errorf("postgres.RunMigrations: %s, %w", msg, err)
