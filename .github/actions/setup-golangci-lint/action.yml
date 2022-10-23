@@ -1,0 +1,31 @@
+name: "Set up golangci-lint"
+description: "Install golangci-lint and set up cache"
+
+inputs:
+  cache-key-prefix:
+    description: "Cache key prefix"
+    required: false
+    default: setup-golangci-lint-${{ github.workflow }}-${{ github.job }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install golangci-lint
+      shell: bash
+      run: |-
+        go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.50.0
+    - name: Get golangci-lint cache path
+      id: golangci-lint-cache-status
+      shell: bash
+      run: |-
+        echo "::set-output name=dir::$(golangci-lint cache status | head -1 | sed 's/^Dir: //')"
+    - name: Set up golangci-lint cache
+      uses: actions/cache@v3
+      with:
+        key: |-
+          ${{ inputs.cache-key-prefix }}-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+        restore-keys: |
+          ${{ inputs.cache-key-prefix }}-${{ runner.os }}-${{ github.run_id }}-
+          ${{ inputs.cache-key-prefix }}-${{ runner.os }}-
+        path: |-
+          ${{ steps.golangci-lint-cache-status.outputs.dir }}

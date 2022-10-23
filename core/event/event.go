@@ -28,6 +28,8 @@ type Persisted struct {
 	Envelope
 }
 
+// ToEnvelope returns an Envelope instance with the provided Event
+// instance and no Metadata.
 func ToEnvelope(event Event) Envelope {
 	return Envelope{
 		Message:  event,
@@ -35,6 +37,8 @@ func ToEnvelope(event Event) Envelope {
 	}
 }
 
+// ToEnvelopes returns a list of Envelopes from a list of Events.
+// The returned Envelopes have no Metadata.
 func ToEnvelopes(events ...Event) []Envelope {
 	envelopes := make([]Envelope, 0, len(events))
 

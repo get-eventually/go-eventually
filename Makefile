@@ -1,9 +1,9 @@
 GO_TEST_FLAGS := -v -race -coverprofile=coverage.out
-GOLANGCI_YML  ?= $(shell find ~+ -name .golangci.yml)
+GOLANGCI_LINT_FLAGS ?=
 
 .PHONY: run-linter
 run-linter:
-	@find . -name "go.mod" | sed "s/\/go.mod//g" | xargs -I % bash -c 'echo -e "Checking: %"; cd %; golangci-lint run -c $(GOLANGCI_YML)'
+	@go work edit -json | jq -c -r '[.Use[].DiskPath] | map_values(. + "/...")[]' | xargs -I {} golangci-lint run $(GOLANGCI_LINT_FLAGS) {}
 
 .PHONY: run-tests
 run-tests:

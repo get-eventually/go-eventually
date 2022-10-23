@@ -46,7 +46,7 @@ func TestEventStore(t *testing.T) {
 
 	repository := aggregate.NewEventSourcedRepository(eventStore, user.Type)
 
-	testUserRepository(t, ctx, repository)
+	testUserRepository(t)(ctx, repository)
 
 	t.Run("append works when used with version.CheckAny", func(t *testing.T) {
 		id := uuid.New()

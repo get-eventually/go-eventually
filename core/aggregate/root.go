@@ -104,10 +104,12 @@ func (br *BaseRoot) FlushRecordedEvents() []event.Envelope {
 	return flushed
 }
 
+//nolint:unused // False positive.
 func (br *BaseRoot) setVersion(v version.Version) {
 	br.version = v
 }
 
+//nolint:unused // False positive.
 func (br *BaseRoot) recordThat(aggregate Aggregate, events ...event.Envelope) error {
 	for _, event := range events {
 		if err := aggregate.Apply(event.Message); err != nil {

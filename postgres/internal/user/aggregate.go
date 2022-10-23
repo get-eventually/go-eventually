@@ -50,8 +50,8 @@ type User struct {
 	email     string
 }
 
-func (user *User) Apply(event event.Event) error {
-	switch evt := event.(type) {
+func (user *User) Apply(evt event.Event) error {
+	switch evt := evt.(type) {
 	case WasCreated:
 		user.id = evt.ID
 		user.firstName = evt.FirstName
@@ -63,7 +63,7 @@ func (user *User) Apply(event event.Event) error {
 		user.email = evt.Email
 
 	default:
-		return fmt.Errorf("%T: unexpected event type, %T", user, event)
+		return fmt.Errorf("%T: unexpected event type, %T", user, evt)
 	}
 
 	return nil

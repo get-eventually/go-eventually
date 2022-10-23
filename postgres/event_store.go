@@ -17,6 +17,10 @@ import (
 
 var _ event.Store = EventStore{}
 
+// EventStore is an event.Store implementation targeted to PostgreSQL databases.
+//
+// The implementation uses "event_streams" and "events" as their
+// operational tables. Updates to these tables are transactional.
 type EventStore struct {
 	Conn  *pgxpool.Pool
 	Serde serde.Bytes[message.Message]
@@ -90,7 +94,6 @@ func (es EventStore) Append(
 		AccessMode:     pgx.ReadWrite,
 		DeferrableMode: pgx.Deferrable,
 	})
-
 	if err != nil {
 		return 0, fmt.Errorf("postgres.EventStore: failed to open database transaction: %w", err)
 	}
@@ -129,7 +132,7 @@ func (es EventStore) Append(
 		)
 
 		if err := row.Scan(&newVersion); err != nil {
-			return 0, fmt.Errorf("postgres.EventStore: failed to update event stream version with no optimistic locking: %w", err)
+			return 0, fmt.Errorf("postgres.EventStore: failed to update event stream version unchecked: %w", err)
 		}
 
 	default:

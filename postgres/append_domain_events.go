@@ -34,16 +34,16 @@ func appendDomainEvent(
 	messageSerializer serde.Serializer[message.Message, []byte],
 	id event.StreamID,
 	eventVersion, newVersion version.Version,
-	event event.Envelope,
+	evt event.Envelope,
 ) error {
-	msg := event.Message
+	msg := evt.Message
 
 	data, err := messageSerializer.Serialize(msg)
 	if err != nil {
 		return fmt.Errorf("postgres.appendDomainEvent: failed to serialize domain event, %w", err)
 	}
 
-	enrichedMetadata := event.Metadata.
+	enrichedMetadata := evt.Metadata.
 		With("Recorded-At", time.Now().Format(time.RFC3339Nano)).
 		With("Recorded-With-New-Overall-Version", strconv.Itoa(int(newVersion)))
 

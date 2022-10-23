@@ -81,14 +81,14 @@ func (es *InMemoryEventStore) Stream(
 // Append inserts the specified Domain Events into the Event Stream specified
 // by the current instance, returning the new version of the Event Stream.
 //
-// `version.CheckExact`` can be specified to enable an Optimistic Concurrency check
+// `version.CheckExact` can be specified to enable an Optimistic Concurrency check
 // on append, by using the expected version of the Event Stream prior
 // to appending the new Events.
 //
 // Alternatively, `version.Any` can be used if no Optimistic Concurrency check
 // should be carried out.
 //
-// An instance of `version.ConflictError`` will be returned if the optimistic locking
+// An instance of `version.ConflictError` will be returned if the optimistic locking
 // version check fails against the current version of the Event Stream.
 func (es *InMemoryEventStore) Append(
 	ctx context.Context,
