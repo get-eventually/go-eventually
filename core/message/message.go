@@ -1,3 +1,5 @@
+// Package message exposes the generic Message type, used to represent
+// a message in a system (e.g. Event, Command, etc.).
 package message
 
 // Message is a Message payload.
@@ -39,13 +41,17 @@ func (m Metadata) Merge(other Metadata) Metadata {
 	return m
 }
 
+// GenericEnvelope is an Envelope type that can be used when the concrete
+// Message type in the Envelope is not of interest.
 type GenericEnvelope Envelope[Message]
 
+// Envelope bundles a Message to be exchanged with optional Metadata support.
 type Envelope[T Message] struct {
 	Message  T
 	Metadata Metadata
 }
 
+// ToGenericEnvelope maps the Envelope instance into a GenericEnvelope one.
 func (e Envelope[T]) ToGenericEnvelope() GenericEnvelope {
 	return GenericEnvelope{
 		Message:  e.Message,

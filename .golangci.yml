@@ -3,7 +3,8 @@ run:
   skip-dirs:
     - .github
     - resources
-    - migrations # NOTE: this is relative to eventstore/postgres
+    - migrations # NOTE: this is relative to postgres module
+    - core/internal/user
     - postgres/internal/user
 
 linters-settings:
@@ -59,21 +60,17 @@ linters:
     - dupl
     - errcheck
     - exhaustive
-    # - exhaustivestruct
     - funlen
     - gci
     - gochecknoinits
     - gocognit
     - goconst
-    - gocritic
+    # NOTE: disabling this linter since it panics when analyzing core/message pkg.
+    # - gocritic
     - gocyclo
     - godot
-    # - godox
-    # - goerr113
-    # - gofmt
     - gofumpt
     - goimports
-    # - golint
     - gomnd
     - goprintffuncname
     - gosec
@@ -118,16 +115,16 @@ issues:
         - gomnd
         - funlen
 
-    - path: eventstore/store_suite\.go
+    - path: core/*
       linters:
-        - gomnd
-        - funlen
+        - gocritic
+
+    # dupl linter is annoying in this module.
+    - path: serdes
+      linters:
+        - dupl
 
     # https://github.com/go-critic/go-critic/issues/926
     - linters:
         - gocritic
       text: "unnecessaryDefer:"
-
-    - path: aggregate/root.go
-      linters:
-        - unused
