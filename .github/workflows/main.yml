@@ -30,7 +30,7 @@ jobs:
           # Disabling shallow clone is recommended for improving relevancy of reporting
           fetch-depth: 0
       - name: Set up Go
-        uses: ./.github/actions/setup-go-with-cache
+        uses: ./.github/actions/setup-go
       - name: Run tests
         run: make run-tests
       - name: Archive code coverage results
@@ -55,4 +55,4 @@ jobs:
       - name: Set up golangci-lint
         uses: ./.github/actions/setup-golangci-lint
       - name: Run golangci-lint
-        run: GOLANGCI_LINT_FLAGS=--out-format=github_actions make run-linter
+        run: GOLANGCI_LINT_FLAGS=--out-format=github-actions make run-linter

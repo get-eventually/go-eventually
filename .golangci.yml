@@ -49,7 +49,6 @@ linters-settings:
 linters:
   disable-all: true
   enable:
-    - deadcode
     - dogsled
     - dupl
     - errcheck
@@ -73,7 +72,6 @@ linters:
     - goprintffuncname
     - gosec
     - gosimple
-    - ifshort
     - ineffassign
     - lll
     - makezero
@@ -90,7 +88,6 @@ linters:
     - typecheck
     - unconvert
     - unused
-    - varcheck
     - whitespace
     - wsl
     # These linters are disabled due to Go 1.18 issues with go/ssa package.
