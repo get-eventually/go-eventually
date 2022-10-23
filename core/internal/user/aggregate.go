@@ -10,6 +10,13 @@ import (
 	"github.com/get-eventually/go-eventually/core/event"
 )
 
+var (
+	ErrInvalidFirstName = fmt.Errorf("user.User: invalid first name, is empty")
+	ErrInvalidLastName  = fmt.Errorf("user.User: invalid last name, is empty")
+	ErrInvalidEmail     = fmt.Errorf("user.User: invalid email, is empty")
+	ErrInvalidBirthDate = fmt.Errorf("user.User: invalid birth date, not specified")
+)
+
 var Type = aggregate.Type[uuid.UUID, *User]{
 	Name:    "User",
 	Factory: func() *User { return &User{} },
@@ -75,19 +82,19 @@ func Create(id uuid.UUID, firstName, lastName, email string, birthDate time.Time
 	user := &User{}
 
 	if firstName == "" {
-		return nil, fmt.Errorf("%T: invalid first name, is empty", user)
+		return nil, ErrInvalidFirstName
 	}
 
 	if lastName == "" {
-		return nil, fmt.Errorf("%T: invalid last name, is empty", user)
+		return nil, ErrInvalidLastName
 	}
 
 	if email == "" {
-		return nil, fmt.Errorf("%T: invalid email, is empty", user)
+		return nil, ErrInvalidEmail
 	}
 
 	if birthDate.IsZero() {
-		return nil, fmt.Errorf("%T: invalid birth date, not specified", user)
+		return nil, ErrInvalidBirthDate
 	}
 
 	if err := aggregate.RecordThat[uuid.UUID](user, event.Envelope{

@@ -18,6 +18,23 @@ type StreamWrite chan<- Persisted
 // StreamRead provides read-only access to an event.Stream object.
 type StreamRead <-chan Persisted
 
+// SliceToStream converts a slice of event.Persisted domain events to an event.Stream type.
+//
+// The event.Stream channel has the same buffer size as the input slice.
+//
+// The channel returned by the function contains all the original slice elements
+// and is already closed.
+func SliceToStream(events []Persisted) Stream {
+	ch := make(chan Persisted, len(events))
+	defer close(ch)
+
+	for _, event := range events {
+		ch <- event
+	}
+
+	return ch
+}
+
 // StreamToSlice synchronously exhausts an EventStream to an event.Persisted slice,
 // and returns an error if the EventStream origin, passed here as a closure,
 // fails with an error.
