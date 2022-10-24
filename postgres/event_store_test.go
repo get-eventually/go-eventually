@@ -38,9 +38,9 @@ func TestEventStore(t *testing.T) {
 
 	eventStore := postgres.EventStore{
 		Conn: conn,
-		Serde: serdes.NewProtoJSON[message.Message, *proto.Event](
+		Serde: serdes.Chain[message.Message, *proto.Event, []byte](
 			user.EventProtoSerde,
-			func() *proto.Event { return &proto.Event{} },
+			serdes.NewProtoJSON(func() *proto.Event { return &proto.Event{} }),
 		),
 	}
 
