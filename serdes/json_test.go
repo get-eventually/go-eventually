@@ -20,6 +20,12 @@ const (
 	enumThird
 )
 
+const (
+	enumFirstString  = "FIRST"
+	enumSecondString = "SECOND"
+	enumThirdString  = "THIRD"
+)
+
 type myData struct {
 	Enum      myEnum
 	Something int64
@@ -37,11 +43,11 @@ func serializeMyData(data myData) (*myJSONData, error) {
 
 	switch data.Enum {
 	case enumFirst:
-		json.Enum = "FIRST"
+		json.Enum = enumFirstString
 	case enumSecond:
-		json.Enum = "SECOND"
+		json.Enum = enumSecondString
 	case enumThird:
-		json.Enum = "THIRD"
+		json.Enum = enumThirdString
 	default:
 		return nil, fmt.Errorf("failed to serialize data, unexpected data value, %v", data.Enum)
 	}
@@ -56,11 +62,11 @@ func deserializeMyData(json *myJSONData) (myData, error) {
 	var data myData
 
 	switch json.Enum {
-	case "FIRST":
+	case enumFirstString:
 		data.Enum = enumFirst
-	case "SECOND":
+	case enumSecondString:
 		data.Enum = enumSecond
-	case "THIRD":
+	case enumThirdString:
 		data.Enum = enumThird
 	default:
 		return myData{}, fmt.Errorf("failed to deserialize data, unexpected enum value, %v", json.Enum)
