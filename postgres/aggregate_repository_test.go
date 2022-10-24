@@ -109,13 +109,13 @@ func TestAggregateRepository(t *testing.T) {
 	repository := postgres.AggregateRepository[uuid.UUID, *user.User]{
 		Conn:          conn,
 		AggregateType: user.Type,
-		AggregateSerde: serdes.NewProtoJSON[*user.User, *proto.User](
+		AggregateSerde: serdes.Chain[*user.User, *proto.User, []byte](
 			user.ProtoSerde,
-			func() *proto.User { return &proto.User{} },
+			serdes.NewProtoJSON(func() *proto.User { return &proto.User{} }),
 		),
-		MessageSerde: serdes.NewProtoJSON[message.Message, *proto.Event](
+		MessageSerde: serdes.Chain[message.Message, *proto.Event, []byte](
 			user.EventProtoSerde,
-			func() *proto.Event { return &proto.Event{} },
+			serdes.NewProtoJSON(func() *proto.Event { return &proto.Event{} }),
 		),
 	}
 
