@@ -33,7 +33,7 @@ type myJSONData struct {
 }
 
 func serializeMyData(data myData) (*myJSONData, error) {
-	var json = new(myJSONData)
+	json := new(myJSONData)
 
 	switch data.Enum {
 	case enumFirst:
