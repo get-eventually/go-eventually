@@ -18,7 +18,7 @@
     <!-- Testing pipeline -->
     <a href="https://github.com/get-eventually/go-eventually/actions?query=workflow%3A%22Main+Workflow%22">
         <img alt="GitHub Workflow Status"
-        src="https://img.shields.io/github/workflow/status/get-eventually/go-eventually/Main%20Workflow?style=flat-square">
+        src="https://img.shields.io/github/actions/workflow/status/get-eventually/go-eventually/main.yml?branch=main&style=flat-square">
     </a>
     <!-- Code Coverage -->
     <a href="https://sonarcloud.io/project/activity?custom_metrics=coverage&graph=custom&id=get-eventually_go-eventually">
