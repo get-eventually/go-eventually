@@ -3,8 +3,8 @@ module github.com/get-eventually/go-eventually/serdes
 go 1.18
 
 require (
-	github.com/get-eventually/go-eventually/core v0.0.0-20220419190440-4927cf7af022
-	google.golang.org/protobuf v1.28.0
+	github.com/get-eventually/go-eventually/core v0.0.0-20230213095413-67475c43eea4
+	google.golang.org/protobuf v1.28.1
 )
 
 require (
