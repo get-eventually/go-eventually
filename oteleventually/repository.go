@@ -8,7 +8,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/trace"
 
@@ -33,14 +32,14 @@ type InstrumentedRepository[I aggregate.ID, T aggregate.Root[I]] struct {
 	repository    aggregate.Repository[I, T]
 
 	tracer       trace.Tracer
-	getDuration  syncint64.Histogram
-	saveDuration syncint64.Histogram
+	getDuration  instrument.Int64Histogram
+	saveDuration instrument.Int64Histogram
 }
 
 func (ir *InstrumentedRepository[I, T]) registerMetrics(meter metric.Meter) error {
 	var err error
 
-	if ir.getDuration, err = meter.SyncInt64().Histogram(
+	if ir.getDuration, err = meter.Int64Histogram(
 		"eventually.repository.get.duration.milliseconds",
 		instrument.WithUnit(unit.Milliseconds),
 		instrument.WithDescription("Duration in milliseconds of aggregate.Repository.Get operations performed."),
@@ -48,7 +47,7 @@ func (ir *InstrumentedRepository[I, T]) registerMetrics(meter metric.Meter) erro
 		return fmt.Errorf("oteleventually.InstrumentedRepository: failed to register metric: %w", err)
 	}
 
-	if ir.saveDuration, err = meter.SyncInt64().Histogram(
+	if ir.saveDuration, err = meter.Int64Histogram(
 		"eventually.repository.save.duration.milliseconds",
 		instrument.WithUnit(unit.Milliseconds),
 		instrument.WithDescription("Duration in milliseconds of aggregate.Repository.Save operations performed."),
