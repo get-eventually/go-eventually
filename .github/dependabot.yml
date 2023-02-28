@@ -5,6 +5,7 @@
 
 version: 2
 updates:
+  # Maintain dependencies for Go
   - package-ecosystem: "gomod"
     directory: "/core"
     schedule:
@@ -19,5 +20,11 @@ updates:
       interval: "weekly"
   - package-ecosystem: "gomod"
     directory: "/serdes"
+    schedule:
+      interval: "weekly"
+
+  # Maintain dependencies for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
     schedule:
       interval: "weekly"
