@@ -8,7 +8,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/get-eventually/go-eventually/core/event"
@@ -43,7 +42,7 @@ func (ies *InstrumentedEventStore) registerMetrics(meter metric.Meter) error {
 
 	if ies.streamDuration, err = meter.Int64Histogram(
 		"eventually.event_store.stream.duration.milliseconds",
-		instrument.WithUnit(unit.Milliseconds),
+		instrument.WithUnit("ms"),
 		instrument.WithDescription("Duration in milliseconds of event.Store.Stream operations performed."),
 	); err != nil {
 		return fmt.Errorf("oteleventually.InstrumentedEventStore: failed to register metric: %w", err)
@@ -51,7 +50,7 @@ func (ies *InstrumentedEventStore) registerMetrics(meter metric.Meter) error {
 
 	if ies.appendDuration, err = meter.Int64Histogram(
 		"eventually.event_store.append.duration.milliseconds",
-		instrument.WithUnit(unit.Milliseconds),
+		instrument.WithUnit("ms"),
 		instrument.WithDescription("Duration in milliseconds of event.Store.Append operations performed."),
 	); err != nil {
 		return fmt.Errorf("oteleventually.InstrumentedEventStore: failed to register metric: %w", err)
