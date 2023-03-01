@@ -8,7 +8,7 @@ require (
 	github.com/golang-migrate/migrate/v4 v4.15.2
 	github.com/google/uuid v1.3.0
 	github.com/jackc/pgconn v1.14.0
-	github.com/jackc/pgx/v4 v4.18.0
+	github.com/jackc/pgx/v4 v4.18.1
 	github.com/stretchr/testify v1.8.2
 	google.golang.org/genproto v0.0.0-20230223222841-637eb2293923
 	google.golang.org/protobuf v1.28.1
