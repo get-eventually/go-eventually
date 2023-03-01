@@ -8,7 +8,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/get-eventually/go-eventually/core/aggregate"
@@ -41,7 +40,7 @@ func (ir *InstrumentedRepository[I, T]) registerMetrics(meter metric.Meter) erro
 
 	if ir.getDuration, err = meter.Int64Histogram(
 		"eventually.repository.get.duration.milliseconds",
-		instrument.WithUnit(unit.Milliseconds),
+		instrument.WithUnit("ms"),
 		instrument.WithDescription("Duration in milliseconds of aggregate.Repository.Get operations performed."),
 	); err != nil {
 		return fmt.Errorf("oteleventually.InstrumentedRepository: failed to register metric: %w", err)
@@ -49,7 +48,7 @@ func (ir *InstrumentedRepository[I, T]) registerMetrics(meter metric.Meter) erro
 
 	if ir.saveDuration, err = meter.Int64Histogram(
 		"eventually.repository.save.duration.milliseconds",
-		instrument.WithUnit(unit.Milliseconds),
+		instrument.WithUnit("ms"),
 		instrument.WithDescription("Duration in milliseconds of aggregate.Repository.Save operations performed."),
 	); err != nil {
 		return fmt.Errorf("oteleventually.InstrumentedRepository: failed to register metric: %w", err)
