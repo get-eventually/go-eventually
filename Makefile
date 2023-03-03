@@ -1,4 +1,4 @@
-GO_TEST_FLAGS := -v -race -coverprofile=coverage.out
+GO_TEST_FLAGS := -v -race -covermode=atomic -coverpkg=./... -coverprofile=coverage.out
 GOLANGCI_LINT_FLAGS ?=
 
 .PHONY: run-linter
