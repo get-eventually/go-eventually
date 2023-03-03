@@ -20,10 +20,20 @@ type ItemWasAdded struct {
 
 func (ItemWasAdded) Name() string { return "TodoListItemWasAdded" }
 
-type ItemMarkedAsDone struct{}
+type ItemMarkedAsDone struct {
+	ID ItemID
+}
 
 func (ItemMarkedAsDone) Name() string { return "TodoListItemMarkedAsDone" }
 
-type ItemWasDeleted struct{}
+type ItemMarkedAsPending struct {
+	ID ItemID
+}
+
+func (ItemMarkedAsPending) Name() string { return "TodoListItemMarkedAsPending" }
+
+type ItemWasDeleted struct {
+	ID ItemID
+}
 
 func (ItemWasDeleted) Name() string { return "TodoListItemWasDeleted" }

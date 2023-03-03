@@ -1,6 +1,7 @@
 package todolist
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -33,6 +34,29 @@ func (tl *TodoList) AggregateID() ID {
 	return tl.id
 }
 
+func (tl *TodoList) findItemByID(id ItemID) *Item {
+	for _, item := range tl.items {
+		if item.id == id {
+			return item
+		}
+	}
+
+	return nil
+}
+
+func (tl *TodoList) applyItemEvent(id ItemID, evt event.Event) error {
+	item := tl.findItemByID(id)
+	if item == nil {
+		return fmt.Errorf("todolist.TodoList.Apply: item not found")
+	}
+
+	if err := item.Apply(evt); err != nil {
+		return fmt.Errorf("todolist.TodoList.Apply: failed to apply item event, %w", err)
+	}
+
+	return nil
+}
+
 // Apply implements aggregate.Root
 func (tl *TodoList) Apply(event event.Event) error {
 	switch evt := event.(type) {
@@ -49,8 +73,23 @@ func (tl *TodoList) Apply(event event.Event) error {
 		}
 		tl.items = append(tl.items, item)
 
+	case ItemMarkedAsPending:
+		return tl.applyItemEvent(evt.ID, evt)
+
 	case ItemMarkedAsDone:
+		return tl.applyItemEvent(evt.ID, evt)
+
 	case ItemWasDeleted:
+		var items []*Item
+		for _, item := range tl.items {
+			if item.id == evt.ID {
+				continue
+			}
+
+			items = append(items, item)
+		}
+
+		tl.items = items
 
 	default:
 		return fmt.Errorf("todolist.TodoList.Apply: invalid event, %T", evt)
@@ -59,20 +98,31 @@ func (tl *TodoList) Apply(event event.Event) error {
 	return nil
 }
 
+var (
+	ErrEmptyID          = errors.New("todolist.TodoList: empty id provided")
+	ErrEmptyTitle       = errors.New("todolist.TodoList: empty title provided")
+	ErrNoOwnerSpecified = errors.New("todolist.TodoList: no owner specified")
+)
+
 func Create(id ID, title, owner string, now time.Time) (*TodoList, error) {
+	wrapErr := func(err error) error {
+		return fmt.Errorf("todolist.Create: failed to create new TodoList, %w", err)
+	}
+
 	if uuid.UUID(id) == uuid.Nil {
-		return nil, fmt.Errorf("invalid id")
+		return nil, wrapErr(ErrEmptyID)
 	}
 
 	if title == "" {
-		return nil, fmt.Errorf("empty title")
+		return nil, wrapErr(ErrEmptyTitle)
 	}
 
 	if owner == "" {
-		return nil, fmt.Errorf("empty owner")
+		return nil, wrapErr(ErrNoOwnerSpecified)
 	}
 
 	var todoList TodoList
+
 	if err := aggregate.RecordThat[ID](&todoList, event.ToEnvelope(WasCreated{
 		ID:           id,
 		Title:        title,

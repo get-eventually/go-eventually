@@ -31,6 +31,13 @@ func (item *Item) Apply(event event.Event) error {
 		item.description = evt.Description
 		item.completed = false
 		item.dueDate = evt.DueDate
+
+	case ItemMarkedAsDone:
+		item.completed = true
+
+	case ItemMarkedAsPending:
+		item.completed = false
+
 	default:
 		return fmt.Errorf("todolist.Item.Apply: unsupported event, %T", evt)
 	}
