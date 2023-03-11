@@ -158,7 +158,7 @@ func (todoList *TodoList) AddItem(id ItemID, title, description string, dueDate,
 	}
 
 	if title == "" {
-		return wrapErr(ErrEmptyTitle)
+		return wrapErr(ErrEmptyItemTitle)
 	}
 
 	if _, ok := todoList.itemByID(id); ok {
