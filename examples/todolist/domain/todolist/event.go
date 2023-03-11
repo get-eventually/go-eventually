@@ -12,10 +12,11 @@ type WasCreated struct {
 func (WasCreated) Name() string { return "TodoListWasCreated" }
 
 type ItemWasAdded struct {
-	ID          ItemID
-	Title       string
-	Description string
-	DueDate     time.Time
+	ID           ItemID
+	Title        string
+	Description  string
+	DueDate      time.Time
+	CreationTime time.Time
 }
 
 func (ItemWasAdded) Name() string { return "TodoListItemWasAdded" }

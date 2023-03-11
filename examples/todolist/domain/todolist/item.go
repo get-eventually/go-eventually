@@ -16,11 +16,12 @@ func (id ItemID) String() string { return uuid.UUID(id).String() }
 type Item struct {
 	aggregate.BaseRoot
 
-	id          ItemID
-	title       string
-	description string
-	completed   bool
-	dueDate     time.Time
+	id           ItemID
+	title        string
+	description  string
+	completed    bool
+	dueDate      time.Time
+	creationTime time.Time
 }
 
 func (item *Item) Apply(event event.Event) error {
@@ -31,6 +32,7 @@ func (item *Item) Apply(event event.Event) error {
 		item.description = evt.Description
 		item.completed = false
 		item.dueDate = evt.DueDate
+		item.creationTime = evt.CreationTime
 
 	case ItemMarkedAsDone:
 		item.completed = true

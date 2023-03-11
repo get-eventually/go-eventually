@@ -99,9 +99,12 @@ func (tl *TodoList) Apply(event event.Event) error {
 }
 
 var (
-	ErrEmptyID          = errors.New("todolist.TodoList: empty id provided")
-	ErrEmptyTitle       = errors.New("todolist.TodoList: empty title provided")
-	ErrNoOwnerSpecified = errors.New("todolist.TodoList: no owner specified")
+	ErrEmptyID           = errors.New("todolist.TodoList: empty id provided")
+	ErrEmptyTitle        = errors.New("todolist.TodoList: empty title provided")
+	ErrNoOwnerSpecified  = errors.New("todolist.TodoList: no owner specified")
+	ErrEmptyItemID       = errors.New("todolist.TodoList: empty item id provided")
+	ErrEmptyItemTitle    = errors.New("todolist.TodoList: empty item title provided")
+	ErrItemAlreadyExists = errors.New("todolist.TodoList: item already exists")
 )
 
 func Create(id ID, title, owner string, now time.Time) (*TodoList, error) {
@@ -133,4 +136,44 @@ func Create(id ID, title, owner string, now time.Time) (*TodoList, error) {
 	}
 
 	return &todoList, nil
+}
+
+func (todoList *TodoList) itemByID(id ItemID) (*Item, bool) {
+	for _, item := range todoList.items {
+		if item.id == id {
+			return item, true
+		}
+	}
+
+	return nil, false
+}
+
+func (todoList *TodoList) AddItem(id ItemID, title, description string, dueDate, now time.Time) error {
+	wrapErr := func(err error) error {
+		return fmt.Errorf("todolist.AddItem: failed to add new TodoItem to list, %w", err)
+	}
+
+	if uuid.UUID(id) == uuid.Nil {
+		return wrapErr(ErrEmptyItemID)
+	}
+
+	if title == "" {
+		return wrapErr(ErrEmptyTitle)
+	}
+
+	if _, ok := todoList.itemByID(id); ok {
+		return wrapErr(ErrItemAlreadyExists)
+	}
+
+	if err := aggregate.RecordThat[ID](todoList, event.ToEnvelope(ItemWasAdded{
+		ID:           id,
+		Title:        title,
+		Description:  description,
+		DueDate:      dueDate,
+		CreationTime: now,
+	})); err != nil {
+		return fmt.Errorf("todolist.AddItem: failed to apply domain event, %w", err)
+	}
+
+	return nil
 }
