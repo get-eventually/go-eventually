@@ -4,15 +4,19 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/get-eventually/go-eventually/core/aggregate"
 	"github.com/get-eventually/go-eventually/core/event"
-	"github.com/google/uuid"
 )
 
+// ItemID is the unique identifier type for a Todo Item.
 type ItemID uuid.UUID
 
 func (id ItemID) String() string { return uuid.UUID(id).String() }
 
+// Item represents a Todo Item.
+// Items are managed by a TodoList aggregate root instance.
 type Item struct {
 	aggregate.BaseRoot
 
@@ -24,6 +28,7 @@ type Item struct {
 	creationTime time.Time
 }
 
+// Apply implements aggregate.Root.
 func (item *Item) Apply(event event.Event) error {
 	switch evt := event.(type) {
 	case ItemWasAdded:

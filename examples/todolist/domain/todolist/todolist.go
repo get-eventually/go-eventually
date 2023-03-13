@@ -1,3 +1,5 @@
+// Package todolist contains the domain types and implementations
+// for the TodoList Aggregate Root.
 package todolist
 
 import (
@@ -5,20 +7,24 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/get-eventually/go-eventually/core/aggregate"
 	"github.com/get-eventually/go-eventually/core/event"
-	"github.com/google/uuid"
 )
 
+// ID is the unique identifier for a TodoList.
 type ID uuid.UUID
 
 func (id ID) String() string { return uuid.UUID(id).String() }
 
+// Type represents the Aggregate Root type for usage with go-eventually utilities.
 var Type = aggregate.Type[ID, *TodoList]{
 	Name:    "TodoList",
 	Factory: func() *TodoList { return new(TodoList) },
 }
 
+// TodoList is a list of different Todo items, that belongs to a specific owner.
 type TodoList struct {
 	aggregate.BaseRoot
 
@@ -29,7 +35,7 @@ type TodoList struct {
 	items        []*Item
 }
 
-// AggregateID implements aggregate.Root
+// AggregateID implements aggregate.Root.
 func (tl *TodoList) AggregateID() ID {
 	return tl.id
 }
@@ -57,7 +63,7 @@ func (tl *TodoList) applyItemEvent(id ItemID, evt event.Event) error {
 	return nil
 }
 
-// Apply implements aggregate.Root
+// Apply implements aggregate.Root.
 func (tl *TodoList) Apply(event event.Event) error {
 	switch evt := event.(type) {
 	case WasCreated:
@@ -71,6 +77,7 @@ func (tl *TodoList) Apply(event event.Event) error {
 		if err := item.Apply(evt); err != nil {
 			return fmt.Errorf("todolist.TodoList.Apply: failed to apply item event, %w", err)
 		}
+
 		tl.items = append(tl.items, item)
 
 	case ItemMarkedAsPending:
@@ -98,6 +105,7 @@ func (tl *TodoList) Apply(event event.Event) error {
 	return nil
 }
 
+// Errors that can be returned by domain commands on a TodoList instance.
 var (
 	ErrEmptyID           = errors.New("todolist.TodoList: empty id provided")
 	ErrEmptyTitle        = errors.New("todolist.TodoList: empty title provided")
@@ -105,8 +113,13 @@ var (
 	ErrEmptyItemID       = errors.New("todolist.TodoList: empty item id provided")
 	ErrEmptyItemTitle    = errors.New("todolist.TodoList: empty item title provided")
 	ErrItemAlreadyExists = errors.New("todolist.TodoList: item already exists")
+	ErrItemNotFound      = errors.New("todolist.TodoList: item was not found in list")
 )
 
+// Create creates a new TodoList.
+//
+// Both id, title and owner are required parameters: when empty, the function
+// will return an error.
 func Create(id ID, title, owner string, now time.Time) (*TodoList, error) {
 	wrapErr := func(err error) error {
 		return fmt.Errorf("todolist.Create: failed to create new TodoList, %w", err)
@@ -138,8 +151,8 @@ func Create(id ID, title, owner string, now time.Time) (*TodoList, error) {
 	return &todoList, nil
 }
 
-func (todoList *TodoList) itemByID(id ItemID) (*Item, bool) {
-	for _, item := range todoList.items {
+func (tl *TodoList) itemByID(id ItemID) (*Item, bool) {
+	for _, item := range tl.items {
 		if item.id == id {
 			return item, true
 		}
@@ -148,7 +161,13 @@ func (todoList *TodoList) itemByID(id ItemID) (*Item, bool) {
 	return nil, false
 }
 
-func (todoList *TodoList) AddItem(id ItemID, title, description string, dueDate, now time.Time) error {
+// AddItem adds a new Todo item to an existing list.
+//
+// Both id and title cannot be empty: if so, the method will return an error.
+//
+// Moreover, if the specified id is already being used by another Todo item,
+// the method will return ErrItemAlreadyExists.
+func (tl *TodoList) AddItem(id ItemID, title, description string, dueDate, now time.Time) error {
 	wrapErr := func(err error) error {
 		return fmt.Errorf("todolist.AddItem: failed to add new TodoItem to list, %w", err)
 	}
@@ -161,11 +180,11 @@ func (todoList *TodoList) AddItem(id ItemID, title, description string, dueDate,
 		return wrapErr(ErrEmptyItemTitle)
 	}
 
-	if _, ok := todoList.itemByID(id); ok {
+	if _, ok := tl.itemByID(id); ok {
 		return wrapErr(ErrItemAlreadyExists)
 	}
 
-	if err := aggregate.RecordThat[ID](todoList, event.ToEnvelope(ItemWasAdded{
+	if err := aggregate.RecordThat[ID](tl, event.ToEnvelope(ItemWasAdded{
 		ID:           id,
 		Title:        title,
 		Description:  description,
@@ -173,6 +192,63 @@ func (todoList *TodoList) AddItem(id ItemID, title, description string, dueDate,
 		CreationTime: now,
 	})); err != nil {
 		return fmt.Errorf("todolist.AddItem: failed to apply domain event, %w", err)
+	}
+
+	return nil
+}
+
+func (tl *TodoList) recordItemEvent(id ItemID, eventFactory func() event.Envelope) error {
+	if uuid.UUID(id) == uuid.Nil {
+		return ErrEmptyItemID
+	}
+
+	if _, ok := tl.itemByID(id); !ok {
+		return ErrItemNotFound
+	}
+
+	return aggregate.RecordThat[ID](tl, eventFactory())
+}
+
+// MarkItemAsDone marks the Todo item with the specified id as "done".
+//
+// The method returns an error when the id is empty, or it doesn't point
+// to an existing Todo item.
+func (tl *TodoList) MarkItemAsDone(id ItemID) error {
+	err := tl.recordItemEvent(id, func() event.Envelope {
+		return event.ToEnvelope(ItemMarkedAsDone{ID: id})
+	})
+	if err != nil {
+		return fmt.Errorf("todolist.MarkItemAsDone: failed to mark item as done, %w", err)
+	}
+
+	return nil
+}
+
+// MarkItemAsPending marks the Todo item with the specified id as "pending".
+//
+// The method returns an error when the id is empty, or it doesn't point
+// to an existing Todo item.
+func (tl *TodoList) MarkItemAsPending(id ItemID) error {
+	err := tl.recordItemEvent(id, func() event.Envelope {
+		return event.ToEnvelope(ItemMarkedAsPending{ID: id})
+	})
+	if err != nil {
+		return fmt.Errorf("todolist.MarkItemAsPending: failed to mark item as pending, %w", err)
+	}
+
+	return nil
+}
+
+// DeleteItem deletes the Todo item with the specified id from the TodoList.
+//
+// The method returns an error when the id is empty, or it doesn't point
+// to an existing Todo item.
+func (tl *TodoList) DeleteItem(id ItemID) error {
+	err := tl.recordItemEvent(id, func() event.Envelope {
+		return event.ToEnvelope(ItemWasDeleted{ID: id})
+	})
+	if err != nil {
+		return fmt.Errorf("todolist.DeleteItem: failed to delete item, %w", err)
 	}
 
 	return nil

@@ -4,13 +4,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/get-eventually/go-eventually/core/aggregate"
 	"github.com/get-eventually/go-eventually/core/command"
 	"github.com/get-eventually/go-eventually/core/event"
 	"github.com/get-eventually/go-eventually/core/test/scenario"
 	appcommand "github.com/get-eventually/go-eventually/examples/todolist/command"
 	"github.com/get-eventually/go-eventually/examples/todolist/domain/todolist"
-	"github.com/google/uuid"
 )
 
 func TestAddTodoListItem(t *testing.T) {

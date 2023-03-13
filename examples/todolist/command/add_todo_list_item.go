@@ -9,6 +9,7 @@ import (
 	"github.com/get-eventually/go-eventually/examples/todolist/domain/todolist"
 )
 
+// AddTodoListItem the Command used to add a new Item to an existing TodoList.
 type AddTodoListItem struct {
 	TodoListID  todolist.ID
 	TodoItemID  todolist.ItemID
@@ -17,17 +18,18 @@ type AddTodoListItem struct {
 	DueDate     time.Time
 }
 
-// Name implements command.Command
+// Name implements message.Message.
 func (AddTodoListItem) Name() string { return "AddTodoListItem" }
 
 var _ command.Handler[AddTodoListItem] = AddTodoListItemHandler{}
 
+// AddTodoListItemHandler is the command.Handler for AddTodoListItem commands.
 type AddTodoListItemHandler struct {
 	Clock      func() time.Time
 	Repository todolist.Repository
 }
 
-// Handle implements command.Handler
+// Handle implements command.Handler.
 func (h AddTodoListItemHandler) Handle(ctx context.Context, cmd command.Envelope[AddTodoListItem]) error {
 	todoList, err := h.Repository.Get(ctx, cmd.Message.TodoListID)
 	if err != nil {
