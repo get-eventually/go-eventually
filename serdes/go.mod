@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/get-eventually/go-eventually/core v0.0.0-20230213095413-67475c43eea4
 	github.com/stretchr/testify v1.8.2
-	google.golang.org/protobuf v1.28.1
+	google.golang.org/protobuf v1.29.0
 )
 
 require (
