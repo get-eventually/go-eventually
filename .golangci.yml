@@ -6,6 +6,7 @@ run:
     - migrations # NOTE: this is relative to postgres module
     - core/internal/user
     - postgres/internal/user
+    - gen/*
 
 linters-settings:
   dupl:

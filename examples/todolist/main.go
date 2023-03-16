@@ -9,6 +9,7 @@ import (
 	grpchealth "github.com/bufbuild/connect-grpchealth-go"
 	grpcreflect "github.com/bufbuild/connect-grpcreflect-go"
 	"github.com/google/uuid"
+	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -22,8 +23,26 @@ import (
 	"github.com/get-eventually/go-eventually/examples/todolist/internal/query"
 )
 
+type config struct {
+	Server struct {
+		Address      string        `default:":8080" required:"true"`
+		ReadTimeout  time.Duration `default:"10s" required:"true"`
+		WriteTimeout time.Duration `default:"10s" required:"true"`
+	}
+}
+
+func parseConfig() (*config, error) {
+	var config config
+
+	if err := envconfig.Process("", &config); err != nil {
+		return nil, fmt.Errorf("config: failed to parse from env, %v", err)
+	}
+
+	return &config, nil
+}
+
 func run() error {
-	config, err := ParseConfig()
+	config, err := parseConfig()
 	if err != nil {
 		return fmt.Errorf("todolist.main: failed to parse config, %v", err)
 	}
