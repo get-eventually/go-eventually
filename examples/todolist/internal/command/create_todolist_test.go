@@ -11,8 +11,8 @@ import (
 	"github.com/get-eventually/go-eventually/core/event"
 	"github.com/get-eventually/go-eventually/core/test/scenario"
 	"github.com/get-eventually/go-eventually/core/version"
-	appcommand "github.com/get-eventually/go-eventually/examples/todolist/command"
-	"github.com/get-eventually/go-eventually/examples/todolist/domain/todolist"
+	appcommand "github.com/get-eventually/go-eventually/examples/todolist/internal/command"
+	"github.com/get-eventually/go-eventually/examples/todolist/internal/domain/todolist"
 )
 
 func TestCreateTodoListHandler(t *testing.T) {

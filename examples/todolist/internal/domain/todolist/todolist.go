@@ -28,31 +28,31 @@ var Type = aggregate.Type[ID, *TodoList]{
 type TodoList struct {
 	aggregate.BaseRoot
 
-	id           ID
-	title        string
-	owner        string
-	creationTime time.Time
-	items        []*Item
+	ID           ID
+	Title        string
+	Owner        string
+	CreationTime time.Time
+	Items        []*Item
 }
 
 // AggregateID implements aggregate.Root.
 func (tl *TodoList) AggregateID() ID {
-	return tl.id
+	return tl.ID
 }
 
-func (tl *TodoList) findItemByID(id ItemID) *Item {
-	for _, item := range tl.items {
-		if item.id == id {
-			return item
+func (tl *TodoList) itemByID(id ItemID) (*Item, bool) {
+	for _, item := range tl.Items {
+		if item.ID == id {
+			return item, true
 		}
 	}
 
-	return nil
+	return nil, false
 }
 
 func (tl *TodoList) applyItemEvent(id ItemID, evt event.Event) error {
-	item := tl.findItemByID(id)
-	if item == nil {
+	item, ok := tl.itemByID(id)
+	if !ok {
 		return fmt.Errorf("todolist.TodoList.Apply: item not found")
 	}
 
@@ -67,10 +67,10 @@ func (tl *TodoList) applyItemEvent(id ItemID, evt event.Event) error {
 func (tl *TodoList) Apply(event event.Event) error {
 	switch evt := event.(type) {
 	case WasCreated:
-		tl.id = evt.ID
-		tl.title = evt.Title
-		tl.owner = evt.Owner
-		tl.creationTime = evt.CreationTime
+		tl.ID = evt.ID
+		tl.Title = evt.Title
+		tl.Owner = evt.Owner
+		tl.CreationTime = evt.CreationTime
 
 	case ItemWasAdded:
 		item := &Item{}
@@ -78,7 +78,7 @@ func (tl *TodoList) Apply(event event.Event) error {
 			return fmt.Errorf("todolist.TodoList.Apply: failed to apply item event, %w", err)
 		}
 
-		tl.items = append(tl.items, item)
+		tl.Items = append(tl.Items, item)
 
 	case ItemMarkedAsPending:
 		return tl.applyItemEvent(evt.ID, evt)
@@ -88,15 +88,16 @@ func (tl *TodoList) Apply(event event.Event) error {
 
 	case ItemWasDeleted:
 		var items []*Item
-		for _, item := range tl.items {
-			if item.id == evt.ID {
+
+		for _, item := range tl.Items {
+			if item.ID == evt.ID {
 				continue
 			}
 
 			items = append(items, item)
 		}
 
-		tl.items = items
+		tl.Items = items
 
 	default:
 		return fmt.Errorf("todolist.TodoList.Apply: invalid event, %T", evt)
@@ -149,16 +150,6 @@ func Create(id ID, title, owner string, now time.Time) (*TodoList, error) {
 	}
 
 	return &todoList, nil
-}
-
-func (tl *TodoList) itemByID(id ItemID) (*Item, bool) {
-	for _, item := range tl.items {
-		if item.id == id {
-			return item, true
-		}
-	}
-
-	return nil, false
 }
 
 // AddItem adds a new Todo item to an existing list.

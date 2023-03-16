@@ -20,30 +20,30 @@ func (id ItemID) String() string { return uuid.UUID(id).String() }
 type Item struct {
 	aggregate.BaseRoot
 
-	id           ItemID
-	title        string
-	description  string
-	completed    bool
-	dueDate      time.Time
-	creationTime time.Time
+	ID           ItemID
+	Title        string
+	Description  string
+	Completed    bool
+	DueDate      time.Time
+	CreationTime time.Time
 }
 
 // Apply implements aggregate.Root.
 func (item *Item) Apply(event event.Event) error {
 	switch evt := event.(type) {
 	case ItemWasAdded:
-		item.id = evt.ID
-		item.title = evt.Title
-		item.description = evt.Description
-		item.completed = false
-		item.dueDate = evt.DueDate
-		item.creationTime = evt.CreationTime
+		item.ID = evt.ID
+		item.Title = evt.Title
+		item.Description = evt.Description
+		item.Completed = false
+		item.DueDate = evt.DueDate
+		item.CreationTime = evt.CreationTime
 
 	case ItemMarkedAsDone:
-		item.completed = true
+		item.Completed = true
 
 	case ItemMarkedAsPending:
-		item.completed = false
+		item.Completed = false
 
 	default:
 		return fmt.Errorf("todolist.Item.Apply: unsupported event, %T", evt)

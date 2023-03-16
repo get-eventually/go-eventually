@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/get-eventually/go-eventually/core/command"
-	"github.com/get-eventually/go-eventually/examples/todolist/domain/todolist"
+	"github.com/get-eventually/go-eventually/examples/todolist/internal/domain/todolist"
 )
 
 // AddTodoListItem the Command used to add a new Item to an existing TodoList.

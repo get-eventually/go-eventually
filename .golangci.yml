@@ -40,7 +40,7 @@ linters-settings:
   govet:
     check-shadowing: true
   lll:
-    line-length: 120
+    line-length: 160
   misspell:
     locale: US
   nolintlint:
