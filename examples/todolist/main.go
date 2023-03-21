@@ -1,3 +1,4 @@
+// Package main contains the entrypoint for the TodoList gRPC API application.
 package main
 
 import (

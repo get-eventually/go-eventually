@@ -10,14 +10,18 @@ import (
 	"github.com/get-eventually/go-eventually/examples/todolist/internal/domain/todolist"
 )
 
+// GetTodoList is a Domain Query used to return a TodoList view.
 type GetTodoList struct {
 	ID todolist.ID
 }
 
+// Name implements message.Message.
 func (GetTodoList) Name() string { return "GetTodoList" }
 
 var _ query.Handler[GetTodoList, *todolist.TodoList] = GetTodoListHandler{}
 
+// GetTodoListHandler handles a GetTodoList query, returning the TodoList aggregate root
+// specified by the query.
 type GetTodoListHandler struct {
 	Getter todolist.Getter
 }

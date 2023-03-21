@@ -1,3 +1,4 @@
+// Package protoconv contains methods for conversion from Protobufs to Domain Objects and back.
 package protoconv
 
 import (
@@ -7,6 +8,7 @@ import (
 	"github.com/get-eventually/go-eventually/examples/todolist/internal/domain/todolist"
 )
 
+// FromTodoList converts a TodoList aggregate root into its Protobuf counterpart.
 func FromTodoList(tl *todolist.TodoList) *todolistv1.TodoList {
 	result := &todolistv1.TodoList{
 		Id:           tl.ID.String(),

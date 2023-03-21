@@ -22,7 +22,6 @@ import (
 
 const defaultPostgresURL = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
 
-//nolint:lll // 121 characters are fine :)
 func testUserRepository(t *testing.T) func(ctx context.Context, repository aggregate.Repository[uuid.UUID, *user.User]) {
 	return func(ctx context.Context, repository aggregate.Repository[uuid.UUID, *user.User]) {
 		t.Run("it can load and save aggregates from the database", func(t *testing.T) {
