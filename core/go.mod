@@ -4,8 +4,8 @@ go 1.18
 
 require (
 	github.com/google/uuid v1.3.0
-	github.com/stretchr/testify v1.8.2
-	golang.org/x/sync v0.1.0
+	github.com/stretchr/testify v1.8.3
+	golang.org/x/sync v0.2.0
 )
 
 require (
