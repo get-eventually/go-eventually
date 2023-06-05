@@ -1,0 +1,14 @@
+version: v1
+managed:
+  enabled: true
+  go_package_prefix:
+    default: github.com/get-eventually/go-eventually/examples/todolist/gen
+    except:
+      - buf.build/googleapis/googleapis
+plugins:
+  - plugin: buf.build/protocolbuffers/go
+    out: gen
+    opt: paths=source_relative
+  - plugin: buf.build/bufbuild/connect-go
+    out: gen
+    opt: paths=source_relative

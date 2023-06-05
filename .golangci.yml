@@ -6,6 +6,7 @@ run:
     - migrations # NOTE: this is relative to postgres module
     - core/internal/user
     - postgres/internal/user
+    - gen/*
 
 linters-settings:
   dupl:
@@ -40,7 +41,7 @@ linters-settings:
   govet:
     check-shadowing: true
   lll:
-    line-length: 120
+    line-length: 160
   misspell:
     locale: US
   nolintlint:

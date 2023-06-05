@@ -1,0 +1,88 @@
+syntax = "proto3";
+
+package todolist.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+import "todolist/v1/todo_list.proto";
+
+service TodoListService {
+  rpc CreateTodoList(CreateTodoListRequest) returns (CreateTodoListResponse) {
+    option (google.api.http) = {
+      post: "/v1/todoLists"
+      body: "*"
+    };
+  }
+
+  rpc GetTodoList(GetTodoListRequest) returns (GetTodoListResponse) {
+    option (google.api.http) = {get: "/v1/todoLists/{todo_list_id}"};
+  }
+
+  rpc AddTodoItem(AddTodoItemRequest) returns (AddTodoItemResponse) {
+    option (google.api.http) = {
+      post: "/v1/todoLists/{todo_list_id}/items"
+      body: "*"
+    };
+  }
+
+  rpc MarkTodoItemAsDone(MarkTodoItemAsDoneRequest) returns (MarkTodoItemAsDoneResponse) {
+    option (google.api.http) = {post: "/v1/todoList/{todo_list_id}/items/{todo_item_id}/mark-as-done"};
+  }
+
+  rpc MarkTodoItemAsPending(MarkTodoItemAsPendingRequest) returns (MarkTodoItemAsPendingResponse) {
+    option (google.api.http) = {post: "/v1/todoList/{todo_list_id}/items/{todo_item_id}/mark-as-pending"};
+  }
+
+  rpc DeleteTodoItem(DeleteTodoItemRequest) returns (DeleteTodoItemResponse) {
+    option (google.api.http) = {delete: "/v1/todoList/{todo_list_id}/items/{todo_item_id}"};
+  }
+}
+
+message CreateTodoListRequest {
+  string title = 1;
+  string owner = 2;
+}
+
+message CreateTodoListResponse {
+  string todo_list_id = 1;
+}
+
+message GetTodoListRequest {
+  string todo_list_id = 1;
+}
+
+message GetTodoListResponse {
+  TodoList todo_list = 1;
+}
+
+message AddTodoItemRequest {
+  string todo_list_id = 1;
+  string title = 2;
+  string description = 3;
+  google.protobuf.Timestamp due_date = 4;
+}
+
+message AddTodoItemResponse {
+  string todo_item_id = 1;
+}
+
+message MarkTodoItemAsDoneRequest {
+  string todo_list_id = 1;
+  string todo_item_id = 2;
+}
+
+message MarkTodoItemAsDoneResponse {}
+
+message MarkTodoItemAsPendingRequest {
+  string todo_list_id = 1;
+  string todo_item_id = 2;
+}
+
+message MarkTodoItemAsPendingResponse {}
+
+message DeleteTodoItemRequest {
+  string todo_list_id = 1;
+  string todo_item_id = 2;
+}
+
+message DeleteTodoItemResponse {}
