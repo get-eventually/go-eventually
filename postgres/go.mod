@@ -11,7 +11,7 @@ require (
 	github.com/jackc/pgx/v4 v4.18.1
 	github.com/stretchr/testify v1.8.3
 	google.golang.org/genproto v0.0.0-20230223222841-637eb2293923
-	google.golang.org/protobuf v1.30.0
+	google.golang.org/protobuf v1.31.0
 )
 
 require (
