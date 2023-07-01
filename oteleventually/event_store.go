@@ -7,7 +7,6 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/get-eventually/go-eventually/core/event"
@@ -33,8 +32,8 @@ type InstrumentedEventStore struct {
 	eventStore event.Store
 
 	tracer         trace.Tracer
-	streamDuration instrument.Int64Histogram
-	appendDuration instrument.Int64Histogram
+	streamDuration metric.Int64Histogram
+	appendDuration metric.Int64Histogram
 }
 
 func (ies *InstrumentedEventStore) registerMetrics(meter metric.Meter) error {
@@ -42,16 +41,16 @@ func (ies *InstrumentedEventStore) registerMetrics(meter metric.Meter) error {
 
 	if ies.streamDuration, err = meter.Int64Histogram(
 		"eventually.event_store.stream.duration.milliseconds",
-		instrument.WithUnit("ms"),
-		instrument.WithDescription("Duration in milliseconds of event.Store.Stream operations performed."),
+		metric.WithUnit("ms"),
+		metric.WithDescription("Duration in milliseconds of event.Store.Stream operations performed."),
 	); err != nil {
 		return fmt.Errorf("oteleventually.InstrumentedEventStore: failed to register metric: %w", err)
 	}
 
 	if ies.appendDuration, err = meter.Int64Histogram(
 		"eventually.event_store.append.duration.milliseconds",
-		instrument.WithUnit("ms"),
-		instrument.WithDescription("Duration in milliseconds of event.Store.Append operations performed."),
+		metric.WithUnit("ms"),
+		metric.WithDescription("Duration in milliseconds of event.Store.Append operations performed."),
 	); err != nil {
 		return fmt.Errorf("oteleventually.InstrumentedEventStore: failed to register metric: %w", err)
 	}
@@ -95,7 +94,9 @@ func (ies *InstrumentedEventStore) Stream(
 
 	defer func() {
 		duration := time.Since(start)
-		ies.streamDuration.Record(ctx, duration.Milliseconds(), ErrorAttribute.Bool(err != nil))
+		ies.streamDuration.Record(ctx, duration.Milliseconds(), metric.WithAttributes(
+			ErrorAttribute.Bool(err != nil),
+		))
 
 		if err != nil {
 			span.RecordError(err)
@@ -132,7 +133,9 @@ func (ies *InstrumentedEventStore) Append(
 
 	defer func() {
 		duration := time.Since(start)
-		ies.streamDuration.Record(ctx, duration.Milliseconds(), ErrorAttribute.Bool(err != nil))
+		ies.streamDuration.Record(ctx, duration.Milliseconds(), metric.WithAttributes(
+			ErrorAttribute.Bool(err != nil),
+		))
 
 		if err != nil {
 			span.RecordError(err)

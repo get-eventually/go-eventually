@@ -7,7 +7,6 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/get-eventually/go-eventually/core/aggregate"
@@ -31,8 +30,8 @@ type InstrumentedRepository[I aggregate.ID, T aggregate.Root[I]] struct {
 	repository    aggregate.Repository[I, T]
 
 	tracer       trace.Tracer
-	getDuration  instrument.Int64Histogram
-	saveDuration instrument.Int64Histogram
+	getDuration  metric.Int64Histogram
+	saveDuration metric.Int64Histogram
 }
 
 func (ir *InstrumentedRepository[I, T]) registerMetrics(meter metric.Meter) error {
@@ -40,16 +39,16 @@ func (ir *InstrumentedRepository[I, T]) registerMetrics(meter metric.Meter) erro
 
 	if ir.getDuration, err = meter.Int64Histogram(
 		"eventually.repository.get.duration.milliseconds",
-		instrument.WithUnit("ms"),
-		instrument.WithDescription("Duration in milliseconds of aggregate.Repository.Get operations performed."),
+		metric.WithUnit("ms"),
+		metric.WithDescription("Duration in milliseconds of aggregate.Repository.Get operations performed."),
 	); err != nil {
 		return fmt.Errorf("oteleventually.InstrumentedRepository: failed to register metric: %w", err)
 	}
 
 	if ir.saveDuration, err = meter.Int64Histogram(
 		"eventually.repository.save.duration.milliseconds",
-		instrument.WithUnit("ms"),
-		instrument.WithDescription("Duration in milliseconds of aggregate.Repository.Save operations performed."),
+		metric.WithUnit("ms"),
+		metric.WithDescription("Duration in milliseconds of aggregate.Repository.Save operations performed."),
 	); err != nil {
 		return fmt.Errorf("oteleventually.InstrumentedRepository: failed to register metric: %w", err)
 	}
@@ -103,7 +102,7 @@ func (ir *InstrumentedRepository[I, T]) Get(ctx context.Context, id I) (result T
 		attributes := append(attributes, ErrorAttribute.Bool(err != nil))
 
 		duration := time.Since(start)
-		ir.getDuration.Record(ctx, duration.Milliseconds(), attributes...)
+		ir.getDuration.Record(ctx, duration.Milliseconds(), metric.WithAttributes(attributes...))
 
 		if err != nil {
 			span.RecordError(err)
@@ -137,7 +136,7 @@ func (ir *InstrumentedRepository[I, T]) Save(ctx context.Context, root T) (err e
 		attributes := append(attributes, ErrorAttribute.Bool(err != nil))
 
 		duration := time.Since(start)
-		ir.saveDuration.Record(ctx, duration.Milliseconds(), attributes...)
+		ir.saveDuration.Record(ctx, duration.Milliseconds(), metric.WithAttributes(attributes...))
 
 		if err != nil {
 			span.RecordError(err)
