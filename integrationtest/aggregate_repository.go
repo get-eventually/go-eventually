@@ -83,7 +83,7 @@ func AggregateRepository(repository aggregate.Repository[uuid.UUID, *user.User])
 
 			expectedErr := version.ConflictError{
 				Expected: 0,
-				Actual:   2,
+				Actual:   2, //nolint:gomnd // False positive.
 			}
 
 			var conflictErr version.ConflictError

@@ -91,7 +91,7 @@ func (es *InMemoryEventStore) Stream(
 // An instance of `version.ConflictError` will be returned if the optimistic locking
 // version check fails against the current version of the Event Stream.
 func (es *InMemoryEventStore) Append(
-	ctx context.Context,
+	_ context.Context,
 	id event.StreamID,
 	expected version.Check,
 	events ...event.Envelope,

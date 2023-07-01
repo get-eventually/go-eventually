@@ -1,3 +1,7 @@
+// Package user serves as a small domain example of how to model
+// an Aggregate using go-eventually.
+//
+// This package is used for integration tests in the parent module.
 package user
 
 import (
@@ -11,11 +15,13 @@ import (
 	"github.com/get-eventually/go-eventually/core/message"
 )
 
+// Type is the User aggregate type.
 var Type = aggregate.Type[uuid.UUID, *User]{
 	Name:    "User",
 	Factory: func() *User { return &User{} },
 }
 
+// WasCreated is the domain event fired after a User is created.
 type WasCreated struct {
 	ID        uuid.UUID
 	FirstName string
@@ -24,20 +30,25 @@ type WasCreated struct {
 	Email     string
 }
 
+// Name implements message.Message.
 func (WasCreated) Name() string {
 	return "UserWasCreated"
 }
 
+// EmailWasUpdated is the domain event fired after a User email is updated.
 type EmailWasUpdated struct {
 	Email string
 }
 
+// Name implements message.Message.
 func (EmailWasUpdated) Name() string {
 	return "UserEmailWasUpdated"
 }
 
 var _ aggregate.Root[uuid.UUID] = &User{}
 
+// User is a naive user implementation, modeled as an Aggregate
+// using go-eventually's API.
 type User struct {
 	aggregate.BaseRoot
 
@@ -51,6 +62,7 @@ type User struct {
 	email     string
 }
 
+// Apply implements aggregate.Aggregate.
 func (user *User) Apply(evt event.Event) error {
 	switch evt := evt.(type) {
 	case WasCreated:
@@ -70,10 +82,12 @@ func (user *User) Apply(evt event.Event) error {
 	return nil
 }
 
+// AggregateID implements aggregate.Root.
 func (user *User) AggregateID() uuid.UUID {
 	return user.id
 }
 
+// Create creates a new User using the provided input.
 func Create(id uuid.UUID, firstName, lastName, email string, birthDate time.Time) (*User, error) {
 	user := &User{}
 
@@ -108,6 +122,7 @@ func Create(id uuid.UUID, firstName, lastName, email string, birthDate time.Time
 	return user, nil
 }
 
+// UpdateEmail updates the User email with the specified one.
 func (user *User) UpdateEmail(email string, metadata message.Metadata) error {
 	if email == "" {
 		return fmt.Errorf("%T: invalid email, is empty", user)

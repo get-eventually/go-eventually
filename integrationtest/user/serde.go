@@ -27,6 +27,8 @@ func dateToTime(d *date.Date) time.Time {
 	)
 }
 
+// ProtoSerde is the serde.Serde implementation for a User to map
+// to its Protobuf type, defined in the proto/ folder.
 var ProtoSerde = serde.Fused[*User, *proto.User]{
 	Serializer:   serde.SerializerFunc[*User, *proto.User](protoSerializer),
 	Deserializer: serde.DeserializerFunc[*User, *proto.User](protoDeserializer),
@@ -59,6 +61,8 @@ func protoDeserializer(src *proto.User) (*User, error) {
 	return user, nil
 }
 
+// EventProtoSerde is the serde.Serde implementation for User domain events
+// to map to their Protobuf type, defined in the proto/ folder.
 var EventProtoSerde = serde.Fused[message.Message, *proto.Event]{
 	Serializer:   serde.SerializerFunc[message.Message, *proto.Event](protoEventSerializer),
 	Deserializer: serde.DeserializerFunc[message.Message, *proto.Event](protoEventDeserializer),

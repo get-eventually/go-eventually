@@ -19,6 +19,7 @@ import (
 //nolint:exhaustruct // Only used for interface assertion.
 var _ event.Store = EventStore{}
 
+// EventStore is an event.Store implementation using Google Cloud Firestore as backend.
 type EventStore struct {
 	Client *firestore.Client
 	Serde  serde.Bytes[message.Message]
@@ -155,6 +156,7 @@ func (es EventStore) appendEvent(tx *firestore.Transaction, evt event.Persisted)
 	return nil
 }
 
+// Append implements the event.Appender interface.
 func (es EventStore) Append(
 	ctx context.Context,
 	id event.StreamID,
