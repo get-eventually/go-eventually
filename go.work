@@ -3,6 +3,7 @@ go 1.18
 use (
 	./core
 	./firestore
+	./integrationtest
 	./oteleventually
 	./postgres
 	./serdes
