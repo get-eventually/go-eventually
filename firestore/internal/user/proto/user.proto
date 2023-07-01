@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+option go_package = "github.com/get-eventually/go-eventually/postgres/internal/user/proto";
+
+import "google/type/date.proto";
+
+message User {
+  string id = 1;
+  string first_name = 2;
+  string last_name = 3;
+  google.type.Date birth_date = 4;
+  string email = 5;
+}

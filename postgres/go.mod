@@ -3,14 +3,14 @@ module github.com/get-eventually/go-eventually/postgres
 go 1.18
 
 require (
-	github.com/get-eventually/go-eventually/core v0.0.0-20230213095413-67475c43eea4
+	github.com/get-eventually/go-eventually/core v0.0.0-20230701135437-6329c6bf6407
 	github.com/get-eventually/go-eventually/serdes v0.0.0-20230227215702-6ac2a4505ce1
 	github.com/golang-migrate/migrate/v4 v4.16.2
 	github.com/google/uuid v1.3.0
 	github.com/jackc/pgconn v1.14.0
 	github.com/jackc/pgx/v4 v4.18.1
 	github.com/stretchr/testify v1.8.4
-	google.golang.org/genproto v0.0.0-20230223222841-637eb2293923
+	google.golang.org/genproto v0.0.0-20230530153820-e85fd2cbaebc
 	google.golang.org/protobuf v1.31.0
 )
 
@@ -30,7 +30,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
-	golang.org/x/crypto v0.7.0 // indirect
+	golang.org/x/crypto v0.9.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

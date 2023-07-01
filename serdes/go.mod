@@ -3,7 +3,7 @@ module github.com/get-eventually/go-eventually/serdes
 go 1.18
 
 require (
-	github.com/get-eventually/go-eventually/core v0.0.0-20230213095413-67475c43eea4
+	github.com/get-eventually/go-eventually/core v0.0.0-20230701135437-6329c6bf6407
 	github.com/stretchr/testify v1.8.4
 	google.golang.org/protobuf v1.31.0
 )
@@ -11,7 +11,8 @@ require (
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
-	github.com/kr/pretty v0.3.1 // indirect
+	github.com/kr/text v0.2.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

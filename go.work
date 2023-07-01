@@ -2,12 +2,13 @@ go 1.18
 
 use (
 	./core
+	./firestore
 	./oteleventually
 	./postgres
 	./serdes
 )
 
 replace (
-	github.com/get-eventually/go-eventually/core v0.0.0-20230213095413-67475c43eea4 => ./core
+	github.com/get-eventually/go-eventually/core v0.0.0-20230701135437-6329c6bf6407 => ./core
 	github.com/get-eventually/go-eventually/serdes v0.0.0-20230227215702-6ac2a4505ce1 => ./serdes
 )
