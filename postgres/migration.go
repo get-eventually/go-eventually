@@ -1,14 +1,14 @@
-package postgres
+package eventuallypostgres
 
 import (
+	"database/sql"
 	"embed"
 	"errors"
 	"fmt"
-	"net/url"
 
-	"github.com/golang-migrate/migrate/v4"
 	// Necessary to load the postgres driver used by migrate.
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/pgx"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 )
 
@@ -19,31 +19,24 @@ var fs embed.FS
 //
 // Make sure to run these in the entrypoint of your application, ideally
 // before building a postgres interface implementation.
-func RunMigrations(dsn string) error {
+func RunMigrations(db *sql.DB) error {
 	wrapErr := func(err error, msg string) error {
-		return fmt.Errorf("postgres.RunMigrations: %s, %w", msg, err)
+		return fmt.Errorf("eventuallypostgres.RunMigrations: %s, %w", msg, err)
 	}
-
-	u, err := url.Parse(dsn)
-	if err != nil {
-		return wrapErr(err, "invalid dsn format")
-	}
-
-	// go-migrate allows to specify a different migration table
-	// than the default 'schema_migrations'. In this case, we want to use
-	// a dedicated table to avoid potential clashing with the same tool running
-	// on the same PostgreSQL database instance that is being used as
-	// an Event Store.
-	q := u.Query()
-	q.Add("x-migrations-table", "eventually_schema_migrations")
-	u.RawQuery = q.Encode()
 
 	d, err := iofs.New(fs, "migrations")
 	if err != nil {
 		return wrapErr(err, "failed to create new iofs driver for reading migrations")
 	}
 
-	m, err := migrate.NewWithSourceInstance("iofs", d, u.String())
+	driver, err := pgx.WithInstance(db, &pgx.Config{
+		MigrationsTable: "eventually_schema_migrations",
+	})
+	if err != nil {
+		return wrapErr(err, "failed to create new migrate db instance")
+	}
+
+	m, err := migrate.NewWithInstance("iofs", d, "pgx", driver)
 	if err != nil {
 		return wrapErr(err, "failed to create new migrate source for running db migrations")
 	}

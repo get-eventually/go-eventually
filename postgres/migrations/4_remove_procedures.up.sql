@@ -1,0 +1,3 @@
+DROP PROCEDURE upsert_aggregate;
+DROP PROCEDURE upsert_event_stream;
+DROP FUNCTION upsert_event_stream_with_no_version_check;

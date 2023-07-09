@@ -1,0 +1,2 @@
+-- Nothing to be done here: there is no coming back from this migration,
+-- since the new versions of the library don't use the procedures anymore.
