@@ -2,6 +2,7 @@ package postgres_test
 
 import (
 	"context"
+	"database/sql"
 	"os"
 	"testing"
 
@@ -30,7 +31,10 @@ func TestAggregateRepository(t *testing.T) {
 		url = defaultPostgresURL
 	}
 
-	require.NoError(t, postgres.RunMigrations(url))
+	db, err := sql.Open("pgx", url)
+	require.NoError(t, err)
+	require.NoError(t, postgres.RunMigrations(db))
+	require.NoError(t, db.Close())
 
 	ctx := context.Background()
 	conn, err := pgxpool.New(ctx, url)
