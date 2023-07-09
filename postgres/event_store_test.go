@@ -2,10 +2,12 @@ package postgres_test
 
 import (
 	"context"
+	"database/sql"
 	"os"
 	"testing"
 
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/jackc/pgx/v5/stdlib" // Used to bring in the driver for sql.Open.
 	"github.com/stretchr/testify/require"
 
 	"github.com/get-eventually/go-eventually/core/message"
@@ -29,7 +31,7 @@ func TestEventStore(t *testing.T) {
 	require.NoError(t, postgres.RunMigrations(url))
 
 	ctx := context.Background()
-	conn, err := pgxpool.Connect(ctx, url)
+	conn, err := pgxpool.New(ctx, url)
 	require.NoError(t, err)
 
 	eventStore := postgres.EventStore{
