@@ -1,4 +1,4 @@
-package postgres
+package eventuallypostgres
 
 import (
 	"context"
@@ -51,7 +51,7 @@ func (repo AggregateRepository[ID, T]) Get(ctx context.Context, id ID) (T, error
 		return zeroValue, aggregate.ErrRootNotFound
 	} else if err != nil {
 		return zeroValue, fmt.Errorf(
-			"postgres.AggregateRepository.Get: failed to fetch aggregate state from database: %w",
+			"eventuallypostgres.AggregateRepository.Get: failed to fetch aggregate state from database: %w",
 			err,
 		)
 	}
@@ -59,7 +59,7 @@ func (repo AggregateRepository[ID, T]) Get(ctx context.Context, id ID) (T, error
 	root, err := aggregate.RehydrateFromState[ID, T, []byte](v, state, repo.AggregateSerde)
 	if err != nil {
 		return zeroValue, fmt.Errorf(
-			"postgres.AggregateRepository.Get: failed to deserialize state into aggregate root object: %w",
+			"eventuallypostgres.AggregateRepository.Get: failed to deserialize state into aggregate root object: %w",
 			err,
 		)
 	}
@@ -68,7 +68,7 @@ func (repo AggregateRepository[ID, T]) Get(ctx context.Context, id ID) (T, error
 }
 
 func (repo AggregateRepository[ID, T]) saveErr(msg string, args ...any) error {
-	return fmt.Errorf("postgres.AggregateRepository.Save: "+msg, args...)
+	return fmt.Errorf("eventuallypostgres.AggregateRepository.Save: "+msg, args...)
 }
 
 func (repo AggregateRepository[ID, T]) saveAggregateState(

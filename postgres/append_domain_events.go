@@ -1,4 +1,4 @@
-package postgres
+package eventuallypostgres
 
 import (
 	"context"
@@ -22,7 +22,7 @@ func serializeMetadata(metadata message.Metadata) ([]byte, error) {
 
 	data, err := json.Marshal(metadata)
 	if err != nil {
-		return nil, fmt.Errorf("postgres.serializeMetadata: failed to marshal to json, %w", err)
+		return nil, fmt.Errorf("eventuallypostgres.serializeMetadata: failed to marshal to json, %w", err)
 	}
 
 	return data, nil
@@ -40,7 +40,7 @@ func appendDomainEvent(
 
 	data, err := messageSerializer.Serialize(msg)
 	if err != nil {
-		return fmt.Errorf("postgres.appendDomainEvent: failed to serialize domain event, %w", err)
+		return fmt.Errorf("eventuallypostgres.appendDomainEvent: failed to serialize domain event, %w", err)
 	}
 
 	enrichedMetadata := evt.Metadata.
@@ -57,7 +57,7 @@ func appendDomainEvent(
 		`INSERT INTO events (event_stream_id, "type", "version", event, metadata) VALUES ($1, $2, $3, $4, $5)`,
 		id, msg.Name(), eventVersion, data, metadata,
 	); err != nil {
-		return fmt.Errorf("postgres.appendDomainEvent: failed to append new domain event to event store, %w", err)
+		return fmt.Errorf("eventuallypostgres.appendDomainEvent: failed to append new domain event to event store, %w", err)
 	}
 
 	return nil

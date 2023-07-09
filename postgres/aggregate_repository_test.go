@@ -1,4 +1,4 @@
-package postgres_test
+package eventuallypostgres_test
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 	"github.com/get-eventually/go-eventually/integrationtest"
 	"github.com/get-eventually/go-eventually/integrationtest/user"
 	"github.com/get-eventually/go-eventually/integrationtest/user/proto"
-	"github.com/get-eventually/go-eventually/postgres"
+	eventuallypostgres "github.com/get-eventually/go-eventually/postgres"
 	"github.com/get-eventually/go-eventually/serdes"
 )
 
@@ -33,14 +33,14 @@ func TestAggregateRepository(t *testing.T) {
 
 	db, err := sql.Open("pgx", url)
 	require.NoError(t, err)
-	require.NoError(t, postgres.RunMigrations(db))
+	require.NoError(t, eventuallypostgres.RunMigrations(db))
 	require.NoError(t, db.Close())
 
 	ctx := context.Background()
 	conn, err := pgxpool.New(ctx, url)
 	require.NoError(t, err)
 
-	repository := postgres.AggregateRepository[uuid.UUID, *user.User]{
+	repository := eventuallypostgres.AggregateRepository[uuid.UUID, *user.User]{
 		Conn:          conn,
 		AggregateType: user.Type,
 		AggregateSerde: serdes.Chain[*user.User, *proto.User, []byte](

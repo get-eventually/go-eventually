@@ -1,4 +1,4 @@
-package postgres
+package eventuallypostgres
 
 import (
 	"database/sql"
@@ -21,7 +21,7 @@ var fs embed.FS
 // before building a postgres interface implementation.
 func RunMigrations(db *sql.DB) error {
 	wrapErr := func(err error, msg string) error {
-		return fmt.Errorf("postgres.RunMigrations: %s, %w", msg, err)
+		return fmt.Errorf("eventuallypostgres.RunMigrations: %s, %w", msg, err)
 	}
 
 	d, err := iofs.New(fs, "migrations")
