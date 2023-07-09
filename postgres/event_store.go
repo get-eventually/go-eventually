@@ -103,43 +103,8 @@ func (es EventStore) Append(
 		_ = tx.Rollback(ctx)
 	}()
 
-	var newVersion version.Version
-
-	switch v := expected.(type) {
-	case version.CheckExact:
-		expectedVersion := version.Version(v)
-		newVersion = expectedVersion + version.Version(len(events))
-
-		_, err := tx.Exec(
-			ctx,
-			"CALL upsert_event_stream($1::TEXT, $2::INTEGER, $3::INTEGER)",
-			id, expectedVersion, newVersion,
-		)
-
-		if conflictErr, ok := isVersionConflictError(err); ok {
-			return 0, conflictErr
-		}
-
-		if err != nil {
-			return 0, fmt.Errorf("eventuallypostgres.EventStore: failed to update event stream version, %w", err)
-		}
-
-	case version.CheckAny:
-		row := tx.QueryRow(
-			ctx,
-			"SELECT * FROM upsert_event_stream_with_no_version_check($1::TEXT, $2::INTEGER)",
-			id, len(events),
-		)
-
-		if err := row.Scan(&newVersion); err != nil {
-			return 0, fmt.Errorf("eventuallypostgres.EventStore: failed to update event stream version unchecked: %w", err)
-		}
-
-	default:
-		return 0, fmt.Errorf("eventuallypostgres.EventStore: unexpected 'expected' version check type, %T", v)
-	}
-
-	if err := appendDomainEvents(ctx, tx, es.Serde, id, newVersion, events...); err != nil {
+	newVersion, err := appendDomainEvents(ctx, tx, es.Serde, id, expected, events...)
+	if err != nil {
 		return 0, fmt.Errorf("eventuallypostgres.EventStore: failed to append domain events: %w", err)
 	}
 
