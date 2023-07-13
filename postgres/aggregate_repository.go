@@ -82,7 +82,7 @@ func (repo AggregateRepository[ID, T]) Save(ctx context.Context, root T) error {
 	conn := repo.Conn
 
 	tx, err := conn.BeginTx(ctx, pgx.TxOptions{
-		IsoLevel:       pgx.ReadCommitted,
+		IsoLevel:       pgx.Serializable,
 		AccessMode:     pgx.ReadWrite,
 		DeferrableMode: pgx.Deferrable,
 	})
