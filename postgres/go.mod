@@ -8,7 +8,7 @@ require (
 	github.com/get-eventually/go-eventually/serdes v0.0.0-20230227215702-6ac2a4505ce1
 	github.com/golang-migrate/migrate/v4 v4.16.2
 	github.com/google/uuid v1.3.0
-	github.com/jackc/pgx/v5 v5.4.1
+	github.com/jackc/pgx/v5 v5.4.2
 	github.com/stretchr/testify v1.8.4
 )
 
