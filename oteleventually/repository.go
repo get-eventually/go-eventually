@@ -106,6 +106,8 @@ func (ir *InstrumentedRepository[I, T]) Get(ctx context.Context, id I) (result T
 
 		if err != nil {
 			span.RecordError(err)
+		} else {
+			span.SetAttributes(AggregateVersionAttribute.Int64(int64(result.Version())))
 		}
 
 		span.End()
@@ -113,7 +115,7 @@ func (ir *InstrumentedRepository[I, T]) Get(ctx context.Context, id I) (result T
 
 	result, err = ir.repository.Get(ctx, id)
 
-	return
+	return result, err
 }
 
 // Save calls the wrapped aggregate.Repository.Save method and records metrics
