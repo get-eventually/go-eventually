@@ -4,9 +4,9 @@ go 1.18
 
 require (
 	github.com/get-eventually/go-eventually/core v0.0.0-20230701135437-6329c6bf6407
-	go.opentelemetry.io/otel v1.16.0
-	go.opentelemetry.io/otel/metric v1.16.0
-	go.opentelemetry.io/otel/trace v1.16.0
+	go.opentelemetry.io/otel v1.17.0
+	go.opentelemetry.io/otel/metric v1.17.0
+	go.opentelemetry.io/otel/trace v1.17.0
 )
 
 require (
