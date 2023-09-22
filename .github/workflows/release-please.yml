@@ -1,0 +1,21 @@
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+name: release-please
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Release
+        uses: google-github-actions/release-please-action@v3
+        id: release
+        with:
+          release-type: go
+          command: manifest
+          monorepo-tags: true
