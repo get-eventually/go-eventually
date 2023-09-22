@@ -3,7 +3,7 @@ module github.com/get-eventually/go-eventually/integrationtest
 go 1.18
 
 require (
-	github.com/google/uuid v1.3.0
+	github.com/google/uuid v1.3.1
 	github.com/stretchr/testify v1.8.4
 	google.golang.org/genproto v0.0.0-20230530153820-e85fd2cbaebc
 	google.golang.org/protobuf v1.31.0

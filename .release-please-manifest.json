@@ -1,3 +1,8 @@
 {
-  ".": "0.0.0"
+  "core": "0.2.0",
+  "firestore": "0.2.0",
+  "oteleventually": "0.2.0",
+  "postgres": "0.2.0",
+  "serdes": "0.2.0",
+  "integrationtest": "0.2.0"
 }
