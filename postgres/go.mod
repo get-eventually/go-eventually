@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/get-eventually/go-eventually/core v0.0.0-20230701135437-6329c6bf6407
-	github.com/get-eventually/go-eventually/integrationtest v0.0.0-20230709124743-a74cc5d818ba
+	github.com/get-eventually/go-eventually/integrationtest v0.2.1
 	github.com/get-eventually/go-eventually/serdes v0.2.1
 	github.com/golang-migrate/migrate/v4 v4.16.2
 	github.com/google/uuid v1.3.1

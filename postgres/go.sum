@@ -18,8 +18,8 @@ github.com/docker/go-connections v0.4.0 h1:El9xVISelRB7BuFusrZozjnkIM5YnzCViNKoh
 github.com/docker/go-units v0.5.0 h1:69rxXcBk27SvSaaxTtLh/8llcHD8vYHT7WSdRZ/jvr4=
 github.com/get-eventually/go-eventually/core v0.0.0-20230701135437-6329c6bf6407 h1:eI6AtVMbu6SG4e1tXcsv781jxujEHg5O2pPUbJi+xdY=
 github.com/get-eventually/go-eventually/core v0.0.0-20230701135437-6329c6bf6407/go.mod h1:ee0NPc9kb9ZwMxY5LDwAnVxcqq2QiIOkMvE8BvSxXFE=
-github.com/get-eventually/go-eventually/integrationtest v0.0.0-20230709124743-a74cc5d818ba h1:I108bGCt7/Ls2i9kMZGge2OgOdjDkmylLXi8j33Hzdw=
-github.com/get-eventually/go-eventually/integrationtest v0.0.0-20230709124743-a74cc5d818ba/go.mod h1:UER9kKSBbjeuNvQXbuGSkpdCVsowpIDTAvk0uJR2CjI=
+github.com/get-eventually/go-eventually/integrationtest v0.2.1 h1:ATBNzwoFnc0/J06VmOmCjpIwD+KhYtW6Dcpey8ZhYe4=
+github.com/get-eventually/go-eventually/integrationtest v0.2.1/go.mod h1:VyI+zlenc3JeuSjJEq4BHzBQsKb5TxHgSERdAJEUEms=
 github.com/get-eventually/go-eventually/serdes v0.2.1 h1:RSEGI3rgeu80Pcs9LYX1FW5w0QpHZljCtiJWlZjHQbA=
 github.com/get-eventually/go-eventually/serdes v0.2.1/go.mod h1:qlDCxDdHo8WyfarUiFIZpyK9pTZHt5K1+uGqk3GFYuI=
 github.com/go-kit/log v0.1.0/go.mod h1:zbhenjAZHb184qTLMA9ZjW7ThYL0H2mk7Q6pNt4vbaY=
