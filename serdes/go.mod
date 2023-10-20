@@ -3,7 +3,7 @@ module github.com/get-eventually/go-eventually/serdes
 go 1.18
 
 require (
-	github.com/get-eventually/go-eventually/core v0.0.0-20230701135437-6329c6bf6407
+	github.com/get-eventually/go-eventually/core v0.2.1
 	github.com/stretchr/testify v1.8.4
 	google.golang.org/protobuf v1.31.0
 )
