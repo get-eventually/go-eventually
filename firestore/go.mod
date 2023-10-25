@@ -9,7 +9,7 @@ require (
 	github.com/get-eventually/go-eventually/serdes v0.2.1
 	github.com/stretchr/testify v1.8.4
 	google.golang.org/api v0.126.0
-	google.golang.org/grpc v1.55.0
+	google.golang.org/grpc v1.56.3
 )
 
 require (
