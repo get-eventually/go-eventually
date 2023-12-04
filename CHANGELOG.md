@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.2.0-alpha.2](https://github.com/get-eventually/go-eventually/compare/v0.1.0-alpha.2...v0.2.0-alpha.2) (2023-12-04)
+
+
+### Features
+
+* **command:** add logger.Logger to ErrorReporter ([#76](https://github.com/get-eventually/go-eventually/issues/76)) ([1e02257](https://github.com/get-eventually/go-eventually/commit/1e022578e2452f6a3e6a18bcded43be07eebf291))
+* **core/command:** add some helper functions and documentation ([#86](https://github.com/get-eventually/go-eventually/issues/86)) ([ee1f26e](https://github.com/get-eventually/go-eventually/commit/ee1f26e6a2924b6ad2ecff5930918f8ec31516c2))
+* **eventstore:** add ContextAware and ContextMetadata propagator ([#72](https://github.com/get-eventually/go-eventually/issues/72)) ([6d8e3b2](https://github.com/get-eventually/go-eventually/commit/6d8e3b23a4c32af278122d5fe79ccda7e63188c0))
+* **github:** add github actions dependabot ([#102](https://github.com/get-eventually/go-eventually/issues/102)) ([fd1c6d5](https://github.com/get-eventually/go-eventually/commit/fd1c6d5e9729af4fcf9f42e35b7c43a35877fb73))
+* **github:** enable dependabot weekly reports ([#95](https://github.com/get-eventually/go-eventually/issues/95)) ([8594cd1](https://github.com/get-eventually/go-eventually/commit/8594cd1ad0cdab60861e033a4038bc52b980627c))
+* implement Firestore event.Store interface ([#136](https://github.com/get-eventually/go-eventually/issues/136)) ([5e1c10c](https://github.com/get-eventually/go-eventually/commit/5e1c10c04d5a51b89da7ba146665882fdfeba237))
+* **opentelemetry:** add aggregate.version to the Repository.Get span ([#142](https://github.com/get-eventually/go-eventually/issues/142)) ([e204ba9](https://github.com/get-eventually/go-eventually/commit/e204ba9f10ae6c1558b1a169b70b496026796034))
+* **oteleventually:** add trace id and span id to events metadata during Append ([#71](https://github.com/get-eventually/go-eventually/issues/71)) ([70f9505](https://github.com/get-eventually/go-eventually/commit/70f9505fe9c2771c8a7a4bfa72389c034d88baa5))
+* **postgres:** EventStore.Append returns eventstore.ErrConflict in case of conflict error ([#67](https://github.com/get-eventually/go-eventually/issues/67)) ([e1617a9](https://github.com/get-eventually/go-eventually/commit/e1617a97d6a543e728f7e188cfeeaea3f3d3e933))
+* **postgres:** update to pgx/v5 and refactor RunMigrations ([#137](https://github.com/get-eventually/go-eventually/issues/137)) ([a74cc5d](https://github.com/get-eventually/go-eventually/commit/a74cc5d818ba390bc3b0ec19cee94a9c8d9de4f4))
+* **README:** add matrix chat link ([#105](https://github.com/get-eventually/go-eventually/issues/105)) ([3594928](https://github.com/get-eventually/go-eventually/commit/3594928062546d54dd8eb80783de86d607e48784))
+
+
+### Bug Fixes
+
+* golangci-lint linter execution ([#88](https://github.com/get-eventually/go-eventually/issues/88)) ([bff3e52](https://github.com/get-eventually/go-eventually/commit/bff3e5219f413465268811a6f7296a5f21ea122a))
+* **oteleventually:** metric name for repository.save ([#84](https://github.com/get-eventually/go-eventually/issues/84)) ([a0bb5be](https://github.com/get-eventually/go-eventually/commit/a0bb5be3e485256b438050fd6557dddb9800ed36))
+* **oteleventually:** remove 'event' field from InstrumentedProjection ([#78](https://github.com/get-eventually/go-eventually/issues/78)) ([75e48fd](https://github.com/get-eventually/go-eventually/commit/75e48fd2b585a33dd2cdac7fcad82c1f113c269d))
+* **oteleventually:** remove 'events' field from InstrumentedEventStore ([#77](https://github.com/get-eventually/go-eventually/issues/77)) ([d1725e3](https://github.com/get-eventually/go-eventually/commit/d1725e35930a7e6769e99c3aa36e69ebec123faa))
+* **postgres:** use eventually_schema_migrations table for migrations ([#87](https://github.com/get-eventually/go-eventually/issues/87)) ([4886b08](https://github.com/get-eventually/go-eventually/commit/4886b082d33db4741832bba12623bfd668790913))
+* **postgres:** use pgxpool.Pool instead of pgx.Conn for db communication ([#83](https://github.com/get-eventually/go-eventually/issues/83)) ([076e4e8](https://github.com/get-eventually/go-eventually/commit/076e4e86145407b81caa03bc900babe61a584917))
+* **postgres:** use SERIALIZABLE tx isolation level for AggregateRepository.Save ([#139](https://github.com/get-eventually/go-eventually/issues/139)) ([0cde29d](https://github.com/get-eventually/go-eventually/commit/0cde29d98de6a1cb38ec250d9dd822af6a5de477))
+* **release-please-config:** add / as tag separator ([6ce8d8c](https://github.com/get-eventually/go-eventually/commit/6ce8d8c39d912276f99512b17cf452384979bd90))
+
 ## [Unreleased]
 
 ### Added
