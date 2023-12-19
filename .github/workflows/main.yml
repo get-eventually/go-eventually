@@ -46,7 +46,7 @@ jobs:
           FIRESTORE_EMULATOR_HOST: '[::1]:9191'
           GOOGLE_PROJECT_ID: test
       - name: Archive code coverage results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: code-coverage-report
           path: ./**/*.out
