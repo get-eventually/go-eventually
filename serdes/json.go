@@ -31,7 +31,7 @@ func NewJSONDeserializer[T any](factory func() T) serde.DeserializerFunc[T, []by
 
 		model := factory()
 
-		if err := json.Unmarshal(data, model); err != nil {
+		if err := json.Unmarshal(data, &model); err != nil {
 			return zeroValue, fmt.Errorf("serdes.JSON: failed to deserialize data, %w", err)
 		}
 

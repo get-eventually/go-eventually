@@ -110,4 +110,21 @@ func TestJSON(t *testing.T) {
 		assert.Error(t, err)
 		assert.Zero(t, deserialized)
 	})
+
+	t.Run("it works also with by-value semantics", func(t *testing.T) {
+		type byValue struct {
+			Test bool
+		}
+
+		mySerde := serdes.NewJSON(func() byValue { return byValue{} })
+		myValue := byValue{Test: true}
+
+		serialized, err := mySerde.Serialize(myValue)
+		assert.NoError(t, err)
+		assert.NotEmpty(t, serialized)
+
+		deserialized, err := mySerde.Deserialize(serialized)
+		assert.NoError(t, err)
+		assert.Equal(t, myValue, deserialized)
+	})
 }
