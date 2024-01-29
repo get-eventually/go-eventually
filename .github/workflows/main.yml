@@ -51,7 +51,7 @@ jobs:
           name: code-coverage-report
           path: ./**/*.out
       - name: Analyze with SonarCloud
-        uses: sonarsource/sonarcloud-github-action@v1.9
+        uses: sonarsource/sonarcloud-github-action@v2.1
         # NOTE: we don't care if SonarCloud analysis fail, as we mainly use it
         # for code coverage tracking.
         continue-on-error: true
