@@ -8,7 +8,7 @@ require (
 	github.com/get-eventually/go-eventually/serdes v0.2.1
 	github.com/golang-migrate/migrate/v4 v4.16.2
 	github.com/google/uuid v1.5.0
-	github.com/jackc/pgx/v5 v5.5.0
+	github.com/jackc/pgx/v5 v5.5.3
 	github.com/stretchr/testify v1.8.4
 )
 
@@ -29,9 +29,9 @@ require (
 	github.com/lib/pq v1.10.7 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
-	golang.org/x/crypto v0.9.0 // indirect
+	golang.org/x/crypto v0.17.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect
-	golang.org/x/text v0.9.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/genproto v0.0.0-20230530153820-e85fd2cbaebc // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
