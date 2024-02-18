@@ -33,7 +33,7 @@ jobs:
         uses: ./.github/actions/setup-go
       # Used for Firestore integration tests
       - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v1
+        uses: google-github-actions/setup-gcloud@v2
         with:
           install_components: 'beta,cloud-firestore-emulator'
       - name: Retrieve Google Cloud info
