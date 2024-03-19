@@ -13,13 +13,13 @@ import (
 	"github.com/get-eventually/go-eventually/version"
 )
 
-func TestCommandHandler(t *testing.T) {
+func Testpostgres(t *testing.T) {
 	id := uuid.New()
 	now := time.Now()
 
 	t.Run("create new user", func(t *testing.T) {
 		command.
-			Scenario[user.CreateCommand, user.CreateCommandHandler]().
+			Scenario[user.CreateCommand, user.Createpostgres]().
 			When(command.Envelope[user.CreateCommand]{
 				Message: user.CreateCommand{
 					FirstName: "John",
@@ -43,8 +43,8 @@ func TestCommandHandler(t *testing.T) {
 					Metadata: nil,
 				},
 			}).
-			AssertOn(t, func(s event.Store) user.CreateCommandHandler {
-				return user.CreateCommandHandler{
+			AssertOn(t, func(s event.Store) user.Createpostgres {
+				return user.Createpostgres{
 					UUIDGenerator: func() uuid.UUID {
 						return id
 					},
@@ -55,7 +55,7 @@ func TestCommandHandler(t *testing.T) {
 
 	t.Run("cannot create two duplicate users", func(t *testing.T) {
 		command.
-			Scenario[user.CreateCommand, user.CreateCommandHandler]().
+			Scenario[user.CreateCommand, user.Createpostgres]().
 			Given(event.Persisted{
 				StreamID: event.StreamID(id.String()),
 				Version:  1,
@@ -83,8 +83,8 @@ func TestCommandHandler(t *testing.T) {
 				Expected: 0,
 				Actual:   1,
 			}).
-			AssertOn(t, func(s event.Store) user.CreateCommandHandler {
-				return user.CreateCommandHandler{
+			AssertOn(t, func(s event.Store) user.Createpostgres {
+				return user.Createpostgres{
 					UUIDGenerator: func() uuid.UUID {
 						return id
 					},

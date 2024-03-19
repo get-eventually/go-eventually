@@ -1,4 +1,4 @@
-package eventuallyfirestore
+package firestore
 
 import (
 	"context"
@@ -10,10 +10,10 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/get-eventually/go-eventually/core/event"
-	"github.com/get-eventually/go-eventually/core/message"
-	"github.com/get-eventually/go-eventually/core/serde"
-	"github.com/get-eventually/go-eventually/core/version"
+	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/message"
+	"github.com/get-eventually/go-eventually/serde"
+	"github.com/get-eventually/go-eventually/version"
 )
 
 //nolint:exhaustruct // Only used for interface assertion.
@@ -25,21 +25,17 @@ type EventStore struct {
 	Serde  serde.Bytes[message.Message]
 }
 
+// NewEventStore creates a new EventStore instance.
+func NewEventStore(client *firestore.Client, msgSerde serde.Bytes[message.Message]) EventStore {
+	return EventStore{Client: client, Serde: msgSerde}
+}
+
 func (es EventStore) eventsCollection() *firestore.CollectionRef {
 	return es.Client.Collection("Events")
 }
 
 func (es EventStore) streamsCollection() *firestore.CollectionRef {
 	return es.Client.Collection("EventStreams")
-}
-
-func printDocs(prefix string, documents []*firestore.DocumentSnapshot) {
-	printable := make([]map[string]interface{}, 0, len(documents))
-	for _, v := range documents {
-		printable = append(printable, v.Data())
-	}
-
-	fmt.Printf("PRINT %s: %#v\n\n", prefix, printable)
 }
 
 // Stream implements the event.Streamer interface.
@@ -50,12 +46,6 @@ func (es EventStore) Stream(
 	selector version.Selector,
 ) error {
 	defer close(stream)
-
-	docs, _ := es.eventsCollection().Documents(ctx).GetAll()
-	printDocs("EVENTS", docs)
-
-	docs, _ = es.streamsCollection().Documents(ctx).GetAll()
-	printDocs("STREAMS", docs)
 
 	iter := es.eventsCollection().
 		Where("event_stream_id", "==", string(id)).
@@ -81,8 +71,8 @@ func (es EventStore) Stream(
 		}
 
 		var metadata message.Metadata
-		if v, ok := doc.Data()["metadata"]; ok && v != nil {
-			metadata = v.(message.Metadata)
+		if v, ok := doc.Data()["metadata"].(message.Metadata); ok && v != nil {
+			metadata = v
 		}
 
 		stream <- event.Persisted{

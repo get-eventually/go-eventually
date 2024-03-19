@@ -1,4 +1,4 @@
-package oteleventually
+package opentelemetry
 
 import (
 	"context"
@@ -9,8 +9,8 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/get-eventually/go-eventually/core/event"
-	"github.com/get-eventually/go-eventually/core/version"
+	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/version"
 )
 
 // Attribute keys used by the InstrumentedEventStore instrumentation.
@@ -21,7 +21,7 @@ const (
 	EventStoreNumEventsKey        attribute.Key = "event_store.num_events"
 )
 
-var _ event.Store = &InstrumentedEventStore{}
+var _ event.Store = new(InstrumentedEventStore)
 
 // InstrumentedEventStore is a wrapper type over an event.Store
 // instance to provide instrumentation, in the form of metrics and traces
@@ -66,8 +66,10 @@ func NewInstrumentedEventStore(eventStore event.Store, options ...Option) (*Inst
 	cfg := newConfig(options...)
 
 	ies := &InstrumentedEventStore{
-		eventStore: eventStore,
-		tracer:     cfg.tracer(),
+		eventStore:     eventStore,
+		tracer:         cfg.tracer(),
+		streamDuration: nil,
+		appendDuration: nil,
 	}
 
 	if err := ies.registerMetrics(cfg.meter()); err != nil {

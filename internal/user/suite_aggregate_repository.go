@@ -14,14 +14,14 @@ import (
 	"github.com/get-eventually/go-eventually/version"
 )
 
-// AggregateRepository returns an executable testing suite running on the
+// AggregateRepositorySuite returns an executable testing suite running on the
 // agfgregate.Repository value provided in input.
 //
 // The aggregate.Repository value requested should comply with the given signature.
 //
 // Package user of this module exposes a Protobuf-based serde, which can be useful
 // to test serialization and deserialization of data to the target repository implementation.
-func AggregateRepository(repository aggregate.Repository[uuid.UUID, *User]) func(t *testing.T) { //nolint:funlen,lll // It's a test suite.
+func AggregateRepositorySuite(repository aggregate.Repository[uuid.UUID, *User]) func(t *testing.T) { //nolint:funlen,lll // It's a test suite.
 	return func(t *testing.T) {
 		ctx := context.Background()
 

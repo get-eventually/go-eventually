@@ -1,4 +1,4 @@
-package oteleventually
+package opentelemetry
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/get-eventually/go-eventually/core/aggregate"
+	"github.com/get-eventually/go-eventually/aggregate"
 )
 
 // Attribute keys used by the InstrumentedRepository instrumentation.
@@ -74,6 +74,8 @@ func NewInstrumentedRepository[I aggregate.ID, T aggregate.Root[I]](
 		aggregateType: aggregateType,
 		repository:    repository,
 		tracer:        cfg.tracer(),
+		getDuration:   nil,
+		saveDuration:  nil,
 	}
 
 	if err := ir.registerMetrics(cfg.meter()); err != nil {

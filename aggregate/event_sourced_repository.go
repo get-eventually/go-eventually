@@ -26,7 +26,7 @@ func RehydrateFromEvents[I ID](root Root[I], eventStream event.StreamRead) error
 
 // RehydrateFromState rehydrates an aggregate.Root instance
 // using a state type, typically coming from an external state type (e.g. Protobuf type)
-// and aggregate.Repository implementation (e.g. eventuallypostgres.AggregateRepository).
+// and aggregate.Repository implementation (e.g. postgres.AggregateRepository).
 func RehydrateFromState[I ID, Src Root[I], Dst any](
 	v version.Version,
 	dst Dst,

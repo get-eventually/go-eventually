@@ -1,4 +1,4 @@
-package eventuallypostgres
+package postgres
 
 import (
 	"context"
@@ -10,10 +10,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/get-eventually/go-eventually/core/event"
-	"github.com/get-eventually/go-eventually/core/message"
-	"github.com/get-eventually/go-eventually/core/serde"
-	"github.com/get-eventually/go-eventually/core/version"
+	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/message"
+	"github.com/get-eventually/go-eventually/serde"
+	"github.com/get-eventually/go-eventually/version"
 )
 
 func appendDomainEvents(
@@ -32,7 +32,7 @@ func appendDomainEvents(
 
 	var oldVersion version.Version
 	if err := row.Scan(&oldVersion); err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return 0, fmt.Errorf("eventuallypostgres.appendDomainEvents: failed to scan old event stream version, %w", err)
+		return 0, fmt.Errorf("postgres.appendDomainEvents: failed to scan old event stream version, %w", err)
 	}
 
 	if v, ok := expected.(version.CheckExact); ok && oldVersion != version.Version(v) {
@@ -55,7 +55,7 @@ func appendDomainEvents(
 		UPDATE SET version = $2`,
 		id, newVersion,
 	); err != nil {
-		return 0, fmt.Errorf("eventuallypostgres.EventStore: failed to update event stream, %w", err)
+		return 0, fmt.Errorf("postgres.EventStore: failed to update event stream, %w", err)
 	}
 
 	for i, event := range events {
@@ -81,7 +81,7 @@ func appendDomainEvent(
 
 	data, err := messageSerializer.Serialize(msg)
 	if err != nil {
-		return fmt.Errorf("eventuallypostgres.appendDomainEvent: failed to serialize domain event, %w", err)
+		return fmt.Errorf("postgres.appendDomainEvent: failed to serialize domain event, %w", err)
 	}
 
 	enrichedMetadata := evt.Metadata.
@@ -95,11 +95,11 @@ func appendDomainEvent(
 
 	if _, err = tx.Exec(
 		ctx,
-		`INSERT INTO events (event_stream_id, "type", "version", event, metadata) 
+		`INSERT INTO events (event_stream_id, "type", "version", event, metadata)
 		VALUES ($1, $2, $3, $4, $5)`,
 		id, msg.Name(), eventVersion, data, metadata,
 	); err != nil {
-		return fmt.Errorf("eventuallypostgres.appendDomainEvent: failed to append new domain event to event store, %w", err)
+		return fmt.Errorf("postgres.appendDomainEvent: failed to append new domain event to event store, %w", err)
 	}
 
 	return nil
@@ -112,7 +112,7 @@ func serializeMetadata(metadata message.Metadata) ([]byte, error) {
 
 	data, err := json.Marshal(metadata)
 	if err != nil {
-		return nil, fmt.Errorf("eventuallypostgres.serializeMetadata: failed to marshal to json, %w", err)
+		return nil, fmt.Errorf("postgres.serializeMetadata: failed to marshal to json, %w", err)
 	}
 
 	return data, nil

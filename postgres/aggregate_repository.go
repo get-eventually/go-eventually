@@ -1,4 +1,4 @@
-package eventuallypostgres
+package postgres
 
 import (
 	"context"
@@ -8,11 +8,11 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/get-eventually/go-eventually/core/aggregate"
-	"github.com/get-eventually/go-eventually/core/event"
-	"github.com/get-eventually/go-eventually/core/message"
-	"github.com/get-eventually/go-eventually/core/serde"
-	"github.com/get-eventually/go-eventually/core/version"
+	"github.com/get-eventually/go-eventually/aggregate"
+	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/message"
+	"github.com/get-eventually/go-eventually/serde"
+	"github.com/get-eventually/go-eventually/version"
 )
 
 // AggregateRepository implements the aggregate.Repository interface
@@ -61,7 +61,7 @@ func (repo AggregateRepository[ID, T]) get(
 		return zeroValue, aggregate.ErrRootNotFound
 	} else if err != nil {
 		return zeroValue, fmt.Errorf(
-			"eventuallypostgres.AggregateRepository.Get: failed to fetch aggregate state from database: %w",
+			"postgres.AggregateRepository.Get: failed to fetch aggregate state from database: %w",
 			err,
 		)
 	}
@@ -69,7 +69,7 @@ func (repo AggregateRepository[ID, T]) get(
 	root, err := aggregate.RehydrateFromState[ID, T, []byte](v, state, repo.AggregateSerde)
 	if err != nil {
 		return zeroValue, fmt.Errorf(
-			"eventuallypostgres.AggregateRepository.Get: failed to deserialize state into aggregate root object: %w",
+			"postgres.AggregateRepository.Get: failed to deserialize state into aggregate root object: %w",
 			err,
 		)
 	}
@@ -154,5 +154,5 @@ func (repo AggregateRepository[ID, T]) saveAggregateState(
 }
 
 func (repo AggregateRepository[ID, T]) saveErr(msg string, args ...any) error {
-	return fmt.Errorf("eventuallypostgres.AggregateRepository: "+msg, args...)
+	return fmt.Errorf("postgres.AggregateRepository: "+msg, args...)
 }

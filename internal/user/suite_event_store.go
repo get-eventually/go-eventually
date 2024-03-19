@@ -13,15 +13,15 @@ import (
 	"github.com/get-eventually/go-eventually/version"
 )
 
-// EventStore returns an executable testing suite running on the event.Store
+// EventStoreSuite returns an executable testing suite running on the event.Store
 // value provided in input.
-func EventStore(eventStore event.Store) func(t *testing.T) {
+func EventStoreSuite(eventStore event.Store) func(t *testing.T) {
 	return func(t *testing.T) {
 		ctx := context.Background()
 
 		// Testing the Event-sourced repository implementation, which indirectly
 		// tests the Event Store instance.
-		AggregateRepository(aggregate.NewEventSourcedRepository(eventStore, Type))(t)
+		AggregateRepositorySuite(aggregate.NewEventSourcedRepository(eventStore, Type))(t)
 
 		t.Run("append works when used with version.CheckAny", func(t *testing.T) {
 			id := uuid.New()

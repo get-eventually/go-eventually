@@ -1,4 +1,4 @@
-package oteleventually
+package opentelemetry
 
 import (
 	"go.opentelemetry.io/otel"
@@ -6,7 +6,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-const instrumentationName = "github.com/get-eventually/go-eventually/oteleventually"
+const instrumentationName = "github.com/get-eventually/go-eventually/opentelemetry"
 
 type config struct {
 	MeterProvider  metric.MeterProvider

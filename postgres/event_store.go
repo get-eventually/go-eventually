@@ -1,4 +1,4 @@
-package eventuallypostgres
+package postgres
 
 import (
 	"context"
@@ -9,10 +9,10 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/get-eventually/go-eventually/core/event"
-	"github.com/get-eventually/go-eventually/core/message"
-	"github.com/get-eventually/go-eventually/core/serde"
-	"github.com/get-eventually/go-eventually/core/version"
+	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/message"
+	"github.com/get-eventually/go-eventually/serde"
+	"github.com/get-eventually/go-eventually/version"
 )
 
 var _ event.Store = EventStore{}
@@ -48,7 +48,7 @@ func (es EventStore) Stream(
 	}
 
 	if err != nil {
-		return fmt.Errorf("eventuallypostgres.EventStore: failed to query events table: %w", err)
+		return fmt.Errorf("postgres.EventStore: failed to query events table: %w", err)
 	}
 
 	for rows.Next() {
@@ -62,18 +62,18 @@ func (es EventStore) Stream(
 		}
 
 		if err := rows.Scan(&evt.Version, &rawEvent, &rawMetadata); err != nil {
-			return fmt.Errorf("eventuallypostgres.EventStore: failed to scan next row")
+			return fmt.Errorf("postgres.EventStore: failed to scan next row")
 		}
 
 		msg, err := es.Serde.Deserialize(rawEvent)
 		if err != nil {
-			return fmt.Errorf("eventuallypostgres.EventStore: failed to deserialize event: %w", err)
+			return fmt.Errorf("postgres.EventStore: failed to deserialize event: %w", err)
 		}
 
 		evt.Message = msg
 
 		if err := json.Unmarshal(rawMetadata, &evt.Metadata); err != nil {
-			return fmt.Errorf("eventuallypostgres.EventStore: failed to deserialize metadata: %w", err)
+			return fmt.Errorf("postgres.EventStore: failed to deserialize metadata: %w", err)
 		}
 
 		stream <- evt
@@ -93,9 +93,10 @@ func (es EventStore) Append(
 		IsoLevel:       pgx.Serializable,
 		AccessMode:     pgx.ReadWrite,
 		DeferrableMode: pgx.Deferrable,
+		BeginQuery:     "",
 	})
 	if err != nil {
-		return 0, fmt.Errorf("eventuallypostgres.EventStore: failed to open database transaction: %w", err)
+		return 0, fmt.Errorf("postgres.EventStore: failed to open database transaction: %w", err)
 	}
 
 	defer func() {
@@ -105,11 +106,11 @@ func (es EventStore) Append(
 
 	newVersion, err := appendDomainEvents(ctx, tx, es.Serde, id, expected, events...)
 	if err != nil {
-		return 0, fmt.Errorf("eventuallypostgres.EventStore: failed to append domain events: %w", err)
+		return 0, fmt.Errorf("postgres.EventStore: failed to append domain events: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return 0, fmt.Errorf("eventuallypostgres.EventStore: failed to commit transaction, %w", err)
+		return 0, fmt.Errorf("postgres.EventStore: failed to commit transaction, %w", err)
 	}
 
 	return newVersion, nil
