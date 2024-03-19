@@ -16,22 +16,22 @@ type Event message.Message
 //
 // Due to lack of sum types (a.k.a enum types), Events cannot currently
 // take advantage of the new generics feature introduced with Go 1.18.
-type Envelope message.GenericEnvelope
+type Envelope[T Event] message.Envelope[T]
 
 // StreamID identifies an Event Stream, which is a log of ordered Domain Events.
 type StreamID string
 
 // Persisted represents an Domain Event that has been persisted into the Event Store.
-type Persisted struct {
+type Persisted[T Event] struct {
 	StreamID
 	version.Version
-	Envelope
+	Envelope[T]
 }
 
 // ToEnvelope returns an Envelope instance with the provided Event
 // instance and no Metadata.
-func ToEnvelope(event Event) Envelope {
-	return Envelope{
+func ToEnvelope[T Event](event T) Envelope[T] {
+	return Envelope[T]{
 		Message:  event,
 		Metadata: nil,
 	}
@@ -39,14 +39,11 @@ func ToEnvelope(event Event) Envelope {
 
 // ToEnvelopes returns a list of Envelopes from a list of Events.
 // The returned Envelopes have no Metadata.
-func ToEnvelopes(events ...Event) []Envelope {
-	envelopes := make([]Envelope, 0, len(events))
+func ToEnvelopes[T Event](events ...T) []Envelope[T] {
+	envelopes := make([]Envelope[T], 0, len(events))
 
 	for _, event := range events {
-		envelopes = append(envelopes, Envelope{
-			Message:  event,
-			Metadata: nil,
-		})
+		envelopes = append(envelopes, ToEnvelope(event))
 	}
 
 	return envelopes

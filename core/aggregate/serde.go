@@ -3,6 +3,7 @@ package aggregate
 import (
 	"fmt"
 
+	"github.com/get-eventually/go-eventually/core/event"
 	"github.com/get-eventually/go-eventually/core/serde"
 	"github.com/get-eventually/go-eventually/core/version"
 )
@@ -10,7 +11,7 @@ import (
 // RehydrateFromState rehydrates an aggregate.Root instance
 // using a state type, typically coming from an external state type (e.g. Protobuf type)
 // and aggregate.Repository implementation (e.g. eventuallypostgres.AggregateRepository).
-func RehydrateFromState[I ID, Src Root[I], Dst any](
+func RehydrateFromState[I ID, Evt event.Event, Src Root[I, Evt], Dst any](
 	v version.Version,
 	dst Dst,
 	deserializer serde.Deserializer[Src, Dst],

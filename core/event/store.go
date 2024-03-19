@@ -10,13 +10,13 @@ import (
 
 // Stream represents a stream of persisted Domain Events coming from some
 // stream-able source of data, like an Event Store.
-type Stream = chan Persisted
+type Stream[T Event] chan Persisted[T]
 
 // StreamWrite provides write-only access to an event.Stream object.
-type StreamWrite chan<- Persisted
+type StreamWrite[T Event] chan<- Persisted[T]
 
 // StreamRead provides read-only access to an event.Stream object.
-type StreamRead <-chan Persisted
+type StreamRead[T Event] <-chan Persisted[T]
 
 // SliceToStream converts a slice of event.Persisted domain events to an event.Stream type.
 //
@@ -24,8 +24,8 @@ type StreamRead <-chan Persisted
 //
 // The channel returned by the function contains all the original slice elements
 // and is already closed.
-func SliceToStream(events []Persisted) Stream {
-	ch := make(chan Persisted, len(events))
+func SliceToStream[T Event](events []Persisted[T]) Stream[T] {
+	ch := make(chan Persisted[T], len(events))
 	defer close(ch)
 
 	for _, event := range events {
@@ -38,13 +38,13 @@ func SliceToStream(events []Persisted) Stream {
 // StreamToSlice synchronously exhausts an EventStream to an event.Persisted slice,
 // and returns an error if the EventStream origin, passed here as a closure,
 // fails with an error.
-func StreamToSlice(ctx context.Context, f func(ctx context.Context, stream StreamWrite) error) ([]Persisted, error) {
-	ch := make(chan Persisted, 1)
+func StreamToSlice[T Event](ctx context.Context, f func(ctx context.Context, stream StreamWrite[T]) error) ([]Persisted[T], error) {
+	ch := make(chan Persisted[T], 1)
 	group, ctx := errgroup.WithContext(ctx)
 
 	group.Go(func() error { return f(ctx, ch) })
 
-	var events []Persisted
+	var events []Persisted[T]
 	for event := range ch {
 		events = append(events, event)
 	}
@@ -54,20 +54,20 @@ func StreamToSlice(ctx context.Context, f func(ctx context.Context, stream Strea
 
 // Streamer is an event.Store trait used to open a specific Event Stream and stream it back
 // in the application.
-type Streamer interface {
-	Stream(ctx context.Context, stream StreamWrite, id StreamID, selector version.Selector) error
+type Streamer[T Event] interface {
+	Stream(ctx context.Context, stream StreamWrite[T], id StreamID, selector version.Selector) error
 }
 
 // Appender is an event.Store trait used to append new Domain Events in the Event Stream.
-type Appender interface {
-	Append(ctx context.Context, id StreamID, expected version.Check, events ...Envelope) (version.Version, error)
+type Appender[T Event] interface {
+	Append(ctx context.Context, id StreamID, expected version.Check, events ...Envelope[T]) (version.Version, error)
 }
 
 // Store represents an Event Store, a stateful data source where Domain Events
 // can be safely stored, and easily replayed.
-type Store interface {
-	Appender
-	Streamer
+type Store[T Event] interface {
+	Appender[T]
+	Streamer[T]
 }
 
 // FusedStore is a convenience type to fuse
@@ -83,7 +83,7 @@ type Store interface {
 //
 // Using a FusedStore instance you can fuse both instances
 // together, and use it with the rest of the library ecosystem.
-type FusedStore struct {
-	Appender
-	Streamer
+type FusedStore[T Event] struct {
+	Appender[T]
+	Streamer[T]
 }

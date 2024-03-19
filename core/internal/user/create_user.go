@@ -9,6 +9,7 @@ import (
 
 	"github.com/get-eventually/go-eventually/core/aggregate"
 	"github.com/get-eventually/go-eventually/core/command"
+	"github.com/get-eventually/go-eventually/core/event"
 )
 
 type CreateCommand struct {
@@ -23,7 +24,7 @@ func (CreateCommand) Name() string {
 
 type CreateCommandHandler struct {
 	UUIDGenerator  func() uuid.UUID
-	UserRepository aggregate.Saver[uuid.UUID, *User]
+	UserRepository aggregate.Saver[uuid.UUID, event.Event, *User]
 }
 
 func (h CreateCommandHandler) Handle(ctx context.Context, cmd command.Envelope[CreateCommand]) error {

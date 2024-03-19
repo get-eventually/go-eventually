@@ -10,24 +10,23 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/get-eventually/go-eventually/core/event"
-	"github.com/get-eventually/go-eventually/core/message"
 	"github.com/get-eventually/go-eventually/core/serde"
 	"github.com/get-eventually/go-eventually/core/version"
 )
 
-var _ event.Store = EventStore{}
+var _ event.Store = EventStore[event.Event]{}
 
 // EventStore is an event.Store implementation targeted to PostgreSQL databases.
 //
 // The implementation uses "event_streams" and "events" as their
 // operational tables. Updates to these tables are transactional.
-type EventStore struct {
+type EventStore[T event.Event] struct {
 	Conn  *pgxpool.Pool
-	Serde serde.Bytes[message.Message]
+	Serde serde.Bytes[T]
 }
 
 // Stream implements the event.Streamer interface.
-func (es EventStore) Stream(
+func (es EventStore[T]) Stream(
 	ctx context.Context,
 	stream event.StreamWrite,
 	id event.StreamID,
@@ -83,7 +82,7 @@ func (es EventStore) Stream(
 }
 
 // Append implements event.Store.
-func (es EventStore) Append(
+func (es EventStore[T]) Append(
 	ctx context.Context,
 	id event.StreamID,
 	expected version.Check,

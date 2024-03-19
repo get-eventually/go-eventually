@@ -11,7 +11,7 @@ import (
 )
 
 // RehydrateFromEvents rehydrates an Aggregate Root from a read-only Event Stream.
-func RehydrateFromEvents[I ID](root Root[I], eventStream event.StreamRead) error {
+func RehydrateFromEvents[I ID, Evt event.Event](root Root[I, Evt], eventStream event.StreamRead[Evt]) error {
 	for event := range eventStream {
 		if err := root.Apply(event.Message); err != nil {
 			return fmt.Errorf("aggregate.RehydrateFromEvents: failed to record event: %w", err)
@@ -25,20 +25,20 @@ func RehydrateFromEvents[I ID](root Root[I], eventStream event.StreamRead) error
 
 // Factory is a function that creates new zero-valued
 // instances of an aggregate.Root implementation.
-type Factory[I ID, T Root[I]] func() T
+type Factory[I ID, Evt event.Event, T Root[I, Evt]] func() T
 
 // EventSourcedRepository provides an aggregate.Repository interface implementation
 // that uses an event.Store to store and load the state of the Aggregate Root.
-type EventSourcedRepository[I ID, T Root[I]] struct {
-	eventStore event.Store
-	typ        Type[I, T]
+type EventSourcedRepository[I ID, Evt event.Event, T Root[I, Evt]] struct {
+	eventStore event.Store[Evt]
+	typ        Type[I, Evt, T]
 }
 
 // NewEventSourcedRepository returns a new EventSourcedRepository implementation
 // to store and load Aggregate Roots, specified by the aggregate.Type,
 // using the provided event.Store implementation.
-func NewEventSourcedRepository[I ID, T Root[I]](eventStore event.Store, typ Type[I, T]) EventSourcedRepository[I, T] {
-	return EventSourcedRepository[I, T]{
+func NewEventSourcedRepository[I ID, Evt event.Event, T Root[I, Evt]](eventStore event.Store[Evt], typ Type[I, Evt, T]) EventSourcedRepository[I, Evt, T] {
+	return EventSourcedRepository[I, Evt, T]{
 		eventStore: eventStore,
 		typ:        typ,
 	}
@@ -50,18 +50,23 @@ func NewEventSourcedRepository[I ID, T Root[I]](eventStore event.Store, typ Type
 //
 // An error is returned if the underlying Event Store fails, or if an error
 // occurs while trying to rehydrate the Aggregate Root state from its Event Stream.
-func (repo EventSourcedRepository[I, T]) Get(ctx context.Context, id I) (T, error) {
+func (repo EventSourcedRepository[I, Evt, T]) Get(ctx context.Context, id I) (T, error) {
 	var zeroValue T
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	streamID := event.StreamID(id.String())
-	eventStream := make(event.Stream, 1)
+	eventStream := make(event.Stream[Evt], 1)
 
 	group, ctx := errgroup.WithContext(ctx)
 	group.Go(func() error {
-		if err := repo.eventStore.Stream(ctx, eventStream, streamID, version.SelectFromBeginning); err != nil {
+		if err := repo.eventStore.Stream(
+			ctx,
+			chan<- event.Persisted[Evt](eventStream),
+			streamID,
+			version.SelectFromBeginning,
+		); err != nil {
 			return fmt.Errorf("%T: failed while reading event from stream: %w", repo, err)
 		}
 
@@ -70,7 +75,7 @@ func (repo EventSourcedRepository[I, T]) Get(ctx context.Context, id I) (T, erro
 
 	root := repo.typ.Factory()
 
-	if err := RehydrateFromEvents[I](root, eventStream); err != nil {
+	if err := RehydrateFromEvents[I, Evt](root, chan event.Persisted[Evt](eventStream)); err != nil {
 		return zeroValue, fmt.Errorf("%T: failed to rehydrate aggregate root: %w", repo, err)
 	}
 
@@ -89,7 +94,7 @@ func (repo EventSourcedRepository[I, T]) Get(ctx context.Context, id I) (T, erro
 // new, uncommitted Domain Events recorded through the Root, if any.
 //
 // An error is returned if the underlying Event Store fails.
-func (repo EventSourcedRepository[I, T]) Save(ctx context.Context, root T) error {
+func (repo EventSourcedRepository[I, Evt, T]) Save(ctx context.Context, root T) error {
 	events := root.FlushRecordedEvents()
 	if len(events) == 0 {
 		return nil

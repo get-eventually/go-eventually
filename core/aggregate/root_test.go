@@ -25,7 +25,7 @@ func TestRoot(t *testing.T) {
 		usr, err := user.Create(id, firstName, lastName, email, birthDate)
 		assert.NoError(t, err)
 
-		expectedEvents := []event.Envelope{
+		expectedEvents := []event.Envelope[event.Event]{
 			{
 				Message: user.WasCreated{
 					ID:        id,

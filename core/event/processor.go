@@ -12,15 +12,15 @@ import (
 const DefaultRunnerBufferSize = 32
 
 // Processor represents a component that can process persisted Domain Events.
-type Processor interface {
-	Process(ctx context.Context, event Persisted) error
+type Processor[T Event] interface {
+	Process(ctx context.Context, event Persisted[T]) error
 }
 
 // ProcessorFunc is a functional implementation of the Processor interface.
-type ProcessorFunc func(ctx context.Context, event Persisted) error
+type ProcessorFunc[T Event] func(ctx context.Context, event Persisted[T]) error
 
 // Process implements the event.Processor interface.
-func (pf ProcessorFunc) Process(ctx context.Context, event Persisted) error {
+func (pf ProcessorFunc[T]) Process(ctx context.Context, event Persisted[T]) error {
 	return pf(ctx, event)
 }
 
@@ -28,25 +28,25 @@ func (pf ProcessorFunc) Process(ctx context.Context, event Persisted) error {
 //
 // Usually, these are stateful components, and their state can be updated using
 // the Checkpoint method.
-type Subscription interface {
+type Subscription[T Event] interface {
 	Name() string
-	Start(ctx context.Context, eventStream StreamWrite) error
-	Checkpoint(ctx context.Context, event Persisted) error
+	Start(ctx context.Context, eventStream StreamWrite[T]) error
+	Checkpoint(ctx context.Context, event Persisted[T]) error
 }
 
 // ProcessorRunner is an infrastructural component that orchestrates the
 // processing of a Domain Event using the provided Event Processor and Subscription,
 // to subscribe to incoming events from the Event Store.
-type ProcessorRunner struct {
-	Processor
-	Subscription
+type ProcessorRunner[T Event] struct {
+	Processor[T]
+	Subscription[T]
 
 	BufferSize int
 
 	Logger func(string, ...any)
 }
 
-func (r ProcessorRunner) log(format string, args ...any) {
+func (r ProcessorRunner[T]) log(format string, args ...any) {
 	if r.Logger == nil {
 		return
 	}
@@ -66,13 +66,13 @@ func (r ProcessorRunner) log(format string, args ...any) {
 // To stop the Runner, cancel the provided context.
 // If the error returned upon exit is context.Canceled, that usually represent
 // a case of normal operation, so it could be treated as a non-error.
-func (r ProcessorRunner) Run(ctx context.Context) error {
+func (r ProcessorRunner[T]) Run(ctx context.Context) error {
 	if r.BufferSize == 0 {
 		r.BufferSize = DefaultRunnerBufferSize
 	}
 
-	eventStream := make(chan Persisted, r.BufferSize)
-	toCheckpoint := make(chan Persisted, r.BufferSize)
+	eventStream := make(chan Persisted[T], r.BufferSize)
+	toCheckpoint := make(chan Persisted[T], r.BufferSize)
 
 	group, ctx := errgroup.WithContext(ctx)
 

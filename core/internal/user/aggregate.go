@@ -17,7 +17,7 @@ var (
 	ErrInvalidBirthDate = fmt.Errorf("user.User: invalid birth date, not specified")
 )
 
-var Type = aggregate.Type[uuid.UUID, *User]{
+var Type = aggregate.Type[uuid.UUID, event.Event, *User]{
 	Name:    "User",
 	Factory: func() *User { return &User{} },
 }
@@ -43,7 +43,7 @@ func (EmailWasUpdated) Name() string {
 }
 
 type User struct {
-	aggregate.BaseRoot
+	aggregate.BaseRoot[event.Event]
 
 	// Aggregate field should remain unexported if possible,
 	// to enforce encapsulation.
@@ -97,7 +97,7 @@ func Create(id uuid.UUID, firstName, lastName, email string, birthDate time.Time
 		return nil, ErrInvalidBirthDate
 	}
 
-	if err := aggregate.RecordThat[uuid.UUID](user, event.Envelope{
+	if err := aggregate.RecordThat[uuid.UUID, event.Event](user, event.Envelope[event.Event]{
 		Message: WasCreated{
 			ID:        id,
 			FirstName: firstName,
@@ -117,7 +117,7 @@ func (user *User) UpdateEmail(email string) error {
 		return fmt.Errorf("%T: invalid email, is empty", user)
 	}
 
-	if err := aggregate.RecordThat[uuid.UUID](user, event.Envelope{
+	if err := aggregate.RecordThat[uuid.UUID, event.Event](user, event.Envelope[event.Event]{
 		Message: EmailWasUpdated{
 			Email: email,
 		},
