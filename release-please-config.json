@@ -34,22 +34,14 @@
     {
       "type": "linked-versions",
       "groupName": "firestore->core",
-      "components": ["firestore", "core"]
-    },
-    {
-      "type": "linked-versions",
-      "groupName": "oteleventually->core",
-      "components": ["oteleventually", "core"]
-    },
-    {
-      "type": "linked-versions",
-      "groupName": "postgres->core",
-      "components": ["postgres", "core", "integrationtest"]
-    },
-    {
-      "type": "linked-versions",
-      "groupName": "serdes->core",
-      "components": ["serdes", "core"]
+      "components": [
+        "core",
+        "firestore",
+        "oteleventually",
+        "postgres",
+        "serdes",
+        "integrationtest"
+      ]
     }
   ],
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json"
