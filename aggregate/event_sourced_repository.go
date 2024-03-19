@@ -7,6 +7,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/serde"
 	"github.com/get-eventually/go-eventually/version"
 )
 
@@ -21,6 +22,26 @@ func RehydrateFromEvents[I ID](root Root[I], eventStream event.StreamRead) error
 	}
 
 	return nil
+}
+
+// RehydrateFromState rehydrates an aggregate.Root instance
+// using a state type, typically coming from an external state type (e.g. Protobuf type)
+// and aggregate.Repository implementation (e.g. eventuallypostgres.AggregateRepository).
+func RehydrateFromState[I ID, Src Root[I], Dst any](
+	v version.Version,
+	dst Dst,
+	deserializer serde.Deserializer[Src, Dst],
+) (Src, error) {
+	var zeroValue Src
+
+	src, err := deserializer.Deserialize(dst)
+	if err != nil {
+		return zeroValue, fmt.Errorf("aggregate.RehydrateFromState: failed to deserialize src into dst root, %w", err)
+	}
+
+	src.setVersion(v)
+
+	return src, nil
 }
 
 // Factory is a function that creates new zero-valued
@@ -62,7 +83,7 @@ func (repo EventSourcedRepository[I, T]) Get(ctx context.Context, id I) (T, erro
 	group, ctx := errgroup.WithContext(ctx)
 	group.Go(func() error {
 		if err := repo.eventStore.Stream(ctx, eventStream, streamID, version.SelectFromBeginning); err != nil {
-			return fmt.Errorf("%T: failed while reading event from stream: %w", repo, err)
+			return fmt.Errorf("aggregate.EventSourcedRepository: failed while reading event from stream, %w", err)
 		}
 
 		return nil
@@ -99,7 +120,7 @@ func (repo EventSourcedRepository[I, T]) Save(ctx context.Context, root T) error
 	expectedVersion := version.CheckExact(root.Version() - version.Version(len(events)))
 
 	if _, err := repo.eventStore.Append(ctx, streamID, expectedVersion, events...); err != nil {
-		return fmt.Errorf("%T: failed to commit recorded events: %w", repo, err)
+		return fmt.Errorf("aggregate.EventSourcedRepository: failed to commit recorded events: %w", err)
 	}
 
 	return nil

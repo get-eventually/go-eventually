@@ -54,7 +54,7 @@ func FromGenericEnvelope[T Command](cmd GenericEnvelope) (Envelope[T], bool) {
 		}, true
 	}
 
-	return Envelope[T]{}, false
+	return Envelope[T]{}, false //nolint:exhaustruct // This is a zero value anyway.
 }
 
 // ToEnvelope is a convenience function that wraps the provided Command type

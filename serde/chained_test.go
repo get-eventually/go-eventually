@@ -1,17 +1,17 @@
-package serdes_test
+package serde_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/get-eventually/go-eventually/serdes"
+	"github.com/get-eventually/go-eventually/serde"
 )
 
 func TestChained(t *testing.T) {
-	serde := serdes.Chain[myData, *myJSONData, []byte](
+	mySerde := serde.Chain[myData, *myJSONData, []byte](
 		myDataSerde,
-		serdes.NewJSON(func() *myJSONData { return new(myJSONData) }),
+		serde.NewJSON(func() *myJSONData { return new(myJSONData) }),
 	)
 
 	data := myData{
@@ -22,11 +22,11 @@ func TestChained(t *testing.T) {
 
 	expected := []byte(`{"enum":"FIRST","something":1,"else":"Else"}`)
 
-	bytes, err := serde.Serialize(data)
+	bytes, err := mySerde.Serialize(data)
 	assert.NoError(t, err)
 	assert.Equal(t, expected, bytes)
 
-	deserialized, err := serde.Deserialize(bytes)
+	deserialized, err := mySerde.Deserialize(bytes)
 	assert.NoError(t, err)
 	assert.Equal(t, data, deserialized)
 }

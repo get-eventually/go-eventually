@@ -1,0 +1,8 @@
+go 1.19
+
+use (
+	.
+	./external/firestore
+	./external/oteleventually
+	./external/postgres
+)

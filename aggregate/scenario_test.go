@@ -1,4 +1,4 @@
-package scenario_test
+package aggregate_test
 
 import (
 	"testing"
@@ -6,12 +6,12 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/get-eventually/go-eventually/aggregate"
 	"github.com/get-eventually/go-eventually/event"
 	"github.com/get-eventually/go-eventually/internal/user"
-	"github.com/get-eventually/go-eventually/test/scenario"
 )
 
-func TestAggregateRoot(t *testing.T) {
+func TestScenario(t *testing.T) {
 	var (
 		id        = uuid.New()
 		firstName = "John"
@@ -21,8 +21,8 @@ func TestAggregateRoot(t *testing.T) {
 	)
 
 	t.Run("test an aggregate function with one factory", func(t *testing.T) {
-		scenario.
-			AggregateRoot(user.Type).
+		aggregate.
+			Scenario(user.Type).
 			When(func() (*user.User, error) {
 				return user.Create(id, firstName, lastName, email, birthDate)
 			}).
@@ -37,8 +37,8 @@ func TestAggregateRoot(t *testing.T) {
 	})
 
 	t.Run("test an aggregate function with one factory call that returns an error", func(t *testing.T) {
-		scenario.
-			AggregateRoot(user.Type).
+		aggregate.
+			Scenario(user.Type).
 			When(func() (*user.User, error) {
 				return user.Create(id, "", lastName, email, birthDate)
 			}).
@@ -47,8 +47,8 @@ func TestAggregateRoot(t *testing.T) {
 	})
 
 	t.Run("test an aggregate function with one factory call that returns a specific error", func(t *testing.T) {
-		scenario.
-			AggregateRoot(user.Type).
+		aggregate.
+			Scenario(user.Type).
 			When(func() (*user.User, error) {
 				return user.Create(id, "", lastName, email, birthDate)
 			}).
@@ -57,8 +57,8 @@ func TestAggregateRoot(t *testing.T) {
 	})
 
 	t.Run("test an aggregate function with an already-existing AggregateRoot instance", func(t *testing.T) {
-		scenario.
-			AggregateRoot(user.Type).
+		aggregate.
+			Scenario(user.Type).
 			Given(event.Persisted{
 				StreamID: event.StreamID(id.String()),
 				Version:  1,
@@ -71,7 +71,7 @@ func TestAggregateRoot(t *testing.T) {
 				}),
 			}).
 			When(func(u *user.User) error {
-				return u.UpdateEmail("john.ross@email.com")
+				return u.UpdateEmail("john.ross@email.com", nil)
 			}).
 			Then(2, event.ToEnvelope(user.EmailWasUpdated{
 				Email: "john.ross@email.com",

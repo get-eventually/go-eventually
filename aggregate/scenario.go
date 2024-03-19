@@ -1,39 +1,38 @@
-package scenario
+package aggregate
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/get-eventually/go-eventually/aggregate"
 	"github.com/get-eventually/go-eventually/event"
 	"github.com/get-eventually/go-eventually/version"
 )
 
-// AggregateRootInit is the entrypoint of the Aggregate Root scenario API.
+// ScenarioInit is the entrypoint of the Aggregate Root scenario API.
 //
 // An Aggregate Root scenario can either set the current evaluation context
 // by using Given(), or test a "clean-slate" scenario by using When() directly.
-type AggregateRootInit[I aggregate.ID, T aggregate.Root[I]] struct {
-	typ aggregate.Type[I, T]
+type ScenarioInit[I ID, T Root[I]] struct {
+	typ Type[I, T]
 }
 
-// AggregateRoot is a scenario type to test the result of methods called
+// Scenario is a scenario type to test the result of methods called
 // on an Aggregate Root and their effects.
 //
 // These methods are meant to produce side-effects in the Aggregate Root state, and thus
 // in the overall system, enforcing the domain invariants represented by the
 // Aggregate Root itself.
-func AggregateRoot[I aggregate.ID, T aggregate.Root[I]](typ aggregate.Type[I, T]) AggregateRootInit[I, T] {
-	return AggregateRootInit[I, T]{
+func Scenario[I ID, T Root[I]](typ Type[I, T]) ScenarioInit[I, T] {
+	return ScenarioInit[I, T]{
 		typ: typ,
 	}
 }
 
 // Given allows to set an Aggregate Root state as precondition to the scenario test,
 // by specifying ordered Domain Events.
-func (sc AggregateRootInit[I, T]) Given(events ...event.Persisted) AggregateRootGiven[I, T] {
-	return AggregateRootGiven[I, T]{
+func (sc ScenarioInit[I, T]) Given(events ...event.Persisted) ScenarioGiven[I, T] {
+	return ScenarioGiven[I, T]{
 		typ:   sc.typ,
 		given: events,
 	}
@@ -44,30 +43,30 @@ func (sc AggregateRootInit[I, T]) Given(events ...event.Persisted) AggregateRoot
 //
 // This method requires a closure that return said new Aggregate Root instance
 // (hence why no input parameter) or an error.
-func (sc AggregateRootInit[I, T]) When(fn func() (T, error)) AggregateRootWhen[I, T] {
-	return AggregateRootWhen[I, T]{
+func (sc ScenarioInit[I, T]) When(fn func() (T, error)) ScenarioWhen[I, T] {
+	return ScenarioWhen[I, T]{
 		typ:   sc.typ,
 		given: nil,
 		fn:    fn,
 	}
 }
 
-// AggregateRootGiven is the state of the scenario once the Aggregate Root
-// preconditions have been set through the AggregateRoot().Given() method.
+// ScenarioGiven is the state of the scenario once the Aggregate Root
+// preconditions have been set through the Scenario().Given() method.
 //
 // This state gives access to the When() method to specify the domain command
 // to test using the desired Aggregate Root.
-type AggregateRootGiven[I aggregate.ID, T aggregate.Root[I]] struct {
-	typ   aggregate.Type[I, T]
+type ScenarioGiven[I ID, T Root[I]] struct {
+	typ   Type[I, T]
 	given []event.Persisted
 }
 
 // When allows to call the domain command method on the Aggregate Root instance
-// provided by the previous AggregateRoot().Given() call.
+// provided by the previous Scenario().Given() call.
 //
 // The domain command must be called inside the required closure parameter.
-func (sc AggregateRootGiven[I, T]) When(fn func(T) error) AggregateRootWhen[I, T] {
-	return AggregateRootWhen[I, T]{
+func (sc ScenarioGiven[I, T]) When(fn func(T) error) ScenarioWhen[I, T] {
+	return ScenarioWhen[I, T]{
 		typ:   sc.typ,
 		given: sc.given,
 		fn: func() (T, error) {
@@ -76,7 +75,7 @@ func (sc AggregateRootGiven[I, T]) When(fn func(T) error) AggregateRootWhen[I, T
 			root := sc.typ.Factory()
 			eventStream := event.SliceToStream(sc.given)
 
-			if err := aggregate.RehydrateFromEvents[I](root, eventStream); err != nil {
+			if err := RehydrateFromEvents[I](root, eventStream); err != nil {
 				return zeroValue, err
 			}
 
@@ -89,14 +88,14 @@ func (sc AggregateRootGiven[I, T]) When(fn func(T) error) AggregateRootWhen[I, T
 	}
 }
 
-// AggregateRootWhen is the state of the scenario once the domain command
-// to test has been provided through either AggregateRoot().When() or
-// AggregateRoot().Given().When() paths.
+// ScenarioWhen is the state of the scenario once the domain command
+// to test has been provided through either Scenario().When() or
+// Scenario().Given().When() paths.
 //
 // This state allows to specify the expected outcome on the scenario using either
 // Then(), ThenFails() or ThenError() methods.
-type AggregateRootWhen[I aggregate.ID, T aggregate.Root[I]] struct {
-	typ   aggregate.Type[I, T]
+type ScenarioWhen[I ID, T Root[I]] struct {
+	typ   Type[I, T]
 	given []event.Persisted
 	fn    func() (T, error)
 }
@@ -104,13 +103,15 @@ type AggregateRootWhen[I aggregate.ID, T aggregate.Root[I]] struct {
 // Then specifies a successful outcome of the scenario, allowing to assert the
 // expected new Aggregate Root version and Domain Events recorded
 // during the domain command execution.
-func (sc AggregateRootWhen[I, T]) Then(v version.Version, events ...event.Envelope) AggregateRootThen[I, T] {
-	return AggregateRootThen[I, T]{
-		typ:      sc.typ,
-		given:    sc.given,
-		fn:       sc.fn,
-		version:  v,
-		expected: events,
+func (sc ScenarioWhen[I, T]) Then(v version.Version, events ...event.Envelope) ScenarioThen[I, T] {
+	return ScenarioThen[I, T]{
+		typ:           sc.typ,
+		given:         sc.given,
+		fn:            sc.fn,
+		version:       v,
+		expected:      events,
+		expectedError: nil,
+		wantError:     false,
 	}
 }
 
@@ -119,12 +120,15 @@ func (sc AggregateRootWhen[I, T]) Then(v version.Version, events ...event.Envelo
 //
 // Use this method when there is no need to assert the error returned by the
 // domain command is of a specific type or value.
-func (sc AggregateRootWhen[I, T]) ThenFails() AggregateRootThen[I, T] {
-	return AggregateRootThen[I, T]{
-		typ:       sc.typ,
-		given:     sc.given,
-		fn:        sc.fn,
-		wantError: true,
+func (sc ScenarioWhen[I, T]) ThenFails() ScenarioThen[I, T] {
+	return ScenarioThen[I, T]{
+		typ:           sc.typ,
+		given:         sc.given,
+		fn:            sc.fn,
+		version:       0,
+		expected:      nil,
+		expectedError: nil,
+		wantError:     true,
 	}
 }
 
@@ -133,22 +137,24 @@ func (sc AggregateRootWhen[I, T]) ThenFails() AggregateRootThen[I, T] {
 //
 // Use this method when you want to assert that the error retured by the domain
 // command execution is of a specific type or value.
-func (sc AggregateRootWhen[I, T]) ThenError(err error) AggregateRootThen[I, T] {
-	return AggregateRootThen[I, T]{
+func (sc ScenarioWhen[I, T]) ThenError(err error) ScenarioThen[I, T] {
+	return ScenarioThen[I, T]{
 		typ:           sc.typ,
 		given:         sc.given,
 		fn:            sc.fn,
+		version:       0,
+		expected:      nil,
 		expectedError: err,
 		wantError:     true,
 	}
 }
 
-// AggregateRootThen is the state of the scenario where all parameters have
+// ScenarioThen is the state of the scenario where all parameters have
 // been set and it's ready to be executed using a testing.T instance.
 //
 // Use the AssertOn method to run the test scenario.
-type AggregateRootThen[I aggregate.ID, T aggregate.Root[I]] struct {
-	typ           aggregate.Type[I, T]
+type ScenarioThen[I ID, T Root[I]] struct {
+	typ           Type[I, T]
 	given         []event.Persisted
 	fn            func() (T, error)
 	version       version.Version
@@ -158,7 +164,7 @@ type AggregateRootThen[I aggregate.ID, T aggregate.Root[I]] struct {
 }
 
 // AssertOn runs the test scenario using the specified testing.T instance.
-func (sc AggregateRootThen[I, T]) AssertOn(t *testing.T) {
+func (sc ScenarioThen[I, T]) AssertOn(t *testing.T) {
 	root, err := sc.fn()
 
 	if !sc.wantError {

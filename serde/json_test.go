@@ -1,4 +1,4 @@
-package serdes_test
+package serde_test
 
 import (
 	"encoding/json"
@@ -8,8 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/get-eventually/go-eventually/core/serde"
-	"github.com/get-eventually/go-eventually/serdes"
+	"github.com/get-eventually/go-eventually/serde"
 )
 
 type myEnum uint8
@@ -39,29 +38,29 @@ type myJSONData struct {
 }
 
 func serializeMyData(data myData) (*myJSONData, error) {
-	json := new(myJSONData)
+	jsonData := new(myJSONData)
 
 	switch data.Enum {
 	case enumFirst:
-		json.Enum = enumFirstString
+		jsonData.Enum = enumFirstString
 	case enumSecond:
-		json.Enum = enumSecondString
+		jsonData.Enum = enumSecondString
 	case enumThird:
-		json.Enum = enumThirdString
+		jsonData.Enum = enumThirdString
 	default:
 		return nil, fmt.Errorf("failed to serialize data, unexpected data value, %v", data.Enum)
 	}
 
-	json.Something = data.Something
-	json.Else = data.Else
+	jsonData.Something = data.Something
+	jsonData.Else = data.Else
 
-	return json, nil
+	return jsonData, nil
 }
 
-func deserializeMyData(json *myJSONData) (myData, error) {
+func deserializeMyData(jsonData *myJSONData) (myData, error) {
 	var data myData
 
-	switch json.Enum {
+	switch jsonData.Enum {
 	case enumFirstString:
 		data.Enum = enumFirst
 	case enumSecondString:
@@ -69,22 +68,22 @@ func deserializeMyData(json *myJSONData) (myData, error) {
 	case enumThirdString:
 		data.Enum = enumThird
 	default:
-		return myData{}, fmt.Errorf("failed to deserialize data, unexpected enum value, %v", json.Enum)
+		return myData{}, fmt.Errorf("failed to deserialize data, unexpected enum value, %v", jsonData.Enum)
 	}
 
-	data.Something = json.Something
-	data.Else = json.Else
+	data.Something = jsonData.Something
+	data.Else = jsonData.Else
 
 	return data, nil
 }
 
-var myDataSerde = serde.Fused[myData, *myJSONData]{
-	Serializer:   serde.SerializerFunc[myData, *myJSONData](serializeMyData),
-	Deserializer: serde.DeserializerFunc[myData, *myJSONData](deserializeMyData),
-}
+var myDataSerde = serde.Fuse[myData, *myJSONData](
+	serde.AsSerializerFunc(serializeMyData),
+	serde.AsDeserializerFunc(deserializeMyData),
+)
 
 func TestJSON(t *testing.T) {
-	myJSONSerde := serdes.NewJSON(func() *myJSONData { return &myJSONData{} })
+	myJSONSerde := serde.NewJSON(func() *myJSONData { return new(myJSONData) })
 
 	t.Run("it works with valid data", func(t *testing.T) {
 		myJSON := &myJSONData{
@@ -116,7 +115,7 @@ func TestJSON(t *testing.T) {
 			Test bool
 		}
 
-		mySerde := serdes.NewJSON(func() byValue { return byValue{} })
+		mySerde := serde.NewJSON(func() byValue { return byValue{} }) //nolint:exhaustruct // Unnecessary.
 		myValue := byValue{Test: true}
 
 		serialized, err := mySerde.Serialize(myValue)

@@ -23,7 +23,7 @@ func TestEventSourcedRepository(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	eventStore := event.NewInMemoryEventStore()
+	eventStore := event.NewInMemoryStore()
 	userRepository := aggregate.NewEventSourcedRepository(eventStore, user.Type)
 
 	_, err := userRepository.Get(ctx, id)

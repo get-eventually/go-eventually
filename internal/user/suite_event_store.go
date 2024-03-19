@@ -1,4 +1,4 @@
-package integrationtest
+package user
 
 import (
 	"context"
@@ -8,10 +8,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
-	"github.com/get-eventually/go-eventually/core/aggregate"
-	"github.com/get-eventually/go-eventually/core/event"
-	"github.com/get-eventually/go-eventually/core/version"
-	"github.com/get-eventually/go-eventually/integrationtest/user"
+	"github.com/get-eventually/go-eventually/aggregate"
+	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/version"
 )
 
 // EventStore returns an executable testing suite running on the event.Store
@@ -22,15 +21,12 @@ func EventStore(eventStore event.Store) func(t *testing.T) {
 
 		// Testing the Event-sourced repository implementation, which indirectly
 		// tests the Event Store instance.
-		AggregateRepository(aggregate.NewEventSourcedRepository(
-			eventStore,
-			user.Type,
-		))(t)
+		AggregateRepository(aggregate.NewEventSourcedRepository(eventStore, Type))(t)
 
 		t.Run("append works when used with version.CheckAny", func(t *testing.T) {
 			id := uuid.New()
 
-			usr, err := user.Create(id, "Dani", "Ross", "dani@ross.com", time.Now())
+			usr, err := Create(id, "Dani", "Ross", "dani@ross.com", time.Now())
 			require.NoError(t, err)
 
 			require.NoError(t, usr.UpdateEmail("dani.ross@mail.com", nil))

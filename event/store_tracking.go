@@ -7,21 +7,25 @@ import (
 	"github.com/get-eventually/go-eventually/version"
 )
 
-// TrackingEventStore is an Event Store wrapper to track the Events
+// TrackingStore is an Event Store wrapper to track the Events
 // committed to the inner Event Store.
 //
 // Useful for tests assertion.
-type TrackingEventStore struct {
+type TrackingStore struct {
 	Appender
 
 	mx       sync.RWMutex
 	recorded []Persisted
 }
 
-// NewTrackingEventStore wraps an Event Store to capture events that get
+// NewTrackingStore wraps an Event Store to capture events that get
 // appended to it.
-func NewTrackingEventStore(appender Appender) *TrackingEventStore {
-	return &TrackingEventStore{Appender: appender}
+func NewTrackingStore(appender Appender) *TrackingStore {
+	return &TrackingStore{
+		Appender: appender,
+		mx:       sync.RWMutex{},
+		recorded: nil,
+	}
 }
 
 // Recorded returns the list of Events that have been appended
@@ -31,7 +35,7 @@ func NewTrackingEventStore(appender Appender) *TrackingEventStore {
 // the Event Store. Usually you should not need it in test assertions, since
 // the order of Events in the returned slice always follows the global order
 // of the Event Stream (or the Event Store).
-func (es *TrackingEventStore) Recorded() []Persisted {
+func (es *TrackingStore) Recorded() []Persisted {
 	es.mx.RLock()
 	defer es.mx.RUnlock()
 
@@ -42,7 +46,7 @@ func (es *TrackingEventStore) Recorded() []Persisted {
 // if the operation concludes successfully, records these events internally.
 //
 // The recorded events can be accessed by calling Recorded().
-func (es *TrackingEventStore) Append(
+func (es *TrackingStore) Append(
 	ctx context.Context,
 	id StreamID,
 	expected version.Check,

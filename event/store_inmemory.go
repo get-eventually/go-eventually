@@ -8,24 +8,26 @@ import (
 	"github.com/get-eventually/go-eventually/version"
 )
 
-var _ Store = &InMemoryEventStore{}
+// Interface implementation assertion.
+var _ Store = new(InMemoryStore)
 
-// InMemoryEventStore is an in-memory Store implementation.
-type InMemoryEventStore struct {
+// InMemoryStore is a thread-safe, in-memory event.Store implementation.
+type InMemoryStore struct {
 	mx     sync.RWMutex
 	events map[StreamID][]Envelope
 }
 
-// NewInMemoryEventStore creates a new empty test.InMemoryEventStore instance.
-func NewInMemoryEventStore() *InMemoryEventStore {
-	return &InMemoryEventStore{
+// NewInMemoryStore creates a new event.InMemoryStore instance.
+func NewInMemoryStore() *InMemoryStore {
+	return &InMemoryStore{
+		mx:     sync.RWMutex{},
 		events: make(map[StreamID][]Envelope),
 	}
 }
 
 func contextErr(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
-		return fmt.Errorf("test.InMemoryEventStore: context error: %w", err)
+		return fmt.Errorf("event.InMemoryStore: context error: %w", err)
 	}
 
 	return nil
@@ -39,7 +41,7 @@ func contextErr(ctx context.Context) error {
 // the context has been canceled.
 //
 // This method fails only when the context is canceled.
-func (es *InMemoryEventStore) Stream(
+func (es *InMemoryStore) Stream(
 	ctx context.Context,
 	eventStream StreamWrite,
 	id StreamID,
@@ -89,7 +91,7 @@ func (es *InMemoryEventStore) Stream(
 //
 // An instance of `version.ConflictError` will be returned if the optimistic locking
 // version check fails against the current version of the Event Stream.
-func (es *InMemoryEventStore) Append(
+func (es *InMemoryStore) Append(
 	_ context.Context,
 	id StreamID,
 	expected version.Check,
@@ -101,7 +103,7 @@ func (es *InMemoryEventStore) Append(
 	currentVersion := version.CheckExact(len(es.events[id]))
 
 	if expected != version.Any && currentVersion != expected {
-		return 0, fmt.Errorf("test.InMemoryEventStore: failed to append events: %w", version.ConflictError{
+		return 0, fmt.Errorf("event.InMemoryStore: failed to append events: %w", version.ConflictError{
 			Expected: version.Version(expected.(version.CheckExact)),
 			Actual:   version.Version(currentVersion),
 		})

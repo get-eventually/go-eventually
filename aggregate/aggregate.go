@@ -75,8 +75,8 @@ type Type[I ID, T Root[I]] struct {
 //
 // An error is typically returned if applying the Domain Event on the Aggregate
 // Root instance fails with an error.
-func RecordThat[I ID](root Root[I], event ...event.Envelope) error {
-	return root.recordThat(root, event...)
+func RecordThat[I ID](root Root[I], events ...event.Envelope) error {
+	return root.recordThat(root, events...)
 }
 
 // BaseRoot segregates and completes the aggregate.Root interface implementation

@@ -7,9 +7,9 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/genproto/googleapis/type/date"
 
-	"github.com/get-eventually/go-eventually/core/message"
-	"github.com/get-eventually/go-eventually/core/serde"
-	"github.com/get-eventually/go-eventually/integrationtest/user/proto"
+	"github.com/get-eventually/go-eventually/internal/user/proto"
+	"github.com/get-eventually/go-eventually/message"
+	"github.com/get-eventually/go-eventually/serde"
 )
 
 func timeToDate(t time.Time) *date.Date {
@@ -50,7 +50,7 @@ func protoDeserializer(src *proto.User) (*User, error) {
 		return nil, fmt.Errorf("user.protoDeserialize: failed to deserialize user id, %w", err)
 	}
 
-	user := &User{
+	user := &User{ //nolint:exhaustruct // Other fields will be set by eventually.
 		id:        id,
 		firstName: src.FirstName,
 		lastName:  src.LastName,

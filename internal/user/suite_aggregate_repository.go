@@ -1,4 +1,4 @@
-package integrationtest
+package user
 
 import (
 	"context"
@@ -9,10 +9,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/get-eventually/go-eventually/core/aggregate"
-	"github.com/get-eventually/go-eventually/core/message"
-	"github.com/get-eventually/go-eventually/core/version"
-	"github.com/get-eventually/go-eventually/integrationtest/user"
+	"github.com/get-eventually/go-eventually/aggregate"
+	"github.com/get-eventually/go-eventually/message"
+	"github.com/get-eventually/go-eventually/version"
 )
 
 // AggregateRepository returns an executable testing suite running on the
@@ -22,7 +21,7 @@ import (
 //
 // Package user of this module exposes a Protobuf-based serde, which can be useful
 // to test serialization and deserialization of data to the target repository implementation.
-func AggregateRepository(repository aggregate.Repository[uuid.UUID, *user.User]) func(t *testing.T) {
+func AggregateRepository(repository aggregate.Repository[uuid.UUID, *User]) func(t *testing.T) { //nolint:funlen,lll // It's a test suite.
 	return func(t *testing.T) {
 		ctx := context.Background()
 
@@ -40,7 +39,7 @@ func AggregateRepository(repository aggregate.Repository[uuid.UUID, *user.User])
 				return
 			}
 
-			usr, err := user.Create(id, firstName, lastName, email, birthDate)
+			usr, err := Create(id, firstName, lastName, email, birthDate)
 			if !assert.NoError(t, err) {
 				return
 			}
@@ -63,20 +62,20 @@ func AggregateRepository(repository aggregate.Repository[uuid.UUID, *user.User])
 				birthDate = time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
 			)
 
-			usr, err := user.Create(id, firstName, lastName, email, birthDate)
+			user, err := Create(id, firstName, lastName, email, birthDate)
 			require.NoError(t, err)
 
 			newEmail := "johndoe@gmail.com"
-			require.NoError(t, usr.UpdateEmail(newEmail, message.Metadata{
+			require.NoError(t, user.UpdateEmail(newEmail, message.Metadata{
 				"Testing-Metadata-Time": time.Now().Format(time.RFC3339),
 			}))
 
-			if err := repository.Save(ctx, usr); !assert.NoError(t, err) {
+			if err := repository.Save(ctx, user); !assert.NoError(t, err) {
 				return
 			}
 
 			// Try to create a new User instance, but stop at Create.
-			outdatedUsr, err := user.Create(id, firstName, lastName, email, birthDate)
+			outdatedUsr, err := Create(id, firstName, lastName, email, birthDate)
 			require.NoError(t, err)
 
 			err = repository.Save(ctx, outdatedUsr)
@@ -87,6 +86,7 @@ func AggregateRepository(repository aggregate.Repository[uuid.UUID, *user.User])
 			}
 
 			var conflictErr version.ConflictError
+
 			assert.ErrorAs(t, err, &conflictErr)
 			assert.Equal(t, expectedErr, conflictErr)
 		})

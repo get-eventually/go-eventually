@@ -26,15 +26,13 @@ func TestRoot(t *testing.T) {
 		assert.NoError(t, err)
 
 		expectedEvents := []event.Envelope{
-			{
-				Message: user.WasCreated{
-					ID:        id,
-					FirstName: firstName,
-					LastName:  lastName,
-					BirthDate: birthDate,
-					Email:     email,
-				},
-			},
+			event.ToEnvelope(user.WasCreated{
+				ID:        id,
+				FirstName: firstName,
+				LastName:  lastName,
+				BirthDate: birthDate,
+				Email:     email,
+			}),
 		}
 
 		assert.Equal(t, expectedEvents, usr.FlushRecordedEvents())
@@ -53,15 +51,13 @@ func TestRoot(t *testing.T) {
 
 		newEmail := "john.doe@email.com"
 
-		err = usr.UpdateEmail(newEmail)
+		err = usr.UpdateEmail(newEmail, nil)
 		assert.NoError(t, err)
 
 		expectedEvents := []event.Envelope{
-			{
-				Message: user.EmailWasUpdated{
-					Email: newEmail,
-				},
-			},
+			event.ToEnvelope(user.EmailWasUpdated{
+				Email: newEmail,
+			}),
 		}
 
 		assert.Equal(t, expectedEvents, usr.FlushRecordedEvents())
