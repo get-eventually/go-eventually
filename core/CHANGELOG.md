@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/get-eventually/go-eventually/compare/core-v0.2.1...core/v0.2.2) (2024-03-19)
+
+
+### Miscellaneous Chores
+
+* **core:** Synchronize serdes-&gt;core versions
+
 ## [0.2.1](https://github.com/get-eventually/go-eventually/compare/core-v0.2.0...core-v0.2.1) (2023-09-22)
 
 
