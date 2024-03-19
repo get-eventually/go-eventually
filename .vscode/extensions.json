@@ -1,0 +1,12 @@
+{
+  "recommendations": [
+    "bufbuild.vscode-buf",
+    "golang.go",
+    "zxh404.vscode-proto3",
+    "esbenp.prettier-vscode",
+    "mkhl.direnv",
+    "jnoortheen.nix-ide",
+    "redhat.vscode-yaml",
+    "yzhang.markdown-all-in-one"
+  ]
+}

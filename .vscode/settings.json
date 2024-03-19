@@ -1,0 +1,55 @@
+{
+  "editor.tabSize": 2,
+  "editor.formatOnSave": true,
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  "[json][jsonc]": {
+    "editor.quickSuggestions": {
+      "strings": true
+    },
+    "editor.suggest.insertMode": "replace",
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[markdown]": {
+    "editor.defaultFormatter": "yzhang.markdown-all-in-one"
+  },
+  "[makefile]": {
+    "editor.insertSpaces": false,
+    "editor.tabSize": 4
+  },
+  "[proto][proto3]": {
+    "editor.defaultFormatter": "bufbuild.vscode-buf"
+  },
+  "[go]": {
+    "editor.tabSize": 4
+  },
+  // NOTE: these are loaded from the Nix shell through direnv.
+  "go.alternateTools": {
+    "go": "${env:GO_BIN_PATH}",
+    "gopls": "${env:GOPLS_PATH}",
+    "dlv": "${env:DLV_PATH}"
+  },
+  "go.lintTool": "golangci-lint",
+  "go.lintFlags": ["--fast"],
+  "gopls": {
+    "formatting.gofumpt": true,
+    "ui.semanticTokens": true,
+    "ui.codelenses": {
+      "gc_details": true,
+      "generate": true,
+      "regenerate_cgo": true,
+      "tidy": true,
+      "upgrade_dependency": true,
+      "vendor": true
+    }
+  },
+  "nix.serverPath": "nil",
+  "nix.enableLanguageServer": true,
+  "nix.serverSettings": {
+    "nil": {
+      "formatting": {
+        "command": ["nixpkgs-fmt"]
+      }
+    }
+  }
+}

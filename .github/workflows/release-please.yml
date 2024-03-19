@@ -1,7 +1,4 @@
-on:
-  push:
-    branches:
-      - main
+on: workflow_dispatch
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -11,11 +8,11 @@ name: release-please
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - name: Release
         uses: google-github-actions/release-please-action@v4
-        id: release
         with:
-          release-type: go
-          command: manifest
-          monorepo-tags: true
+          include-component-in-tag: true
