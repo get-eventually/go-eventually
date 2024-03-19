@@ -1,8 +1,8 @@
 {
-  "core": "0.2.1",
+  "core": "0.2.2",
   "firestore": "0.2.1",
   "oteleventually": "0.2.1",
   "postgres": "0.2.1",
-  "serdes": "0.2.1",
+  "serdes": "0.2.2",
   "integrationtest": "0.2.1"
 }
