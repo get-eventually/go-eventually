@@ -6,12 +6,12 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/get-eventually/go-eventually/core/aggregate"
-	"github.com/get-eventually/go-eventually/core/command"
-	"github.com/get-eventually/go-eventually/core/event"
-	"github.com/get-eventually/go-eventually/core/internal/user"
-	"github.com/get-eventually/go-eventually/core/test/scenario"
-	"github.com/get-eventually/go-eventually/core/version"
+	"github.com/get-eventually/go-eventually/aggregate"
+	"github.com/get-eventually/go-eventually/command"
+	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/internal/user"
+	"github.com/get-eventually/go-eventually/test/scenario"
+	"github.com/get-eventually/go-eventually/version"
 )
 
 func TestCommandHandler(t *testing.T) {

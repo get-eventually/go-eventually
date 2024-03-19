@@ -6,10 +6,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/get-eventually/go-eventually/core/command"
-	"github.com/get-eventually/go-eventually/core/event"
-	"github.com/get-eventually/go-eventually/core/test"
-	"github.com/get-eventually/go-eventually/core/version"
+	"github.com/get-eventually/go-eventually/command"
+	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/version"
 )
 
 // CommandHandlerInit is the entrypoint of the Command Handler scenario API.
@@ -137,7 +136,7 @@ func (sc CommandHandlerThen[Cmd, T]) AssertOn( //nolint:gocritic
 	handlerFactory func(event.Store) T,
 ) {
 	ctx := context.Background()
-	store := test.NewInMemoryEventStore()
+	store := event.NewInMemoryEventStore()
 
 	for _, event := range sc.given {
 		_, err := store.Append(ctx, event.StreamID, version.Any, event.Envelope)
@@ -146,7 +145,7 @@ func (sc CommandHandlerThen[Cmd, T]) AssertOn( //nolint:gocritic
 		}
 	}
 
-	trackingStore := test.NewTrackingEventStore(store)
+	trackingStore := event.NewTrackingEventStore(store)
 	handler := handlerFactory(event.FusedStore{
 		Appender: trackingStore,
 		Streamer: store,

@@ -1,11 +1,10 @@
-package test
+package event
 
 import (
 	"context"
 	"sync"
 
-	"github.com/get-eventually/go-eventually/core/event"
-	"github.com/get-eventually/go-eventually/core/version"
+	"github.com/get-eventually/go-eventually/version"
 )
 
 // TrackingEventStore is an Event Store wrapper to track the Events
@@ -13,15 +12,15 @@ import (
 //
 // Useful for tests assertion.
 type TrackingEventStore struct {
-	event.Appender
+	Appender
 
 	mx       sync.RWMutex
-	recorded []event.Persisted
+	recorded []Persisted
 }
 
 // NewTrackingEventStore wraps an Event Store to capture events that get
 // appended to it.
-func NewTrackingEventStore(appender event.Appender) *TrackingEventStore {
+func NewTrackingEventStore(appender Appender) *TrackingEventStore {
 	return &TrackingEventStore{Appender: appender}
 }
 
@@ -32,7 +31,7 @@ func NewTrackingEventStore(appender event.Appender) *TrackingEventStore {
 // the Event Store. Usually you should not need it in test assertions, since
 // the order of Events in the returned slice always follows the global order
 // of the Event Stream (or the Event Store).
-func (es *TrackingEventStore) Recorded() []event.Persisted {
+func (es *TrackingEventStore) Recorded() []Persisted {
 	es.mx.RLock()
 	defer es.mx.RUnlock()
 
@@ -45,9 +44,9 @@ func (es *TrackingEventStore) Recorded() []event.Persisted {
 // The recorded events can be accessed by calling Recorded().
 func (es *TrackingEventStore) Append(
 	ctx context.Context,
-	id event.StreamID,
+	id StreamID,
 	expected version.Check,
-	events ...event.Envelope,
+	events ...Envelope,
 ) (version.Version, error) {
 	es.mx.Lock()
 	defer es.mx.Unlock()
@@ -60,7 +59,7 @@ func (es *TrackingEventStore) Append(
 	previousVersion := v - version.Version(len(events))
 
 	for i, evt := range events {
-		es.recorded = append(es.recorded, event.Persisted{
+		es.recorded = append(es.recorded, Persisted{
 			StreamID: id,
 			Version:  previousVersion + version.Version(i) + 1,
 			Envelope: evt,

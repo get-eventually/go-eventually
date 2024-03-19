@@ -6,8 +6,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/get-eventually/go-eventually/core/aggregate"
-	"github.com/get-eventually/go-eventually/core/event"
+	"github.com/get-eventually/go-eventually/aggregate"
+	"github.com/get-eventually/go-eventually/event"
 )
 
 var (
@@ -79,8 +79,6 @@ func (user *User) AggregateID() uuid.UUID {
 }
 
 func Create(id uuid.UUID, firstName, lastName, email string, birthDate time.Time) (*User, error) {
-	user := &User{}
-
 	if firstName == "" {
 		return nil, ErrInvalidFirstName
 	}
@@ -97,6 +95,8 @@ func Create(id uuid.UUID, firstName, lastName, email string, birthDate time.Time
 		return nil, ErrInvalidBirthDate
 	}
 
+	user := new(User)
+
 	if err := aggregate.RecordThat[uuid.UUID](user, event.Envelope{
 		Message: WasCreated{
 			ID:        id,
@@ -106,7 +106,7 @@ func Create(id uuid.UUID, firstName, lastName, email string, birthDate time.Time
 			Email:     email,
 		},
 	}); err != nil {
-		return nil, fmt.Errorf("%T: failed to record domain event, %w", user, err)
+		return nil, fmt.Errorf("user.Create: failed to record domain event, %w", user, err)
 	}
 
 	return user, nil

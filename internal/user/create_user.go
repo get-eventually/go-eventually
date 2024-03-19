@@ -7,8 +7,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/get-eventually/go-eventually/core/aggregate"
-	"github.com/get-eventually/go-eventually/core/command"
+	"github.com/get-eventually/go-eventually/aggregate"
+	"github.com/get-eventually/go-eventually/command"
 )
 
 type CreateCommand struct {

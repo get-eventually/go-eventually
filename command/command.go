@@ -3,7 +3,7 @@ package command
 import (
 	"context"
 
-	"github.com/get-eventually/go-eventually/core/message"
+	"github.com/get-eventually/go-eventually/message"
 )
 
 // Command is a specific kind of Message that represents an intent.

@@ -1,4 +1,4 @@
-module github.com/get-eventually/go-eventually/core
+module github.com/get-eventually/go-eventually
 
 go 1.18
 

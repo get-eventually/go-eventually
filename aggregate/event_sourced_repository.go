@@ -6,8 +6,8 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/get-eventually/go-eventually/core/event"
-	"github.com/get-eventually/go-eventually/core/version"
+	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/version"
 )
 
 // RehydrateFromEvents rehydrates an Aggregate Root from a read-only Event Stream.

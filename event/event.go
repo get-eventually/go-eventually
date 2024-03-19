@@ -1,8 +1,8 @@
 package event
 
 import (
-	"github.com/get-eventually/go-eventually/core/message"
-	"github.com/get-eventually/go-eventually/core/version"
+	"github.com/get-eventually/go-eventually/message"
+	"github.com/get-eventually/go-eventually/version"
 )
 
 // Event is a Message representing some Domain information that has happened

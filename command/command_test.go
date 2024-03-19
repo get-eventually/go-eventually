@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/get-eventually/go-eventually/core/command"
+	"github.com/get-eventually/go-eventually/command"
 )
 
 var (

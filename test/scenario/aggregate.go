@@ -5,9 +5,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/get-eventually/go-eventually/core/aggregate"
-	"github.com/get-eventually/go-eventually/core/event"
-	"github.com/get-eventually/go-eventually/core/version"
+	"github.com/get-eventually/go-eventually/aggregate"
+	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/version"
 )
 
 // AggregateRootInit is the entrypoint of the Aggregate Root scenario API.

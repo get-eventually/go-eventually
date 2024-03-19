@@ -5,7 +5,7 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/get-eventually/go-eventually/core/version"
+	"github.com/get-eventually/go-eventually/version"
 )
 
 // Stream represents a stream of persisted Domain Events coming from some

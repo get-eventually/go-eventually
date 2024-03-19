@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/get-eventually/go-eventually/core/event"
-	"github.com/get-eventually/go-eventually/core/internal/user"
+	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/internal/user"
 )
 
 func TestRoot(t *testing.T) {

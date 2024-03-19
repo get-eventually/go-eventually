@@ -8,9 +8,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/get-eventually/go-eventually/core/aggregate"
-	"github.com/get-eventually/go-eventually/core/internal/user"
-	"github.com/get-eventually/go-eventually/core/test"
+	"github.com/get-eventually/go-eventually/aggregate"
+	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/internal/user"
 )
 
 func TestEventSourcedRepository(t *testing.T) {
@@ -23,7 +23,7 @@ func TestEventSourcedRepository(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	eventStore := test.NewInMemoryEventStore()
+	eventStore := event.NewInMemoryEventStore()
 	userRepository := aggregate.NewEventSourcedRepository(eventStore, user.Type)
 
 	_, err := userRepository.Get(ctx, id)

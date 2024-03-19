@@ -6,9 +6,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/get-eventually/go-eventually/core/event"
-	"github.com/get-eventually/go-eventually/core/internal/user"
-	"github.com/get-eventually/go-eventually/core/test/scenario"
+	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/internal/user"
+	"github.com/get-eventually/go-eventually/test/scenario"
 )
 
 func TestAggregateRoot(t *testing.T) {

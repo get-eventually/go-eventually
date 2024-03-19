@@ -15,3 +15,5 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
 )
+
+replace github.com/get-eventually/go-eventually => ../..

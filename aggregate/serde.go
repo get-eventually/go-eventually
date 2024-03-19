@@ -3,8 +3,8 @@ package aggregate
 import (
 	"fmt"
 
-	"github.com/get-eventually/go-eventually/core/serde"
-	"github.com/get-eventually/go-eventually/core/version"
+	"github.com/get-eventually/go-eventually/serde"
+	"github.com/get-eventually/go-eventually/version"
 )
 
 // RehydrateFromState rehydrates an aggregate.Root instance

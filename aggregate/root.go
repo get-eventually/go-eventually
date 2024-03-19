@@ -3,8 +3,8 @@ package aggregate
 import (
 	"fmt"
 
-	"github.com/get-eventually/go-eventually/core/event"
-	"github.com/get-eventually/go-eventually/core/version"
+	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/version"
 )
 
 // ID represents an Aggregate ID type.

@@ -1,26 +1,25 @@
-package test
+package event
 
 import (
 	"context"
 	"fmt"
 	"sync"
 
-	"github.com/get-eventually/go-eventually/core/event"
-	"github.com/get-eventually/go-eventually/core/version"
+	"github.com/get-eventually/go-eventually/version"
 )
 
-var _ event.Store = &InMemoryEventStore{}
+var _ Store = &InMemoryEventStore{}
 
-// InMemoryEventStore is an in-memory event.Store implementation.
+// InMemoryEventStore is an in-memory Store implementation.
 type InMemoryEventStore struct {
 	mx     sync.RWMutex
-	events map[event.StreamID][]event.Envelope
+	events map[StreamID][]Envelope
 }
 
 // NewInMemoryEventStore creates a new empty test.InMemoryEventStore instance.
 func NewInMemoryEventStore() *InMemoryEventStore {
 	return &InMemoryEventStore{
-		events: make(map[event.StreamID][]event.Envelope),
+		events: make(map[StreamID][]Envelope),
 	}
 }
 
@@ -42,8 +41,8 @@ func contextErr(ctx context.Context) error {
 // This method fails only when the context is canceled.
 func (es *InMemoryEventStore) Stream(
 	ctx context.Context,
-	eventStream event.StreamWrite,
-	id event.StreamID,
+	eventStream StreamWrite,
+	id StreamID,
 	selector version.Selector,
 ) error {
 	es.mx.RLock()
@@ -62,7 +61,7 @@ func (es *InMemoryEventStore) Stream(
 			continue
 		}
 
-		persistedEvent := event.Persisted{
+		persistedEvent := Persisted{
 			Envelope: evt,
 			StreamID: id,
 			Version:  eventVersion,
@@ -92,9 +91,9 @@ func (es *InMemoryEventStore) Stream(
 // version check fails against the current version of the Event Stream.
 func (es *InMemoryEventStore) Append(
 	_ context.Context,
-	id event.StreamID,
+	id StreamID,
 	expected version.Check,
-	events ...event.Envelope,
+	events ...Envelope,
 ) (version.Version, error) {
 	es.mx.Lock()
 	defer es.mx.Unlock()
