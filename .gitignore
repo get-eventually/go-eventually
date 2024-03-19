@@ -1,3 +1,5 @@
 vendor
 *.out
 go.work.sum
+
+.direnv
