@@ -33,6 +33,7 @@
               # Linters
               nil
               golangci-lint
+              markdownlint-cli
             ];
 
             # Provide binary paths for tooling through environment variables.
