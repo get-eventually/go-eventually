@@ -28,8 +28,10 @@ jobs:
           go-version: '1.21'
       - name: Run go test
         run: make go.test
-      - name: Analyze with SonarCloud
-        uses: sonarsource/sonarcloud-github-action@v2.1
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.txt
+          verbose: true
+          fail_ci_if_error: true
