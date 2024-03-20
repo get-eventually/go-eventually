@@ -114,7 +114,12 @@ func (es EventStore) Append(
 	if err := internal.RunTransaction(ctx, es.conn, txOpts, func(ctx context.Context, tx pgx.Tx) error {
 		var err error
 
-		if newVersion, err = appendDomainEvents(ctx, tx, es.messageSerde, id, expected, events...); err != nil {
+		if newVersion, err = appendDomainEvents(
+			ctx, tx,
+			DefaultEventsTableName, DefaultStreamsTableName,
+			es.messageSerde,
+			id, expected, events...,
+		); err != nil {
 			return fmt.Errorf("postgres.EventStore: failed to append domain events, %w", err)
 		}
 
