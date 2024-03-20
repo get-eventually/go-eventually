@@ -63,3 +63,4 @@ jobs:
           # NOTE: super-linter has quite poor support for golangci-lint.
           # We use the official linter action for it instead.
           VALIDATE_GO: false
+          VALIDATE_GO_MODULES: false
