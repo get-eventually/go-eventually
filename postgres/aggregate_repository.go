@@ -19,15 +19,24 @@ import (
 // AggregateRepository implements the aggregate.Repository interface
 // for PostgreSQL databases.
 //
-// This implementation uses the "aggregates" table in the database
-// as its main operational table. At the same time, it also writes
+// This implementation uses the "aggregates" table (by default) in the database
+// as its main operational table.
+//
+// At the same time, it also writes
 // to both "events" and "event_streams" to append the Domain events
 // recorded by Aggregate Roots. These updates are performed within the same transaction.
+//
+// Note: the tables the Repository points to can be changed using the
+// available functional options.
 type AggregateRepository[ID aggregate.ID, T aggregate.Root[ID]] struct {
 	conn           *pgxpool.Pool
 	aggregateType  aggregate.Type[ID, T]
 	aggregateSerde serde.Bytes[T]
 	messageSerde   serde.Bytes[message.Message]
+
+	aggregateTableName string
+	eventsTableName    string
+	streamsTableName   string
 }
 
 // NewAggregateRepository returns a new AggregateRepository instance.
@@ -36,13 +45,23 @@ func NewAggregateRepository[ID aggregate.ID, T aggregate.Root[ID]](
 	aggregateType aggregate.Type[ID, T],
 	aggregateSerde serde.Bytes[T],
 	messageSerde serde.Bytes[message.Message],
+	options ...Option[*AggregateRepository[ID, T]],
 ) AggregateRepository[ID, T] {
-	return AggregateRepository[ID, T]{
-		conn:           conn,
-		aggregateType:  aggregateType,
-		aggregateSerde: aggregateSerde,
-		messageSerde:   messageSerde,
+	repo := AggregateRepository[ID, T]{
+		conn:               conn,
+		aggregateType:      aggregateType,
+		aggregateSerde:     aggregateSerde,
+		messageSerde:       messageSerde,
+		aggregateTableName: DefaultAggregateTableName,
+		eventsTableName:    DefaultEventsTableName,
+		streamsTableName:   DefaultStreamsTableName,
 	}
+
+	for _, opt := range options {
+		opt.apply(&repo)
+	}
+
+	return repo
 }
 
 // Get returns the aggregate.Root instance specified by the provided id.
@@ -55,14 +74,18 @@ type queryRower interface {
 	QueryRow(context.Context, string, ...interface{}) pgx.Row
 }
 
+const getAggregateQueryTemplate = `
+	SELECT version, state
+	FROM %s
+	WHERE aggregate_id = $1 AND "type" = $2
+`
+
 func (repo AggregateRepository[ID, T]) get(ctx context.Context, tx queryRower, id ID) (T, error) {
 	var zeroValue T
 
 	row := tx.QueryRow(
 		ctx,
-		`SELECT version, state
-		FROM aggregates
-		WHERE aggregate_id = $1 AND "type" = $2`,
+		fmt.Sprintf(getAggregateQueryTemplate, repo.aggregateTableName),
 		id.String(), repo.aggregateType.Name,
 	)
 
@@ -107,6 +130,7 @@ func (repo AggregateRepository[ID, T]) Save(ctx context.Context, root T) (err er
 
 		newEventStreamVersion, err := appendDomainEvents(
 			ctx, tx,
+			repo.eventsTableName, repo.streamsTableName,
 			repo.messageSerde,
 			eventStreamID,
 			version.CheckExact(expectedRootVersion),
@@ -127,6 +151,13 @@ func (repo AggregateRepository[ID, T]) Save(ctx context.Context, root T) (err er
 	})
 }
 
+const saveAggregateQueryTemplate = `
+	INSERT INTO %s (aggregate_id, "type", "version", "state")
+	VALUES ($1, $2, $3, $4)
+	ON CONFLICT (aggregate_id) DO
+	UPDATE SET "version" = $3, "state" = $4
+`
+
 func (repo AggregateRepository[ID, T]) saveAggregateState(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -140,10 +171,7 @@ func (repo AggregateRepository[ID, T]) saveAggregateState(
 
 	if _, err := tx.Exec(
 		ctx,
-		`INSERT INTO aggregates (aggregate_id, "type", "version", "state")
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (aggregate_id) DO
-		UPDATE SET "version" = $3, "state" = $4`,
+		fmt.Sprintf(saveAggregateQueryTemplate, repo.aggregateTableName),
 		id, repo.aggregateType.Name, root.Version(), state,
 	); err != nil {
 		return repo.saveErr("failed to save new aggregate state, %w", err)

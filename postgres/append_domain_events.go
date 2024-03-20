@@ -16,9 +16,25 @@ import (
 	"github.com/get-eventually/go-eventually/version"
 )
 
+const (
+	getEventStreamQueryTemplate = `
+		SELECT version
+		FROM %s
+		WHERE event_stream_id = $1
+	`
+
+	updateEventStreamQueryTemplate = `
+		INSERT INTO %s (event_stream_id, version)
+		VALUES ($1, $2)
+		ON CONFLICT (event_stream_id) DO
+		UPDATE SET version = $2
+	`
+)
+
 func appendDomainEvents(
 	ctx context.Context,
 	tx pgx.Tx,
+	eventsTableName, streamsTableName string,
 	messageSerializer serde.Serializer[message.Message, []byte],
 	id event.StreamID,
 	expected version.Check,
@@ -26,7 +42,7 @@ func appendDomainEvents(
 ) (version.Version, error) {
 	row := tx.QueryRow(
 		ctx,
-		`SELECT version FROM event_streams WHERE event_stream_id = $1`,
+		fmt.Sprintf(getEventStreamQueryTemplate, streamsTableName),
 		id,
 	)
 
@@ -37,7 +53,7 @@ func appendDomainEvents(
 
 	if v, ok := expected.(version.CheckExact); ok && oldVersion != version.Version(v) {
 		return 0, fmt.Errorf(
-			"eventuallypostges.appendDomainEvents: event stream version check failed, %w",
+			"postgres.appendDomainEvents: event stream version check failed, %w",
 			version.ConflictError{
 				Expected: version.Version(v),
 				Actual:   oldVersion,
@@ -49,10 +65,7 @@ func appendDomainEvents(
 
 	if _, err := tx.Exec(
 		ctx,
-		`INSERT INTO event_streams (event_stream_id, version)
-		VALUES ($1, $2)
-		ON CONFLICT (event_stream_id) DO
-		UPDATE SET version = $2`,
+		fmt.Sprintf(updateEventStreamQueryTemplate, streamsTableName),
 		id, newVersion,
 	); err != nil {
 		return 0, fmt.Errorf("postgres.EventStore: failed to update event stream, %w", err)
@@ -61,7 +74,11 @@ func appendDomainEvents(
 	for i, event := range events {
 		eventVersion := oldVersion + version.Version(i) + 1
 
-		if err := appendDomainEvent(ctx, tx, messageSerializer, id, eventVersion, newVersion, event); err != nil {
+		if err := appendDomainEvent(
+			ctx, tx,
+			eventsTableName, messageSerializer,
+			id, eventVersion, newVersion, event,
+		); err != nil {
 			return 0, err
 		}
 	}
@@ -69,9 +86,15 @@ func appendDomainEvents(
 	return newVersion, nil
 }
 
+const appendDomainEventQueryTemplate = `
+	INSERT INTO %s (event_stream_id, "type", "version", event, metadata)
+	VALUES ($1, $2, $3, $4, $5)
+`
+
 func appendDomainEvent(
 	ctx context.Context,
 	tx pgx.Tx,
+	eventsTableName string,
 	messageSerializer serde.Serializer[message.Message, []byte],
 	id event.StreamID,
 	eventVersion, newVersion version.Version,
@@ -95,8 +118,7 @@ func appendDomainEvent(
 
 	if _, err = tx.Exec(
 		ctx,
-		`INSERT INTO events (event_stream_id, "type", "version", event, metadata)
-		VALUES ($1, $2, $3, $4, $5)`,
+		fmt.Sprintf(appendDomainEventQueryTemplate, eventsTableName),
 		id, msg.Name(), eventVersion, data, metadata,
 	); err != nil {
 		return fmt.Errorf("postgres.appendDomainEvent: failed to append new domain event to event store, %w", err)
