@@ -41,7 +41,7 @@ func NewProtoDeserializer[T proto.Message](factory func() T) DeserializerFunc[T,
 // NewProto returns a new serde instance where some data (`T`) gets serialized to
 // and deserialized from a Protobuf byte-array.
 func NewProto[T proto.Message](factory func() T) Fused[T, []byte] {
-	return Fuse[T, []byte](
+	return Fuse(
 		NewProtoSerializer[T](),
 		NewProtoDeserializer(factory),
 	)

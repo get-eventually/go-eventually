@@ -13,7 +13,6 @@ import (
 
 	"github.com/get-eventually/go-eventually/internal/user"
 	"github.com/get-eventually/go-eventually/internal/user/proto"
-	"github.com/get-eventually/go-eventually/message"
 	"github.com/get-eventually/go-eventually/postgres"
 	"github.com/get-eventually/go-eventually/serde"
 )
@@ -42,11 +41,11 @@ func TestAggregateRepository(t *testing.T) {
 	repository := postgres.AggregateRepository[uuid.UUID, *user.User]{
 		Conn:          conn,
 		AggregateType: user.Type,
-		AggregateSerde: serde.Chain[*user.User, *proto.User, []byte](
+		AggregateSerde: serde.Chain(
 			user.ProtoSerde,
 			serde.NewProtoJSON(func() *proto.User { return new(proto.User) }),
 		),
-		MessageSerde: serde.Chain[message.Message, *proto.Event, []byte](
+		MessageSerde: serde.Chain(
 			user.EventProtoSerde,
 			serde.NewProtoJSON(func() *proto.Event { return new(proto.Event) }),
 		),

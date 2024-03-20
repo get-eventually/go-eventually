@@ -1,18 +1,22 @@
+---
+name: Release
+
 on: workflow_dispatch
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-name: release-please
+permissions: read-all
+
 jobs:
-  release-please:
+  run:
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
     steps:
-      - name: Release
+      - name: Run release-please
         uses: google-github-actions/release-please-action@v4
         with:
           include-component-in-tag: true

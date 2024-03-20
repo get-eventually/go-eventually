@@ -9,7 +9,7 @@ import (
 )
 
 func TestChained(t *testing.T) {
-	mySerde := serde.Chain[myData, *myJSONData, []byte](
+	mySerde := serde.Chain(
 		myDataSerde,
 		serde.NewJSON(func() *myJSONData { return new(myJSONData) }),
 	)

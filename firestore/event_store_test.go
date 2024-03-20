@@ -11,7 +11,6 @@ import (
 	eventuallyfirestore "github.com/get-eventually/go-eventually/firestore"
 	"github.com/get-eventually/go-eventually/internal/user"
 	"github.com/get-eventually/go-eventually/internal/user/proto"
-	"github.com/get-eventually/go-eventually/message"
 	"github.com/get-eventually/go-eventually/serde"
 )
 
@@ -27,7 +26,7 @@ func TestEventStore(t *testing.T) {
 
 	eventStore := eventuallyfirestore.EventStore{
 		Client: client,
-		Serde: serde.Chain[message.Message, *proto.Event, []byte](
+		Serde: serde.Chain(
 			user.EventProtoSerde,
 			serde.NewProtoJSON(func() *proto.Event { return new(proto.Event) }),
 		),

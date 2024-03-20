@@ -39,7 +39,7 @@ func NewJSONDeserializer[T any](factory func() T) DeserializerFunc[T, []byte] {
 // NewJSON returns a new serde instance where some data (`T`) gets serialized to
 // and deserialized from JSON as byte-array.
 func NewJSON[T any](factory func() T) Fused[T, []byte] {
-	return Fuse[T, []byte](
+	return Fuse(
 		NewJSONSerializer[T](),
 		NewJSONDeserializer(factory),
 	)

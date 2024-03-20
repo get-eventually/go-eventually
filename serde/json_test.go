@@ -77,7 +77,7 @@ func deserializeMyData(jsonData *myJSONData) (myData, error) {
 	return data, nil
 }
 
-var myDataSerde = serde.Fuse[myData, *myJSONData](
+var myDataSerde = serde.Fuse(
 	serde.AsSerializerFunc(serializeMyData),
 	serde.AsDeserializerFunc(deserializeMyData),
 )
