@@ -29,6 +29,7 @@
               go-outline
               gopkgs
               delve
+              goreleaser
 
               # Linters
               nil

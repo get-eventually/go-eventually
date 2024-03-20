@@ -3,3 +3,5 @@
 
 # go
 coverage.txt
+
+dist/
