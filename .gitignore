@@ -1,3 +1,5 @@
-vendor
-*.out
+# local development environment
 .direnv
+
+# go
+coverage.txt
