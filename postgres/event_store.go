@@ -11,7 +11,7 @@ import (
 
 	"github.com/get-eventually/go-eventually/event"
 	"github.com/get-eventually/go-eventually/message"
-	"github.com/get-eventually/go-eventually/postgres/internal/xpgx"
+	"github.com/get-eventually/go-eventually/postgres/internal"
 	"github.com/get-eventually/go-eventually/serde"
 	"github.com/get-eventually/go-eventually/version"
 )
@@ -103,8 +103,9 @@ func (es EventStore) Append(
 		BeginQuery:     "",
 	}
 
-	if err := xpgx.RunTransaction(ctx, es.Conn, txOpts, func(ctx context.Context, tx pgx.Tx) error {
+	if err := internal.RunTransaction(ctx, es.Conn, txOpts, func(ctx context.Context, tx pgx.Tx) error {
 		var err error
+
 		if newVersion, err = appendDomainEvents(ctx, tx, es.Serde, id, expected, events...); err != nil {
 			return fmt.Errorf("postgres.EventStore: failed to append domain events, %w", err)
 		}

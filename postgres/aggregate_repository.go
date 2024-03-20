@@ -11,7 +11,7 @@ import (
 	"github.com/get-eventually/go-eventually/aggregate"
 	"github.com/get-eventually/go-eventually/event"
 	"github.com/get-eventually/go-eventually/message"
-	"github.com/get-eventually/go-eventually/postgres/internal/xpgx"
+	"github.com/get-eventually/go-eventually/postgres/internal"
 	"github.com/get-eventually/go-eventually/serde"
 	"github.com/get-eventually/go-eventually/version"
 )
@@ -85,7 +85,7 @@ func (repo AggregateRepository[ID, T]) Save(ctx context.Context, root T) (err er
 		BeginQuery:     "",
 	}
 
-	return xpgx.RunTransaction(ctx, repo.Conn, txOpts, func(ctx context.Context, tx pgx.Tx) error {
+	return internal.RunTransaction(ctx, repo.Conn, txOpts, func(ctx context.Context, tx pgx.Tx) error {
 		eventsToCommit := root.FlushRecordedEvents()
 		expectedRootVersion := root.Version() - version.Version(len(eventsToCommit))
 		eventStreamID := event.StreamID(root.AggregateID().String())

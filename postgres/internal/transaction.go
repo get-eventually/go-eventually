@@ -1,4 +1,4 @@
-package xpgx
+package internal
 
 import (
 	"context"

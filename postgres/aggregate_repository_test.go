@@ -3,7 +3,6 @@ package postgres_test
 import (
 	"context"
 	"database/sql"
-	"os"
 	"testing"
 
 	"github.com/google/uuid"
@@ -14,28 +13,30 @@ import (
 	"github.com/get-eventually/go-eventually/internal/user"
 	userv1 "github.com/get-eventually/go-eventually/internal/user/gen/user/v1"
 	"github.com/get-eventually/go-eventually/postgres"
+	"github.com/get-eventually/go-eventually/postgres/internal"
 	"github.com/get-eventually/go-eventually/serde"
 )
-
-const defaultPostgresURL = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
 
 func TestAggregateRepository(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
 
-	url, ok := os.LookupEnv("DATABASE_URL")
-	if !ok {
-		url = defaultPostgresURL
-	}
+	ctx := context.Background()
 
-	db, err := sql.Open("pgx", url)
+	container, err := internal.NewPostgresContainer(ctx)
+	require.NoError(t, err)
+
+	defer func() {
+		require.NoError(t, container.Terminate(ctx))
+	}()
+
+	db, err := sql.Open("pgx", container.ConnectionDSN)
 	require.NoError(t, err)
 	require.NoError(t, postgres.RunMigrations(db))
 	require.NoError(t, db.Close())
 
-	ctx := context.Background()
-	conn, err := pgxpool.New(ctx, url)
+	conn, err := pgxpool.New(ctx, container.ConnectionDSN)
 	require.NoError(t, err)
 
 	repository := postgres.AggregateRepository[uuid.UUID, *user.User]{
