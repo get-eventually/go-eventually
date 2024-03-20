@@ -60,6 +60,21 @@ func TestScenario(t *testing.T) {
 			AssertOn(t)
 	})
 
+	t.Run("test an aggregate function with one factory call that returns multiple errors with errors.Join()", func(t *testing.T) { //nolint:lll // It's ok in a test.
+		aggregate.
+			Scenario(user.Type).
+			When(func() (*user.User, error) {
+				return user.Create(id, "", "", "", time.Time{}, now)
+			}).
+			ThenErrors(
+				user.ErrInvalidFirstName,
+				user.ErrInvalidLastName,
+				user.ErrInvalidEmail,
+				user.ErrInvalidBirthDate,
+			).
+			AssertOn(t)
+	})
+
 	t.Run("test an aggregate function with an already-existing AggregateRoot instance", func(t *testing.T) {
 		aggregate.
 			Scenario(user.Type).

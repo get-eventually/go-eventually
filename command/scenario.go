@@ -2,9 +2,11 @@ package command
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/get-eventually/go-eventually/event"
 	"github.com/get-eventually/go-eventually/version"
@@ -81,8 +83,8 @@ func (sc ScenarioWhen[Cmd, T]) Then(events ...event.Persisted) ScenarioThen[Cmd,
 	return ScenarioThen[Cmd, T]{
 		ScenarioWhen: sc,
 		then:         events,
-		thenError:    nil,
-		wantError:    false,
+		errors:       nil,
+		wantErr:      false,
 	}
 }
 
@@ -96,8 +98,22 @@ func (sc ScenarioWhen[Cmd, T]) ThenError(err error) ScenarioThen[Cmd, T] {
 	return ScenarioThen[Cmd, T]{
 		ScenarioWhen: sc,
 		then:         nil,
-		thenError:    err,
-		wantError:    true,
+		errors:       []error{err},
+		wantErr:      true,
+	}
+}
+
+// ThenErrors specifies an unsuccessful outcome of the scenario, where the domain command
+// execution fails with a specific error that wraps multiple error types (e.g. through `errors.Join`).
+//
+// Use this method when you want to assert that the error returned by the domain command
+// matches ALL of the errors specified.
+func (sc ScenarioWhen[I, T]) ThenErrors(errs ...error) ScenarioThen[I, T] {
+	return ScenarioThen[I, T]{
+		ScenarioWhen: sc,
+		then:         nil,
+		errors:       errs,
+		wantErr:      true,
 	}
 }
 
@@ -110,8 +126,8 @@ func (sc ScenarioWhen[Cmd, T]) ThenFails() ScenarioThen[Cmd, T] {
 	return ScenarioThen[Cmd, T]{
 		ScenarioWhen: sc,
 		then:         nil,
-		thenError:    nil,
-		wantError:    true,
+		errors:       nil,
+		wantErr:      true,
 	}
 }
 
@@ -120,9 +136,9 @@ func (sc ScenarioWhen[Cmd, T]) ThenFails() ScenarioThen[Cmd, T] {
 type ScenarioThen[Cmd Command, T Handler[Cmd]] struct {
 	ScenarioWhen[Cmd, T]
 
-	then      []event.Persisted
-	thenError error
-	wantError bool
+	then    []event.Persisted
+	errors  []error
+	wantErr bool
 }
 
 // AssertOn performs the specified expectations of the scenario, using the Command Handler
@@ -136,18 +152,16 @@ type ScenarioThen[Cmd Command, T Handler[Cmd]] struct {
 // The type of the Aggregate used to evaluate the Command must be specified,
 // so that the Event-sourced Repository instance can be provided to the factory function
 // to build the desired Command Handler.
-func (sc ScenarioThen[Cmd, T]) AssertOn( //nolint:gocritic
+func (sc ScenarioThen[Cmd, T]) AssertOn(
 	t *testing.T,
 	handlerFactory func(event.Store) T,
 ) {
 	ctx := context.Background()
 	store := event.NewInMemoryStore()
 
-	for _, event := range sc.given {
-		_, err := store.Append(ctx, event.StreamID, version.Any, event.Envelope)
-		if !assert.NoError(t, err) {
-			return
-		}
+	for _, evt := range sc.given {
+		_, err := store.Append(ctx, evt.StreamID, version.Any, evt.Envelope)
+		require.NoError(t, err)
 	}
 
 	trackingStore := event.NewTrackingStore(store)
@@ -156,20 +170,18 @@ func (sc ScenarioThen[Cmd, T]) AssertOn( //nolint:gocritic
 		Streamer: store,
 	})
 
-	err := handler.Handle(context.Background(), sc.when)
+	switch err := handler.Handle(context.Background(), sc.when); {
+	case sc.wantErr:
+		assert.Error(t, err)
 
-	if !sc.wantError {
+		if expected := errors.Join(sc.errors...); expected != nil {
+			for _, expectedErr := range sc.errors {
+				assert.ErrorIs(t, err, expectedErr)
+			}
+		}
+
+	default:
 		assert.NoError(t, err)
 		assert.Equal(t, sc.then, trackingStore.Recorded())
-
-		return
-	}
-
-	if !assert.Error(t, err) {
-		return
-	}
-
-	if sc.thenError != nil {
-		assert.ErrorIs(t, err, sc.thenError)
 	}
 }

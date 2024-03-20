@@ -1,6 +1,7 @@
 package aggregate
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -21,7 +22,7 @@ type ScenarioInit[I ID, T Root[I]] struct {
 // on an Aggregate Root and their effects.
 //
 // These methods are meant to produce side-effects in the Aggregate Root state, and thus
-// in the overall system, enforcing the domain invariants represented by the
+// in the overall system, enforcing the aggregate invariants represented by the
 // Aggregate Root itself.
 func Scenario[I ID, T Root[I]](typ Type[I, T]) ScenarioInit[I, T] {
 	return ScenarioInit[I, T]{
@@ -38,7 +39,7 @@ func (sc ScenarioInit[I, T]) Given(events ...event.Persisted) ScenarioGiven[I, T
 	}
 }
 
-// When allows to call for a domain command method/function that creates a new
+// When allows to call for a aggregate method/function that creates a new
 // Aggregate Root instance.
 //
 // This method requires a closure that return said new Aggregate Root instance
@@ -54,17 +55,17 @@ func (sc ScenarioInit[I, T]) When(fn func() (T, error)) ScenarioWhen[I, T] {
 // ScenarioGiven is the state of the scenario once the Aggregate Root
 // preconditions have been set through the Scenario().Given() method.
 //
-// This state gives access to the When() method to specify the domain command
+// This state gives access to the When() method to specify the aggregate method
 // to test using the desired Aggregate Root.
 type ScenarioGiven[I ID, T Root[I]] struct {
 	typ   Type[I, T]
 	given []event.Persisted
 }
 
-// When allows to call the domain command method on the Aggregate Root instance
+// When allows to call the aggregate method method on the Aggregate Root instance
 // provided by the previous Scenario().Given() call.
 //
-// The domain command must be called inside the required closure parameter.
+// The aggregate method must be called inside the required closure parameter.
 func (sc ScenarioGiven[I, T]) When(fn func(T) error) ScenarioWhen[I, T] {
 	return ScenarioWhen[I, T]{
 		typ:   sc.typ,
@@ -88,12 +89,12 @@ func (sc ScenarioGiven[I, T]) When(fn func(T) error) ScenarioWhen[I, T] {
 	}
 }
 
-// ScenarioWhen is the state of the scenario once the domain command
+// ScenarioWhen is the state of the scenario once the aggregate method
 // to test has been provided through either Scenario().When() or
 // Scenario().Given().When() paths.
 //
 // This state allows to specify the expected outcome on the scenario using either
-// Then(), ThenFails() or ThenError() methods.
+// Then(), ThenFails(), ThenError() or ThenErrors() methods.
 type ScenarioWhen[I ID, T Root[I]] struct {
 	typ   Type[I, T]
 	given []event.Persisted
@@ -102,50 +103,67 @@ type ScenarioWhen[I ID, T Root[I]] struct {
 
 // Then specifies a successful outcome of the scenario, allowing to assert the
 // expected new Aggregate Root version and Domain Events recorded
-// during the domain command execution.
+// during the aggregate method execution.
 func (sc ScenarioWhen[I, T]) Then(v version.Version, events ...event.Envelope) ScenarioThen[I, T] {
 	return ScenarioThen[I, T]{
-		typ:           sc.typ,
-		given:         sc.given,
-		fn:            sc.fn,
-		version:       v,
-		expected:      events,
-		expectedError: nil,
-		wantError:     false,
+		typ:      sc.typ,
+		given:    sc.given,
+		fn:       sc.fn,
+		version:  v,
+		expected: events,
+		errors:   nil,
+		wantErr:  false,
 	}
 }
 
-// ThenFails specifies an unsuccessful outcome of the scenario, where the domain
-// command execution fails with an error.
+// ThenFails specifies an unsuccessful outcome of the scenario, where the aggregate
+// method execution fails with an error.
 //
 // Use this method when there is no need to assert the error returned by the
-// domain command is of a specific type or value.
+// aggregate method is of a specific type or value.
 func (sc ScenarioWhen[I, T]) ThenFails() ScenarioThen[I, T] {
 	return ScenarioThen[I, T]{
-		typ:           sc.typ,
-		given:         sc.given,
-		fn:            sc.fn,
-		version:       0,
-		expected:      nil,
-		expectedError: nil,
-		wantError:     true,
+		typ:      sc.typ,
+		given:    sc.given,
+		fn:       sc.fn,
+		version:  0,
+		expected: nil,
+		errors:   nil,
+		wantErr:  true,
 	}
 }
 
-// ThenError specifies an unsuccessful outcome of the scenario, where the domain
-// command execution fails with an error.
+// ThenError specifies an unsuccessful outcome of the scenario, where the aggregate
+// method execution fails with an error.
 //
-// Use this method when you want to assert that the error retured by the domain
-// command execution is of a specific type or value.
+// Use this method when you want to assert that the error retured by the aggregate
+// method execution is of a specific type or value.
 func (sc ScenarioWhen[I, T]) ThenError(err error) ScenarioThen[I, T] {
 	return ScenarioThen[I, T]{
-		typ:           sc.typ,
-		given:         sc.given,
-		fn:            sc.fn,
-		version:       0,
-		expected:      nil,
-		expectedError: err,
-		wantError:     true,
+		typ:      sc.typ,
+		given:    sc.given,
+		fn:       sc.fn,
+		version:  0,
+		expected: nil,
+		errors:   []error{err},
+		wantErr:  true,
+	}
+}
+
+// ThenErrors specifies an unsuccessful outcome of the scenario, where the aggregate method
+// execution fails with a specific error that wraps multiple error types (e.g. through `errors.Join`).
+//
+// Use this method when you want to assert that the error returned by the aggregate method
+// matches ALL of the errors specified.
+func (sc ScenarioWhen[I, T]) ThenErrors(errs ...error) ScenarioThen[I, T] {
+	return ScenarioThen[I, T]{
+		typ:      sc.typ,
+		given:    sc.given,
+		fn:       sc.fn,
+		version:  0,
+		expected: nil,
+		errors:   errs,
+		wantErr:  true,
 	}
 }
 
@@ -154,32 +172,32 @@ func (sc ScenarioWhen[I, T]) ThenError(err error) ScenarioThen[I, T] {
 //
 // Use the AssertOn method to run the test scenario.
 type ScenarioThen[I ID, T Root[I]] struct {
-	typ           Type[I, T]
-	given         []event.Persisted
-	fn            func() (T, error)
-	version       version.Version
-	expected      []event.Envelope
-	expectedError error
-	wantError     bool
+	typ      Type[I, T]
+	given    []event.Persisted
+	fn       func() (T, error)
+	version  version.Version
+	expected []event.Envelope
+	errors   []error
+	wantErr  bool
 }
 
 // AssertOn runs the test scenario using the specified testing.T instance.
 func (sc ScenarioThen[I, T]) AssertOn(t *testing.T) {
-	root, err := sc.fn()
+	switch root, err := sc.fn(); {
+	case sc.wantErr:
+		assert.Error(t, err)
 
-	if !sc.wantError {
+		if expected := errors.Join(sc.errors...); expected != nil {
+			for _, expectedErr := range sc.errors {
+				assert.ErrorIs(t, err, expectedErr)
+			}
+		}
+
+	default:
 		assert.NoError(t, err)
 
 		recordedEvents := root.FlushRecordedEvents()
 		assert.Equal(t, sc.expected, recordedEvents)
 		assert.Equal(t, sc.version, root.Version())
-
-		return
-	}
-
-	assert.Error(t, err)
-
-	if sc.expectedError != nil {
-		assert.ErrorIs(t, err, sc.expectedError)
 	}
 }

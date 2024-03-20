@@ -25,6 +25,27 @@ func TestScenario(t *testing.T) {
 		}
 	}
 
+	t.Run("fails when the given arguments are invalid", func(t *testing.T) {
+		command.
+			Scenario[user.CreateCommand, user.CreateCommandHandler]().
+			When(command.Envelope[user.CreateCommand]{
+				Message: user.CreateCommand{
+					FirstName: "",
+					LastName:  "",
+					BirthDate: time.Time{},
+					Email:     "",
+				},
+				Metadata: nil,
+			}).
+			ThenErrors(
+				user.ErrInvalidFirstName,
+				user.ErrInvalidLastName,
+				user.ErrInvalidEmail,
+				user.ErrInvalidBirthDate,
+			).
+			AssertOn(t, makeCommandHandler)
+	})
+
 	t.Run("create new user", func(t *testing.T) {
 		command.
 			Scenario[user.CreateCommand, user.CreateCommandHandler]().

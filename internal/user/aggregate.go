@@ -75,20 +75,26 @@ var (
 
 // Create creates a new User using the provided input.
 func Create(id uuid.UUID, firstName, lastName, email string, birthDate, now time.Time) (*User, error) {
+	var invalidArgs []error
+
 	if firstName == "" {
-		return nil, ErrInvalidFirstName
+		invalidArgs = append(invalidArgs, ErrInvalidFirstName)
 	}
 
 	if lastName == "" {
-		return nil, ErrInvalidLastName
+		invalidArgs = append(invalidArgs, ErrInvalidLastName)
 	}
 
 	if email == "" {
-		return nil, ErrInvalidEmail
+		invalidArgs = append(invalidArgs, ErrInvalidEmail)
 	}
 
 	if birthDate.IsZero() {
-		return nil, ErrInvalidBirthDate
+		invalidArgs = append(invalidArgs, ErrInvalidBirthDate)
+	}
+
+	if err := errors.Join(invalidArgs...); err != nil {
+		return nil, fmt.Errorf("user.Create: invalid arguments provided, %w", err)
 	}
 
 	user := new(User)
