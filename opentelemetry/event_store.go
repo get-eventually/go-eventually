@@ -44,7 +44,7 @@ func (ies *InstrumentedEventStore) registerMetrics(meter metric.Meter) error {
 		metric.WithUnit("ms"),
 		metric.WithDescription("Duration in milliseconds of event.Store.Stream operations performed."),
 	); err != nil {
-		return fmt.Errorf("oteleventually.InstrumentedEventStore: failed to register metric: %w", err)
+		return fmt.Errorf("oteleventually.InstrumentedEventStore: failed to register metric, %w", err)
 	}
 
 	if ies.appendDuration, err = meter.Int64Histogram(
@@ -52,7 +52,7 @@ func (ies *InstrumentedEventStore) registerMetrics(meter metric.Meter) error {
 		metric.WithUnit("ms"),
 		metric.WithDescription("Duration in milliseconds of event.Store.Append operations performed."),
 	); err != nil {
-		return fmt.Errorf("oteleventually.InstrumentedEventStore: failed to register metric: %w", err)
+		return fmt.Errorf("oteleventually.InstrumentedEventStore: failed to register metric, %w", err)
 	}
 
 	return nil

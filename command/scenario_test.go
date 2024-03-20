@@ -17,6 +17,14 @@ func TestScenario(t *testing.T) {
 	id := uuid.New()
 	now := time.Now()
 
+	makeCommandHandler := func(s event.Store) user.CreateCommandHandler {
+		return user.CreateCommandHandler{
+			Clock:          func() time.Time { return now },
+			UUIDGenerator:  func() uuid.UUID { return id },
+			UserRepository: aggregate.NewEventSourcedRepository(s, user.Type),
+		}
+	}
+
 	t.Run("create new user", func(t *testing.T) {
 		command.
 			Scenario[user.CreateCommand, user.CreateCommandHandler]().
@@ -32,43 +40,36 @@ func TestScenario(t *testing.T) {
 			Then(event.Persisted{
 				StreamID: event.StreamID(id.String()),
 				Version:  1,
-				Envelope: event.Envelope{
-					Message: user.WasCreated{
-						ID:        id,
+				Envelope: event.ToEnvelope(&user.Event{
+					ID:         id,
+					RecordTime: now,
+					Kind: &user.WasCreated{
 						FirstName: "John",
 						LastName:  "Doe",
 						BirthDate: now,
 						Email:     "john@doe.com",
 					},
-					Metadata: nil,
-				},
+				}),
 			}).
-			AssertOn(t, func(s event.Store) user.CreateCommandHandler {
-				return user.CreateCommandHandler{
-					UUIDGenerator: func() uuid.UUID {
-						return id
-					},
-					UserRepository: aggregate.NewEventSourcedRepository(s, user.Type),
-				}
-			})
+			AssertOn(t, makeCommandHandler)
 	})
 
 	t.Run("cannot create two duplicate users", func(t *testing.T) {
 		command.
-			Scenario[user.CreateCommand, user.Createpostgres]().
+			Scenario[user.CreateCommand, user.CreateCommandHandler]().
 			Given(event.Persisted{
 				StreamID: event.StreamID(id.String()),
 				Version:  1,
-				Envelope: event.Envelope{
-					Message: user.WasCreated{
-						ID:        id,
+				Envelope: event.ToEnvelope(&user.Event{
+					ID:         id,
+					RecordTime: now,
+					Kind: &user.WasCreated{
 						FirstName: "John",
 						LastName:  "Doe",
 						BirthDate: now,
 						Email:     "john@doe.com",
 					},
-					Metadata: nil,
-				},
+				}),
 			}).
 			When(command.Envelope[user.CreateCommand]{
 				Message: user.CreateCommand{
@@ -83,13 +84,6 @@ func TestScenario(t *testing.T) {
 				Expected: 0,
 				Actual:   1,
 			}).
-			AssertOn(t, func(s event.Store) user.Createpostgres {
-				return user.Createpostgres{
-					UUIDGenerator: func() uuid.UUID {
-						return id
-					},
-					UserRepository: aggregate.NewEventSourcedRepository(s, user.Type),
-				}
-			})
+			AssertOn(t, makeCommandHandler)
 	})
 }

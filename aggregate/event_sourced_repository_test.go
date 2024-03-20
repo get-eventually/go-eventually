@@ -20,6 +20,7 @@ func TestEventSourcedRepository(t *testing.T) {
 		lastName  = "Doe"
 		email     = "john@doe.com"
 		birthDate = time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
+		now       = time.Now()
 	)
 
 	ctx := context.Background()

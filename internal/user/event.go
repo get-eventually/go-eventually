@@ -10,6 +10,7 @@ import (
 
 var _ event.Event = new(Event)
 
+// Event represents a Domain Event for a User resource.
 type Event struct {
 	ID         uuid.UUID
 	RecordTime time.Time

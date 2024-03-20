@@ -63,7 +63,7 @@ func TestScenario(t *testing.T) {
 	t.Run("test an aggregate function with an already-existing AggregateRoot instance", func(t *testing.T) {
 		aggregate.
 			Scenario(user.Type).
-			Given(event.Persisted[*user.Event]{
+			Given(event.Persisted{
 				StreamID: event.StreamID(id.String()),
 				Version:  1,
 				Envelope: event.ToEnvelope(&user.Event{

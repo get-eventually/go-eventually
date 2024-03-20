@@ -27,7 +27,7 @@ type CreateCommand struct {
 // Name implements command.Command.
 func (CreateCommand) Name() string { return "CreateUser" }
 
-// Createpostgres is the command handler for CreateCommand domain commands.
+// CreateCommandHandler is the command handler for CreateCommand domain commands.
 type CreateCommandHandler struct {
 	Clock          func() time.Time
 	UUIDGenerator  func() uuid.UUID

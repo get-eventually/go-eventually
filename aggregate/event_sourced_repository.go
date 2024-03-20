@@ -15,7 +15,7 @@ import (
 func RehydrateFromEvents[I ID](root Root[I], eventStream event.StreamRead) error {
 	for event := range eventStream {
 		if err := root.Apply(event.Message); err != nil {
-			return fmt.Errorf("aggregate.RehydrateFromEvents: failed to record event: %w", err)
+			return fmt.Errorf("aggregate.RehydrateFromEvents: failed to record event, %w", err)
 		}
 
 		root.setVersion(event.Version)
@@ -91,7 +91,7 @@ func (repo EventSourcedRepository[I, T]) Get(ctx context.Context, id I) (T, erro
 
 	root := repo.typ.Factory()
 
-	if err := RehydrateFromEvents(root, eventStream.AsRead()); err != nil {
+	if err := RehydrateFromEvents(root, eventStream); err != nil {
 		return zeroValue, fmt.Errorf("aggregate.EventSourcedRepository: failed to rehydrate aggregate root, %w", err)
 	}
 
@@ -120,7 +120,7 @@ func (repo EventSourcedRepository[I, T]) Save(ctx context.Context, root T) error
 	expectedVersion := version.CheckExact(root.Version() - version.Version(len(events)))
 
 	if _, err := repo.eventStore.Append(ctx, streamID, expectedVersion, events...); err != nil {
-		return fmt.Errorf("aggregate.EventSourcedRepository: failed to commit recorded events: %w", err)
+		return fmt.Errorf("aggregate.EventSourcedRepository: failed to commit recorded events, %w", err)
 	}
 
 	return nil

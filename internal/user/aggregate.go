@@ -17,7 +17,7 @@ import (
 )
 
 // Type is the User aggregate type.
-var Type = aggregate.Type[uuid.UUID, *Event, *User]{
+var Type = aggregate.Type[uuid.UUID, *User]{
 	Name:    "User",
 	Factory: func() *User { return new(User) },
 }
@@ -25,7 +25,7 @@ var Type = aggregate.Type[uuid.UUID, *Event, *User]{
 // User is a naive user implementation, modeled as an Aggregate
 // using go-eventually's API.
 type User struct {
-	aggregate.BaseRoot[*Event]
+	aggregate.BaseRoot
 
 	// Aggregate field should remain unexported if possible,
 	// to enforce encapsulation.
@@ -38,10 +38,15 @@ type User struct {
 }
 
 // Apply implements aggregate.Aggregate.
-func (user *User) Apply(evt *Event) error {
-	switch kind := evt.Kind.(type) {
+func (user *User) Apply(evt event.Event) error {
+	userEvent, ok := evt.(*Event)
+	if !ok {
+		return fmt.Errorf("user.Apply: unexpected event type, %T", evt)
+	}
+
+	switch kind := userEvent.Kind.(type) {
 	case *WasCreated:
-		user.id = evt.ID
+		user.id = userEvent.ID
 		user.firstName = kind.FirstName
 		user.lastName = kind.LastName
 		user.birthDate = kind.BirthDate
@@ -49,7 +54,7 @@ func (user *User) Apply(evt *Event) error {
 	case *EmailWasUpdated:
 		user.email = kind.Email
 	default:
-		return fmt.Errorf("user.Apply: unexpected event type, %T", user, evt)
+		return fmt.Errorf("user.Apply: unexpected event kind type, %T", kind)
 	}
 
 	return nil
@@ -110,7 +115,7 @@ func (user *User) UpdateEmail(email string, now time.Time, metadata message.Meta
 		return ErrInvalidEmail
 	}
 
-	if err := aggregate.RecordThat(user, event.Envelope[*Event]{
+	if err := aggregate.RecordThat(user, event.Envelope{
 		Metadata: metadata,
 		Message: &Event{
 			ID:         user.id,
@@ -118,7 +123,7 @@ func (user *User) UpdateEmail(email string, now time.Time, metadata message.Meta
 			Kind:       &EmailWasUpdated{Email: email},
 		},
 	}); err != nil {
-		return fmt.Errorf("%T: failed to record domain event, %w", user, err)
+		return fmt.Errorf("user.UpdateEmail: failed to record domain event, %w", err)
 	}
 
 	return nil

@@ -15,9 +15,10 @@ import (
 
 // EventStoreSuite returns an executable testing suite running on the event.Store
 // value provided in input.
-func EventStoreSuite(eventStore event.Store[*Event]) func(t *testing.T) {
+func EventStoreSuite(eventStore event.Store) func(t *testing.T) {
 	return func(t *testing.T) {
 		ctx := context.Background()
+		now := time.Now()
 
 		// Testing the Event-sourced repository implementation, which indirectly
 		// tests the Event Store instance.
@@ -26,10 +27,10 @@ func EventStoreSuite(eventStore event.Store[*Event]) func(t *testing.T) {
 		t.Run("append works when used with version.CheckAny", func(t *testing.T) {
 			id := uuid.New()
 
-			usr, err := Create(id, "Dani", "Ross", "dani@ross.com", time.Now())
+			usr, err := Create(id, "Dani", "Ross", "dani@ross.com", now, now)
 			require.NoError(t, err)
 
-			require.NoError(t, usr.UpdateEmail("dani.ross@mail.com", nil))
+			require.NoError(t, usr.UpdateEmail("dani.ross@mail.com", now, nil))
 
 			eventsToCommit := usr.FlushRecordedEvents()
 			expectedVersion := version.Version(len(eventsToCommit))
@@ -46,7 +47,7 @@ func EventStoreSuite(eventStore event.Store[*Event]) func(t *testing.T) {
 
 			// Now let's update the User event stream once more.
 
-			require.NoError(t, usr.UpdateEmail("daniross123@gmail.com", nil))
+			require.NoError(t, usr.UpdateEmail("daniross123@gmail.com", now, nil))
 
 			newEventsToCommit := usr.FlushRecordedEvents()
 			expectedVersion += version.Version(len(newEventsToCommit))

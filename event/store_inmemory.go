@@ -27,7 +27,7 @@ func NewInMemoryStore() *InMemoryStore {
 
 func contextErr(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
-		return fmt.Errorf("event.InMemoryStore: context error: %w", err)
+		return fmt.Errorf("event.InMemoryStore: context error, %w", err)
 	}
 
 	return nil
@@ -103,7 +103,7 @@ func (es *InMemoryStore) Append(
 	currentVersion := version.CheckExact(len(es.events[id]))
 
 	if expected != version.Any && currentVersion != expected {
-		return 0, fmt.Errorf("event.InMemoryStore: failed to append events: %w", version.ConflictError{
+		return 0, fmt.Errorf("event.InMemoryStore: failed to append events, %w", version.ConflictError{
 			Expected: version.Version(expected.(version.CheckExact)),
 			Actual:   version.Version(currentVersion),
 		})

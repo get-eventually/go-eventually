@@ -8,6 +8,7 @@ import (
 	"google.golang.org/genproto/googleapis/type/date"
 
 	"github.com/get-eventually/go-eventually/internal/user/proto"
+	"github.com/get-eventually/go-eventually/message"
 	"github.com/get-eventually/go-eventually/serde"
 )
 
@@ -62,18 +63,23 @@ func protoDeserializer(src *proto.User) (*User, error) {
 
 // EventProtoSerde is the serde.Serde implementation for User domain events
 // to map to their Protobuf type, defined in the proto/ folder.
-var EventProtoSerde = serde.Fused[*Event, *proto.Event]{
-	Serializer:   serde.SerializerFunc[*Event, *proto.Event](protoEventSerializer),
-	Deserializer: serde.DeserializerFunc[*Event, *proto.Event](protoEventDeserializer),
+var EventProtoSerde = serde.Fused[message.Message, *proto.Event]{
+	Serializer:   serde.SerializerFunc[message.Message, *proto.Event](protoEventSerializer),
+	Deserializer: serde.DeserializerFunc[message.Message, *proto.Event](protoEventDeserializer),
 }
 
-func protoEventSerializer(evt *Event) (*proto.Event, error) {
-	switch kind := evt.Kind.(type) {
+func protoEventSerializer(evt message.Message) (*proto.Event, error) {
+	userEvent, ok := evt.(*Event)
+	if !ok {
+		return nil, fmt.Errorf("user.protoEventSerializer: unexpected event type, %T", evt)
+	}
+
+	switch kind := userEvent.Kind.(type) {
 	case *WasCreated:
 		return &proto.Event{
 			Event: &proto.Event_WasCreated_{
 				WasCreated: &proto.Event_WasCreated{
-					Id:        evt.ID.String(),
+					Id:        userEvent.ID.String(),
 					FirstName: kind.FirstName,
 					LastName:  kind.LastName,
 					BirthDate: timeToDate(kind.BirthDate),
@@ -90,11 +96,11 @@ func protoEventSerializer(evt *Event) (*proto.Event, error) {
 			},
 		}, nil
 	default:
-		return nil, fmt.Errorf("user.protoEventSerializer: invalid event type, %T", kind)
+		return nil, fmt.Errorf("user.protoEventSerializer: unexpected event kind type, %T", kind)
 	}
 }
 
-func protoEventDeserializer(evt *proto.Event) (*Event, error) {
+func protoEventDeserializer(evt *proto.Event) (message.Message, error) {
 	switch t := evt.Event.(type) {
 	case *proto.Event_WasCreated_:
 		id, err := uuid.Parse(t.WasCreated.Id)
