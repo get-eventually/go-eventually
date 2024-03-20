@@ -4,5 +4,6 @@
   "oteleventually": "0.2.1",
   "postgres": "0.2.1",
   "serdes": "0.2.1",
-  "integrationtest": "0.2.1"
+  "integrationtest": "0.2.1",
+  ".": "0.0.0"
 }
