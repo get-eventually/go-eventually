@@ -35,11 +35,6 @@
         <img alt="GitHub license"
         src="https://img.shields.io/github/license/get-eventually/go-eventually?style=flat-square">
     </a>
-    <!-- Matrix -->
-    <a href="https://matrix.to/#/#get-eventually:matrix.org">
-        <img alt="Matrix Chat"
-        src="https://img.shields.io/matrix/get-eventually:matrix.org?logo=matrix&style=flat-square">
-    </a>
 </div>
 
 <br />
