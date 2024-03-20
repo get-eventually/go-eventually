@@ -18,20 +18,24 @@ func TestScenario(t *testing.T) {
 		lastName  = "Ross"
 		birthDate = time.Date(1990, 1, 1, 0, 0, 0, 0, time.Local)
 		email     = "john@ross.com"
+		now       = time.Now()
 	)
 
 	t.Run("test an aggregate function with one factory", func(t *testing.T) {
 		aggregate.
 			Scenario(user.Type).
 			When(func() (*user.User, error) {
-				return user.Create(id, firstName, lastName, email, birthDate)
+				return user.Create(id, firstName, lastName, email, birthDate, now)
 			}).
-			Then(1, event.ToEnvelope(user.WasCreated{
-				ID:        id,
-				FirstName: firstName,
-				LastName:  lastName,
-				BirthDate: birthDate,
-				Email:     email,
+			Then(1, event.ToEnvelope(&user.Event{
+				ID:         id,
+				RecordTime: now,
+				Kind: &user.WasCreated{
+					FirstName: firstName,
+					LastName:  lastName,
+					BirthDate: birthDate,
+					Email:     email,
+				},
 			})).
 			AssertOn(t)
 	})
@@ -40,7 +44,7 @@ func TestScenario(t *testing.T) {
 		aggregate.
 			Scenario(user.Type).
 			When(func() (*user.User, error) {
-				return user.Create(id, "", lastName, email, birthDate)
+				return user.Create(id, "", lastName, email, birthDate, now)
 			}).
 			ThenFails().
 			AssertOn(t)
@@ -50,7 +54,7 @@ func TestScenario(t *testing.T) {
 		aggregate.
 			Scenario(user.Type).
 			When(func() (*user.User, error) {
-				return user.Create(id, "", lastName, email, birthDate)
+				return user.Create(id, "", lastName, email, birthDate, now)
 			}).
 			ThenError(user.ErrInvalidFirstName).
 			AssertOn(t)
@@ -59,22 +63,29 @@ func TestScenario(t *testing.T) {
 	t.Run("test an aggregate function with an already-existing AggregateRoot instance", func(t *testing.T) {
 		aggregate.
 			Scenario(user.Type).
-			Given(event.Persisted{
+			Given(event.Persisted[*user.Event]{
 				StreamID: event.StreamID(id.String()),
 				Version:  1,
-				Envelope: event.ToEnvelope(user.WasCreated{
-					ID:        id,
-					FirstName: firstName,
-					LastName:  lastName,
-					BirthDate: birthDate,
-					Email:     email,
+				Envelope: event.ToEnvelope(&user.Event{
+					ID:         id,
+					RecordTime: now,
+					Kind: &user.WasCreated{
+						FirstName: firstName,
+						LastName:  lastName,
+						BirthDate: birthDate,
+						Email:     email,
+					},
 				}),
 			}).
 			When(func(u *user.User) error {
-				return u.UpdateEmail("john.ross@email.com", nil)
+				return u.UpdateEmail("john.ross@email.com", now, nil)
 			}).
-			Then(2, event.ToEnvelope(user.EmailWasUpdated{
-				Email: "john.ross@email.com",
+			Then(2, event.ToEnvelope(&user.Event{
+				ID:         id,
+				RecordTime: now,
+				Kind: &user.EmailWasUpdated{
+					Email: "john.ross@email.com",
+				},
 			})).
 			AssertOn(t)
 	})

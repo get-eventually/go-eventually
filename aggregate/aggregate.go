@@ -113,7 +113,7 @@ func (br *BaseRoot) setVersion(v version.Version) {
 func (br *BaseRoot) recordThat(aggregate Aggregate, events ...event.Envelope) error {
 	for _, event := range events {
 		if err := aggregate.Apply(event.Message); err != nil {
-			return fmt.Errorf("%T: failed to record event: %w", br, err)
+			return fmt.Errorf("aggregate.BaseRoot: failed to record event, %w", err)
 		}
 
 		br.recordedEvents = append(br.recordedEvents, event)

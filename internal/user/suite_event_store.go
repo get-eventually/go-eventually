@@ -15,7 +15,7 @@ import (
 
 // EventStoreSuite returns an executable testing suite running on the event.Store
 // value provided in input.
-func EventStoreSuite(eventStore event.Store) func(t *testing.T) {
+func EventStoreSuite(eventStore event.Store[*Event]) func(t *testing.T) {
 	return func(t *testing.T) {
 		ctx := context.Background()
 

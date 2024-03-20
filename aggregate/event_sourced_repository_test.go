@@ -31,7 +31,7 @@ func TestEventSourcedRepository(t *testing.T) {
 		return
 	}
 
-	usr, err := user.Create(id, firstName, lastName, email, birthDate)
+	usr, err := user.Create(id, firstName, lastName, email, birthDate, now)
 	if !assert.NoError(t, err) {
 		return
 	}

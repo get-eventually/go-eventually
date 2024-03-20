@@ -14,7 +14,7 @@ import (
 //nolint:exhaustruct // Interface implementation assertion.
 var (
 	_ command.Command                = CreateCommand{}
-	_ command.Handler[CreateCommand] = Createpostgres{}
+	_ command.Handler[CreateCommand] = CreateCommandHandler{}
 )
 
 // CreateCommand is a domain command that can be used to create a new User.
@@ -28,22 +28,30 @@ type CreateCommand struct {
 func (CreateCommand) Name() string { return "CreateUser" }
 
 // Createpostgres is the command handler for CreateCommand domain commands.
-type Createpostgres struct {
+type CreateCommandHandler struct {
+	Clock          func() time.Time
 	UUIDGenerator  func() uuid.UUID
 	UserRepository aggregate.Saver[uuid.UUID, *User]
 }
 
 // Handle implements command.Handler.
-func (h Createpostgres) Handle(ctx context.Context, cmd command.Envelope[CreateCommand]) error {
+func (h CreateCommandHandler) Handle(ctx context.Context, cmd command.Envelope[CreateCommand]) error {
 	newUserID := h.UUIDGenerator()
 
-	user, err := Create(newUserID, cmd.Message.FirstName, cmd.Message.LastName, cmd.Message.Email, cmd.Message.BirthDate)
+	user, err := Create(
+		newUserID,
+		cmd.Message.FirstName,
+		cmd.Message.LastName,
+		cmd.Message.Email,
+		cmd.Message.BirthDate,
+		h.Clock(),
+	)
 	if err != nil {
-		return fmt.Errorf("user.Createpostgres: failed to create new User, %w", err)
+		return fmt.Errorf("user.CreateCommandHandler: failed to create new User, %w", err)
 	}
 
 	if err := h.UserRepository.Save(ctx, user); err != nil {
-		return fmt.Errorf("user.Createpostgres: failed to save new User to repository, %w", err)
+		return fmt.Errorf("user.CreateCommandHandler: failed to save new User to repository, %w", err)
 	}
 
 	return nil

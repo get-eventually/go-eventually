@@ -21,9 +21,10 @@ import (
 //
 // Package user of this module exposes a Protobuf-based serde, which can be useful
 // to test serialization and deserialization of data to the target repository implementation.
-func AggregateRepositorySuite(repository aggregate.Repository[uuid.UUID, *User]) func(t *testing.T) { //nolint:funlen,lll // It's a test suite.
+func AggregateRepositorySuite(repository aggregate.Repository[uuid.UUID, *Event, *User]) func(t *testing.T) { //nolint:funlen,lll // It's a test suite.
 	return func(t *testing.T) {
 		ctx := context.Background()
+		now := time.Now()
 
 		t.Run("it can load and save aggregates from the database", func(t *testing.T) {
 			var (
@@ -39,7 +40,7 @@ func AggregateRepositorySuite(repository aggregate.Repository[uuid.UUID, *User])
 				return
 			}
 
-			usr, err := Create(id, firstName, lastName, email, birthDate)
+			usr, err := Create(id, firstName, lastName, email, birthDate, now)
 			if !assert.NoError(t, err) {
 				return
 			}
@@ -62,11 +63,11 @@ func AggregateRepositorySuite(repository aggregate.Repository[uuid.UUID, *User])
 				birthDate = time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
 			)
 
-			user, err := Create(id, firstName, lastName, email, birthDate)
+			user, err := Create(id, firstName, lastName, email, birthDate, now)
 			require.NoError(t, err)
 
 			newEmail := "johndoe@gmail.com"
-			require.NoError(t, user.UpdateEmail(newEmail, message.Metadata{
+			require.NoError(t, user.UpdateEmail(newEmail, now, message.Metadata{
 				"Testing-Metadata-Time": time.Now().Format(time.RFC3339),
 			}))
 
@@ -75,7 +76,7 @@ func AggregateRepositorySuite(repository aggregate.Repository[uuid.UUID, *User])
 			}
 
 			// Try to create a new User instance, but stop at Create.
-			outdatedUsr, err := Create(id, firstName, lastName, email, birthDate)
+			outdatedUsr, err := Create(id, firstName, lastName, email, birthDate, now)
 			require.NoError(t, err)
 
 			err = repository.Save(ctx, outdatedUsr)

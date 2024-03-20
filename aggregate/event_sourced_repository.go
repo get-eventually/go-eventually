@@ -91,8 +91,8 @@ func (repo EventSourcedRepository[I, T]) Get(ctx context.Context, id I) (T, erro
 
 	root := repo.typ.Factory()
 
-	if err := RehydrateFromEvents[I](root, eventStream); err != nil {
-		return zeroValue, fmt.Errorf("%T: failed to rehydrate aggregate root: %w", repo, err)
+	if err := RehydrateFromEvents(root, eventStream.AsRead()); err != nil {
+		return zeroValue, fmt.Errorf("aggregate.EventSourcedRepository: failed to rehydrate aggregate root, %w", err)
 	}
 
 	if err := group.Wait(); err != nil {

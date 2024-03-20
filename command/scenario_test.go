@@ -13,13 +13,13 @@ import (
 	"github.com/get-eventually/go-eventually/version"
 )
 
-func Testpostgres(t *testing.T) {
+func TestScenario(t *testing.T) {
 	id := uuid.New()
 	now := time.Now()
 
 	t.Run("create new user", func(t *testing.T) {
 		command.
-			Scenario[user.CreateCommand, user.Createpostgres]().
+			Scenario[user.CreateCommand, user.CreateCommandHandler]().
 			When(command.Envelope[user.CreateCommand]{
 				Message: user.CreateCommand{
 					FirstName: "John",
@@ -43,8 +43,8 @@ func Testpostgres(t *testing.T) {
 					Metadata: nil,
 				},
 			}).
-			AssertOn(t, func(s event.Store) user.Createpostgres {
-				return user.Createpostgres{
+			AssertOn(t, func(s event.Store) user.CreateCommandHandler {
+				return user.CreateCommandHandler{
 					UUIDGenerator: func() uuid.UUID {
 						return id
 					},
