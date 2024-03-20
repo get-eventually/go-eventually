@@ -1,57 +1,52 @@
-package eventuallypostgres_test
+package postgres_test
 
 import (
 	"context"
 	"database/sql"
-	"os"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib" // Used to bring in the driver for sql.Open.
 	"github.com/stretchr/testify/require"
 
-	"github.com/get-eventually/go-eventually/core/message"
-	"github.com/get-eventually/go-eventually/integrationtest"
-	"github.com/get-eventually/go-eventually/integrationtest/user"
-	"github.com/get-eventually/go-eventually/integrationtest/user/proto"
-	eventuallypostgres "github.com/get-eventually/go-eventually/postgres"
-	"github.com/get-eventually/go-eventually/serdes"
+	"github.com/get-eventually/go-eventually/internal/user"
+	userv1 "github.com/get-eventually/go-eventually/internal/user/gen/user/v1"
+	"github.com/get-eventually/go-eventually/postgres"
+	"github.com/get-eventually/go-eventually/postgres/internal"
+	"github.com/get-eventually/go-eventually/serde"
 )
-
-const defaultPostgresURL = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
 
 func TestAggregateRepository(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
 
-	url, ok := os.LookupEnv("DATABASE_URL")
-	if !ok {
-		url = defaultPostgresURL
-	}
+	ctx := context.Background()
 
-	db, err := sql.Open("pgx", url)
+	container, err := internal.NewPostgresContainer(ctx)
 	require.NoError(t, err)
-	require.NoError(t, eventuallypostgres.RunMigrations(db))
+
+	defer func() {
+		require.NoError(t, container.Terminate(ctx))
+	}()
+
+	db, err := sql.Open("pgx", container.ConnectionDSN)
+	require.NoError(t, err)
+	require.NoError(t, postgres.RunMigrations(db))
 	require.NoError(t, db.Close())
 
-	ctx := context.Background()
-	conn, err := pgxpool.New(ctx, url)
+	conn, err := pgxpool.New(ctx, container.ConnectionDSN)
 	require.NoError(t, err)
 
-	repository := eventuallypostgres.AggregateRepository[uuid.UUID, *user.User]{
-		Conn:          conn,
-		AggregateType: user.Type,
-		AggregateSerde: serdes.Chain[*user.User, *proto.User, []byte](
+	user.AggregateRepositorySuite(postgres.NewAggregateRepository(
+		conn, user.Type,
+		serde.Chain(
 			user.ProtoSerde,
-			serdes.NewProtoJSON(func() *proto.User { return &proto.User{} }),
+			serde.NewProtoJSON(func() *userv1.User { return new(userv1.User) }),
 		),
-		MessageSerde: serdes.Chain[message.Message, *proto.Event, []byte](
+		serde.Chain(
 			user.EventProtoSerde,
-			serdes.NewProtoJSON(func() *proto.Event { return &proto.Event{} }),
+			serde.NewProtoJSON(func() *userv1.Event { return new(userv1.Event) }),
 		),
-	}
-
-	integrationtest.AggregateRepository(repository)(t)
+	))(t)
 }

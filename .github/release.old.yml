@@ -1,0 +1,22 @@
+---
+name: Release
+
+on: workflow_dispatch
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: read-all
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Run release-please
+        uses: google-github-actions/release-please-action@v4
+        with:
+          include-component-in-tag: true

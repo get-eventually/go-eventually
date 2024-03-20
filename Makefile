@@ -1,10 +1,19 @@
-GO_TEST_FLAGS := -v -race -coverprofile=coverage.out
-GOLANGCI_LINT_FLAGS ?=
+MAKEFLAGS    += -s --always-make -C
+SHELL        := bash
+.SHELLFLAGS  := -Eeuo pipefail -c
 
-.PHONY: run-linter
-run-linter:
-	@go work edit -json | jq -c -r '[.Use[].DiskPath] | map_values(. + "/...")[]' | xargs -I {} golangci-lint run $(GOLANGCI_LINT_FLAGS) {}
+ifndef DEBUG
+.SILENT:
+endif
 
-.PHONY: run-tests
-run-tests:
-	@find . -name "go.mod" | sed "s/\/go.mod//g" | xargs -I % bash -c 'echo -e "Testing: %"; cd %; go test ./... $(GO_TEST_FLAGS)'
+GOLANGCI_LINT_FLAGS ?= -v
+GO_TEST_FLAGS       ?= -v -cover -covermode=atomic -coverprofile=coverage.txt -coverpkg=./...
+
+go.lint:
+	golangci-lint run $(GOLANGCI_LINT_FLAGS)
+
+go.test:
+	go test $(GO_TEST_FLAGS) ./...
+
+go.test.unit:
+	go test -short $(GO_TEST_FLAGS) ./...

@@ -1,4 +1,4 @@
-package eventuallypostgres
+package postgres
 
 import (
 	"database/sql"
@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 
-	// Necessary to load the postgres driver used by migrate.
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/pgx"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
@@ -21,7 +20,7 @@ var fs embed.FS
 // before building a postgres interface implementation.
 func RunMigrations(db *sql.DB) error {
 	wrapErr := func(err error, msg string) error {
-		return fmt.Errorf("eventuallypostgres.RunMigrations: %s, %w", msg, err)
+		return fmt.Errorf("postgres.RunMigrations: %s, %w", msg, err)
 	}
 
 	d, err := iofs.New(fs, "migrations")
@@ -30,7 +29,13 @@ func RunMigrations(db *sql.DB) error {
 	}
 
 	driver, err := pgx.WithInstance(db, &pgx.Config{
-		MigrationsTable: "eventually_schema_migrations",
+		MigrationsTable:       "eventually_schema_migrations",
+		DatabaseName:          "",
+		SchemaName:            "",
+		StatementTimeout:      0,
+		MigrationsTableQuoted: false,
+		MultiStatementEnabled: false,
+		MultiStatementMaxSize: 0,
 	})
 	if err != nil {
 		return wrapErr(err, "failed to create new migrate db instance")

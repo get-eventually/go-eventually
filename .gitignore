@@ -1,5 +1,5 @@
-vendor
-*.out
-go.work.sum
-
+# local development environment
 .direnv
+
+# go
+coverage.txt

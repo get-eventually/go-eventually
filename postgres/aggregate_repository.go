@@ -1,4 +1,4 @@
-package eventuallypostgres
+package postgres
 
 import (
 	"context"
@@ -8,11 +8,12 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/get-eventually/go-eventually/core/aggregate"
-	"github.com/get-eventually/go-eventually/core/event"
-	"github.com/get-eventually/go-eventually/core/message"
-	"github.com/get-eventually/go-eventually/core/serde"
-	"github.com/get-eventually/go-eventually/core/version"
+	"github.com/get-eventually/go-eventually/aggregate"
+	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/message"
+	"github.com/get-eventually/go-eventually/postgres/internal"
+	"github.com/get-eventually/go-eventually/serde"
+	"github.com/get-eventually/go-eventually/version"
 )
 
 // AggregateRepository implements the aggregate.Repository interface
@@ -23,25 +24,38 @@ import (
 // to both "events" and "event_streams" to append the Domain events
 // recorded by Aggregate Roots. These updates are performed within the same transaction.
 type AggregateRepository[ID aggregate.ID, T aggregate.Root[ID]] struct {
-	Conn           *pgxpool.Pool
-	AggregateType  aggregate.Type[ID, T]
-	AggregateSerde serde.Bytes[T]
-	MessageSerde   serde.Bytes[message.Message]
+	conn           *pgxpool.Pool
+	aggregateType  aggregate.Type[ID, T]
+	aggregateSerde serde.Bytes[T]
+	messageSerde   serde.Bytes[message.Message]
+}
+
+// NewAggregateRepository returns a new AggregateRepository instance.
+func NewAggregateRepository[ID aggregate.ID, T aggregate.Root[ID]](
+	conn *pgxpool.Pool,
+	aggregateType aggregate.Type[ID, T],
+	aggregateSerde serde.Bytes[T],
+	messageSerde serde.Bytes[message.Message],
+) AggregateRepository[ID, T] {
+	return AggregateRepository[ID, T]{
+		conn:           conn,
+		aggregateType:  aggregateType,
+		aggregateSerde: aggregateSerde,
+		messageSerde:   messageSerde,
+	}
 }
 
 // Get returns the aggregate.Root instance specified by the provided id.
 // Returns aggregate.ErrRootNotFound if the Aggregate Root doesn't exist.
 func (repo AggregateRepository[ID, T]) Get(ctx context.Context, id ID) (T, error) {
-	return repo.get(ctx, repo.Conn, id)
+	return repo.get(ctx, repo.conn, id)
 }
 
-func (repo AggregateRepository[ID, T]) get(
-	ctx context.Context,
-	tx interface {
-		QueryRow(context.Context, string, ...interface{}) pgx.Row
-	},
-	id ID,
-) (T, error) {
+type queryRower interface {
+	QueryRow(context.Context, string, ...interface{}) pgx.Row
+}
+
+func (repo AggregateRepository[ID, T]) get(ctx context.Context, tx queryRower, id ID) (T, error) {
 	var zeroValue T
 
 	row := tx.QueryRow(
@@ -49,7 +63,7 @@ func (repo AggregateRepository[ID, T]) get(
 		`SELECT version, state
 		FROM aggregates
 		WHERE aggregate_id = $1 AND "type" = $2`,
-		id.String(), repo.AggregateType.Name,
+		id.String(), repo.aggregateType.Name,
 	)
 
 	var (
@@ -61,15 +75,15 @@ func (repo AggregateRepository[ID, T]) get(
 		return zeroValue, aggregate.ErrRootNotFound
 	} else if err != nil {
 		return zeroValue, fmt.Errorf(
-			"eventuallypostgres.AggregateRepository.Get: failed to fetch aggregate state from database: %w",
+			"postgres.AggregateRepository: failed to fetch aggregate state from database, %w",
 			err,
 		)
 	}
 
-	root, err := aggregate.RehydrateFromState[ID, T, []byte](v, state, repo.AggregateSerde)
+	root, err := aggregate.RehydrateFromState(v, state, repo.aggregateSerde)
 	if err != nil {
 		return zeroValue, fmt.Errorf(
-			"eventuallypostgres.AggregateRepository.Get: failed to deserialize state into aggregate root object: %w",
+			"postgres.AggregateRepository: failed to deserialize state into aggregate root object, %w",
 			err,
 		)
 	}
@@ -78,54 +92,39 @@ func (repo AggregateRepository[ID, T]) get(
 }
 
 // Save saves the new state of the provided aggregate.Root instance.
-func (repo AggregateRepository[ID, T]) Save(ctx context.Context, root T) error {
-	conn := repo.Conn
-
-	tx, err := conn.BeginTx(ctx, pgx.TxOptions{
+func (repo AggregateRepository[ID, T]) Save(ctx context.Context, root T) (err error) {
+	txOpts := pgx.TxOptions{
 		IsoLevel:       pgx.Serializable,
 		AccessMode:     pgx.ReadWrite,
 		DeferrableMode: pgx.Deferrable,
+		BeginQuery:     "",
+	}
+
+	return internal.RunTransaction(ctx, repo.conn, txOpts, func(ctx context.Context, tx pgx.Tx) error {
+		eventsToCommit := root.FlushRecordedEvents()
+		expectedRootVersion := root.Version() - version.Version(len(eventsToCommit))
+		eventStreamID := event.StreamID(root.AggregateID().String())
+
+		newEventStreamVersion, err := appendDomainEvents(
+			ctx, tx,
+			repo.messageSerde,
+			eventStreamID,
+			version.CheckExact(expectedRootVersion),
+			eventsToCommit...,
+		)
+		if err != nil {
+			return err
+		}
+
+		if newEventStreamVersion != root.Version() {
+			return repo.saveErr("version mismatch between event stream and aggregate", version.ConflictError{
+				Expected: newEventStreamVersion,
+				Actual:   root.Version(),
+			})
+		}
+
+		return repo.saveAggregateState(ctx, tx, eventStreamID, root)
 	})
-	if err != nil {
-		return repo.saveErr("failed to open db transaction, %w", err)
-	}
-
-	defer func() {
-		// NOTE: should not have effect if the transaction has been committed
-		_ = tx.Rollback(ctx)
-	}()
-
-	eventsToCommit := root.FlushRecordedEvents()
-	expectedRootVersion := root.Version() - version.Version(len(eventsToCommit))
-	eventStreamID := event.StreamID(root.AggregateID().String())
-
-	newEventStreamVersion, err := appendDomainEvents(
-		ctx, tx,
-		repo.MessageSerde,
-		eventStreamID,
-		version.CheckExact(expectedRootVersion),
-		eventsToCommit...,
-	)
-	if err != nil {
-		return err
-	}
-
-	if newEventStreamVersion != root.Version() {
-		return repo.saveErr("version mismatch between event stream and aggregate", version.ConflictError{
-			Expected: newEventStreamVersion,
-			Actual:   root.Version(),
-		})
-	}
-
-	if err := repo.saveAggregateState(ctx, tx, eventStreamID, root); err != nil {
-		return err
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return repo.saveErr("failed to commit transaction, %w", err)
-	}
-
-	return nil
 }
 
 func (repo AggregateRepository[ID, T]) saveAggregateState(
@@ -134,7 +133,7 @@ func (repo AggregateRepository[ID, T]) saveAggregateState(
 	id event.StreamID,
 	root T,
 ) error {
-	state, err := repo.AggregateSerde.Serialize(root)
+	state, err := repo.aggregateSerde.Serialize(root)
 	if err != nil {
 		return repo.saveErr("failed to serialize aggregate root into wire format, %w", err)
 	}
@@ -145,7 +144,7 @@ func (repo AggregateRepository[ID, T]) saveAggregateState(
 		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (aggregate_id) DO
 		UPDATE SET "version" = $3, "state" = $4`,
-		id, repo.AggregateType.Name, root.Version(), state,
+		id, repo.aggregateType.Name, root.Version(), state,
 	); err != nil {
 		return repo.saveErr("failed to save new aggregate state, %w", err)
 	}
@@ -154,5 +153,5 @@ func (repo AggregateRepository[ID, T]) saveAggregateState(
 }
 
 func (repo AggregateRepository[ID, T]) saveErr(msg string, args ...any) error {
-	return fmt.Errorf("eventuallypostgres.AggregateRepository: "+msg, args...)
+	return fmt.Errorf("postgres.AggregateRepository: "+msg, args...)
 }

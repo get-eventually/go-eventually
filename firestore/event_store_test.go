@@ -1,38 +1,61 @@
-package eventuallyfirestore_test
+package firestore_test
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"cloud.google.com/go/firestore"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/modules/gcloud"
+	"google.golang.org/api/option"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
-	"github.com/get-eventually/go-eventually/core/message"
 	eventuallyfirestore "github.com/get-eventually/go-eventually/firestore"
-	"github.com/get-eventually/go-eventually/integrationtest"
-	"github.com/get-eventually/go-eventually/integrationtest/user"
-	"github.com/get-eventually/go-eventually/integrationtest/user/proto"
-	"github.com/get-eventually/go-eventually/serdes"
+	"github.com/get-eventually/go-eventually/internal/user"
+	userv1 "github.com/get-eventually/go-eventually/internal/user/gen/user/v1"
+	"github.com/get-eventually/go-eventually/serde"
 )
 
 func TestEventStore(t *testing.T) {
+	const projectID = "firestore-project"
+
 	if testing.Short() {
 		t.SkipNow()
 	}
 
 	ctx := context.Background()
 
-	client, err := firestore.NewClient(ctx, os.Getenv("GOOGLE_PROJECT_ID"))
+	firestoreContainer, err := gcloud.RunFirestoreContainer(
+		ctx,
+		testcontainers.WithImage("google/cloud-sdk:469.0.0-emulators"),
+		gcloud.WithProjectID(projectID),
+	)
 	require.NoError(t, err)
+
+	// Clean up the container
+	defer func() {
+		require.NoError(t, firestoreContainer.Terminate(ctx))
+	}()
+
+	conn, err := grpc.Dial(firestoreContainer.URI, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	require.NoError(t, err)
+
+	client, err := firestore.NewClient(ctx, projectID, option.WithGRPCConn(conn))
+	require.NoError(t, err)
+
+	defer func() {
+		require.NoError(t, client.Close())
+	}()
 
 	eventStore := eventuallyfirestore.EventStore{
 		Client: client,
-		Serde: serdes.Chain[message.Message, *proto.Event, []byte](
+		Serde: serde.Chain(
 			user.EventProtoSerde,
-			serdes.NewProtoJSON(func() *proto.Event { return &proto.Event{} }),
+			serde.NewProtoJSON(func() *userv1.Event { return new(userv1.Event) }),
 		),
 	}
 
-	integrationtest.EventStore(eventStore)(t)
+	user.EventStoreSuite(eventStore)(t)
 }

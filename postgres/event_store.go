@@ -1,4 +1,4 @@
-package eventuallypostgres
+package postgres
 
 import (
 	"context"
@@ -9,12 +9,14 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/get-eventually/go-eventually/core/event"
-	"github.com/get-eventually/go-eventually/core/message"
-	"github.com/get-eventually/go-eventually/core/serde"
-	"github.com/get-eventually/go-eventually/core/version"
+	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/message"
+	"github.com/get-eventually/go-eventually/postgres/internal"
+	"github.com/get-eventually/go-eventually/serde"
+	"github.com/get-eventually/go-eventually/version"
 )
 
+//nolint:exhaustruct // Interface implementation assertion.
 var _ event.Store = EventStore{}
 
 // EventStore is an event.Store implementation targeted to PostgreSQL databases.
@@ -22,8 +24,16 @@ var _ event.Store = EventStore{}
 // The implementation uses "event_streams" and "events" as their
 // operational tables. Updates to these tables are transactional.
 type EventStore struct {
-	Conn  *pgxpool.Pool
-	Serde serde.Bytes[message.Message]
+	conn         *pgxpool.Pool
+	messageSerde serde.Bytes[message.Message]
+}
+
+// NewEventStore returns a new EventStore instance.
+func NewEventStore(conn *pgxpool.Pool, messageSerde serde.Bytes[message.Message]) EventStore {
+	return EventStore{
+		conn:         conn,
+		messageSerde: messageSerde,
+	}
 }
 
 // Stream implements the event.Streamer interface.
@@ -35,7 +45,7 @@ func (es EventStore) Stream(
 ) error {
 	defer close(stream)
 
-	rows, err := es.Conn.Query(
+	rows, err := es.conn.Query(
 		ctx,
 		`SELECT version, event, metadata FROM events
 		WHERE event_stream_id = $1 AND version >= $2
@@ -48,35 +58,38 @@ func (es EventStore) Stream(
 	}
 
 	if err != nil {
-		return fmt.Errorf("eventuallypostgres.EventStore: failed to query events table: %w", err)
+		return fmt.Errorf("postgres.EventStore: failed to query events table, %w", err)
 	}
 
 	for rows.Next() {
 		var (
-			rawEvent    []byte
-			rawMetadata json.RawMessage
+			rawEvent     []byte
+			rawMetadata  json.RawMessage
+			eventVersion version.Version
 		)
 
-		evt := event.Persisted{
-			StreamID: id,
+		if err := rows.Scan(&eventVersion, &rawEvent, &rawMetadata); err != nil {
+			return fmt.Errorf("postgres.EventStore: failed to scan next row")
 		}
 
-		if err := rows.Scan(&evt.Version, &rawEvent, &rawMetadata); err != nil {
-			return fmt.Errorf("eventuallypostgres.EventStore: failed to scan next row")
-		}
-
-		msg, err := es.Serde.Deserialize(rawEvent)
+		msg, err := es.messageSerde.Deserialize(rawEvent)
 		if err != nil {
-			return fmt.Errorf("eventuallypostgres.EventStore: failed to deserialize event: %w", err)
+			return fmt.Errorf("postgres.EventStore: failed to deserialize event, %w", err)
 		}
 
-		evt.Message = msg
-
-		if err := json.Unmarshal(rawMetadata, &evt.Metadata); err != nil {
-			return fmt.Errorf("eventuallypostgres.EventStore: failed to deserialize metadata: %w", err)
+		var metadata message.Metadata
+		if err := json.Unmarshal(rawMetadata, &metadata); err != nil {
+			return fmt.Errorf("postgres.EventStore: failed to deserialize metadata, %w", err)
 		}
 
-		stream <- evt
+		stream <- event.Persisted{
+			StreamID: id,
+			Version:  eventVersion,
+			Envelope: event.Envelope{
+				Message:  msg,
+				Metadata: metadata,
+			},
+		}
 	}
 
 	return nil
@@ -89,27 +102,25 @@ func (es EventStore) Append(
 	expected version.Check,
 	events ...event.Envelope,
 ) (version.Version, error) {
-	tx, err := es.Conn.BeginTx(ctx, pgx.TxOptions{
+	var newVersion version.Version
+
+	txOpts := pgx.TxOptions{
 		IsoLevel:       pgx.Serializable,
 		AccessMode:     pgx.ReadWrite,
 		DeferrableMode: pgx.Deferrable,
-	})
-	if err != nil {
-		return 0, fmt.Errorf("eventuallypostgres.EventStore: failed to open database transaction: %w", err)
+		BeginQuery:     "",
 	}
 
-	defer func() {
-		// NOTE: should not have effect if the transaction has been committed
-		_ = tx.Rollback(ctx)
-	}()
+	if err := internal.RunTransaction(ctx, es.conn, txOpts, func(ctx context.Context, tx pgx.Tx) error {
+		var err error
 
-	newVersion, err := appendDomainEvents(ctx, tx, es.Serde, id, expected, events...)
-	if err != nil {
-		return 0, fmt.Errorf("eventuallypostgres.EventStore: failed to append domain events: %w", err)
-	}
+		if newVersion, err = appendDomainEvents(ctx, tx, es.messageSerde, id, expected, events...); err != nil {
+			return fmt.Errorf("postgres.EventStore: failed to append domain events, %w", err)
+		}
 
-	if err := tx.Commit(ctx); err != nil {
-		return 0, fmt.Errorf("eventuallypostgres.EventStore: failed to commit transaction, %w", err)
+		return nil
+	}); err != nil {
+		return 0, err
 	}
 
 	return newVersion, nil

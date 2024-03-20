@@ -1,27 +1,22 @@
+---
+# See https://github.com/golangci/golangci-lint/blob/master/.golangci.example.yml
 run:
-  # Avoid false positives on .github configuration files.
-  skip-dirs:
-    - .github
-    - resources
-    - migrations # NOTE: this is relative to postgres module
-    - core/internal/user
-    - postgres/internal/user
+  go: '1.21'
+  tests: true
 
 linters-settings:
-  dupl:
-    threshold: 100
-  funlen:
-    lines: 80
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
   gci:
     sections:
       - standard
       - default
       - prefix(github.com/get-eventually/go-eventually)
-  goconst:
-    min-len: 2
-    min-occurrences: 2
-  gocognit:
-    min-complexity: 20
+  gocyclo:
+    min-complexity: 15
+  goimports:
+    local-prefixes: prefix(github.com/get-eventually/go-eventually)
   gocritic:
     enabled-tags:
       - diagnostic
@@ -30,101 +25,88 @@ linters-settings:
       - performance
       - style
     disabled-checks:
-      - dupImport # https://github.com/go-critic/go-critic/issues/845
-  gocyclo:
-    min-complexity: 15
-  goimports:
-    local-prefixes: github.com/get-eventually/go-eventually
-  golint:
-    min-confidence: 0
-  govet:
-    check-shadowing: true
-  lll:
-    line-length: 120
+      - dupImport  # https://github.com/go-critic/go-critic/issues/845
   misspell:
     locale: US
-  nolintlint:
-    allow-leading-space: true # don't require machine-readable nolint directives (i.e. with no leading space)
-    allow-unused: false # report any unused nolint directives
-    require-explanation: false # don't require an explanation for nolint directives
-    require-specific: false # don't require nolint directives to be specific about which linter is being skipped
-  prealloc:
-    # NOTE: since the codebase uses channels as streams pretty extensively, we are
-    # disabling the range-over-channel case for this linter.
-    range-loops: false
+  lll:
+    line-length: 120
+  tagliatelle:
+    case:
+      rules:
+        json: snake
+  unused:
+    exported-is-used: true
+    exported-fields-are-used: true
+  unparam:
+    check-exported: true
+  gomodguard:
+    blocked:
+      modules:
+        - github.com/golang/protobuf:
+            recommendations:
+              - google.golang.org/protobuf
+  varnamelen:
+    ignore-names:
+      - err
+      - tc  # For test cases, like `for _, tc := range testcases`
+      - id
 
 linters:
   disable-all: true
   enable:
+    - bodyclose
     - dogsled
-    - dupl
     - errcheck
     - exhaustive
+    - exhaustruct
+    - exportloopref
     - funlen
     - gci
     - gochecknoinits
+    # - gochecknoglobals
     - gocognit
     - goconst
-    # NOTE: disabling this linter since it panics when analyzing core/message pkg.
-    # - gocritic
+    - gocritic
     - gocyclo
     - godot
+    - godox
     - gofumpt
     - goimports
+    - gomodguard
     - gomnd
     - goprintffuncname
+    - exportloopref
     - gosec
     - gosimple
+    - govet
+    # - ifshort
     - ineffassign
     - lll
     - makezero
     - misspell
     - nakedret
     - nestif
+    - nilerr
     - nolintlint
     - prealloc
     - revive
-    # These two linters are useful for the Postgres Event Store implementation.
+    - rowserrcheck
+    - sqlclosecheck
     - staticcheck
     - stylecheck
+    - tagliatelle
     - testpackage
     - typecheck
     - unconvert
+    - unparam
     - unused
+    - wastedassign
     - whitespace
     - wsl
-    # These linters are disabled due to Go 1.18 issues with go/ssa package.
-    # More context here: https://github.com/golangci/golangci-lint/issues/2649
-    #
-    # - bodyclose
-    # - govet
-    # - nilerr
-    # - rowserrcheck
-    # - sqlclosecheck
-    # - structcheck
-    # - unparam
-    # - wastedassign
 
 issues:
   exclude-use-default: false
-
-  # Excluding configuration per-path, per-linter, per-text and per-source
   exclude-rules:
     - path: _test\.go
       linters:
-        - gomnd
         - funlen
-
-    - path: core/*
-      linters:
-        - gocritic
-
-    # dupl linter is annoying in this module.
-    - path: serdes
-      linters:
-        - dupl
-
-    # https://github.com/go-critic/go-critic/issues/926
-    - linters:
-        - gocritic
-      text: "unnecessaryDefer:"

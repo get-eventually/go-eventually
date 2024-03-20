@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package user.v1;
+
+import "google/type/date.proto";
+
+// Represents a User resource.
+message User {
+  // The User's primary unique identifier.
+  string id = 1;
+
+  // The User's first name.
+  string first_name = 2;
+
+  // The User's last name.
+  string last_name = 3;
+
+  // The User's birth date.
+  google.type.Date birth_date = 4;
+
+  // The User's email.
+  string email = 5;
+}

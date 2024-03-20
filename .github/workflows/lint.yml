@@ -1,0 +1,66 @@
+---
+name: Lint
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+on:  # yamllint disable-line rule:truthy
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions: read-all
+
+jobs:
+  go:
+    name: Go
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v4
+        with:
+          args: --timeout=5m
+
+  super-linter:
+    name: Super Linter
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+      statuses: write
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+        with:
+          # Full git history is needed to get a proper
+          # list of changed files within `super-linter`
+          fetch-depth: 0
+      - name: Run super-linter
+        uses: super-linter/super-linter@v6
+        env:
+          VALIDATE_ALL_CODEBASE: false
+          DEFAULT_BRANCH: main
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Linters are on the top-level of the repository.
+          LINTER_RULES_PATH: ./
+          # Go is made out of copy-paste, forget this one.
+          VALIDATE_JSCPD: false
+          # NOTE: using Buf as linter, which is not supported by SuperLinter.
+          VALIDATE_PROTOBUF: false
+          # NOTE: super-linter has quite poor support for golangci-lint.
+          # We use the official linter action for it instead.
+          VALIDATE_GO: false
+          VALIDATE_GO_MODULES: false

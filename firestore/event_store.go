@@ -1,4 +1,4 @@
-package eventuallyfirestore
+package firestore
 
 import (
 	"context"
@@ -10,10 +10,10 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/get-eventually/go-eventually/core/event"
-	"github.com/get-eventually/go-eventually/core/message"
-	"github.com/get-eventually/go-eventually/core/serde"
-	"github.com/get-eventually/go-eventually/core/version"
+	"github.com/get-eventually/go-eventually/event"
+	"github.com/get-eventually/go-eventually/message"
+	"github.com/get-eventually/go-eventually/serde"
+	"github.com/get-eventually/go-eventually/version"
 )
 
 //nolint:exhaustruct // Only used for interface assertion.
@@ -25,21 +25,17 @@ type EventStore struct {
 	Serde  serde.Bytes[message.Message]
 }
 
+// NewEventStore creates a new EventStore instance.
+func NewEventStore(client *firestore.Client, msgSerde serde.Bytes[message.Message]) EventStore {
+	return EventStore{Client: client, Serde: msgSerde}
+}
+
 func (es EventStore) eventsCollection() *firestore.CollectionRef {
 	return es.Client.Collection("Events")
 }
 
 func (es EventStore) streamsCollection() *firestore.CollectionRef {
 	return es.Client.Collection("EventStreams")
-}
-
-func printDocs(prefix string, documents []*firestore.DocumentSnapshot) {
-	printable := make([]map[string]interface{}, 0, len(documents))
-	for _, v := range documents {
-		printable = append(printable, v.Data())
-	}
-
-	fmt.Printf("PRINT %s: %#v\n\n", prefix, printable)
 }
 
 // Stream implements the event.Streamer interface.
@@ -50,12 +46,6 @@ func (es EventStore) Stream(
 	selector version.Selector,
 ) error {
 	defer close(stream)
-
-	docs, _ := es.eventsCollection().Documents(ctx).GetAll()
-	printDocs("EVENTS", docs)
-
-	docs, _ = es.streamsCollection().Documents(ctx).GetAll()
-	printDocs("STREAMS", docs)
 
 	iter := es.eventsCollection().
 		Where("event_stream_id", "==", string(id)).
@@ -72,17 +62,17 @@ func (es EventStore) Stream(
 		}
 
 		if err != nil {
-			return fmt.Errorf("eventuallyfirestore.EventStore.Stream: failed while reading iterator, %w", err)
+			return fmt.Errorf("firestore.EventStore.Stream: failed while reading iterator, %w", err)
 		}
 
 		msg, err := es.Serde.Deserialize(doc.Data()["payload"].([]byte))
 		if err != nil {
-			return fmt.Errorf("eventuallyfirestore.EventStore.Stream: failed to deserialize message payload, %w", err)
+			return fmt.Errorf("firestore.EventStore.Stream: failed to deserialize message payload, %w", err)
 		}
 
 		var metadata message.Metadata
-		if v, ok := doc.Data()["metadata"]; ok && v != nil {
-			metadata = v.(message.Metadata)
+		if v, ok := doc.Data()["metadata"].(message.Metadata); ok && v != nil {
+			metadata = v
 		}
 
 		stream <- event.Persisted{
@@ -108,7 +98,7 @@ func (es EventStore) checkAndUpsertEventStream(
 
 	doc, err := tx.Get(docRef)
 	if err != nil && status.Code(err) != codes.NotFound {
-		return 0, fmt.Errorf("eventuallyfirestore.EventStore.Append: failed to get stream, %w", err)
+		return 0, fmt.Errorf("firestore.EventStore.Append: failed to get stream, %w", err)
 	}
 
 	var currentVersion version.Version
@@ -117,7 +107,7 @@ func (es EventStore) checkAndUpsertEventStream(
 	}
 
 	if v, ok := expected.(version.CheckExact); ok && version.Version(v) != currentVersion {
-		return 0, fmt.Errorf("eventuallyfirestore.EventStore.Append: version check failed, %w", version.ConflictError{
+		return 0, fmt.Errorf("firestore.EventStore.Append: version check failed, %w", version.ConflictError{
 			Expected: version.Version(v),
 			Actual:   currentVersion,
 		})
@@ -128,7 +118,7 @@ func (es EventStore) checkAndUpsertEventStream(
 	if err := tx.Set(docRef, map[string]interface{}{
 		"last_version": newVersion,
 	}); err != nil {
-		return 0, fmt.Errorf("eventuallyfirestore.EventStore.Append: failed to update event stream, %w", err)
+		return 0, fmt.Errorf("firestore.EventStore.Append: failed to update event stream, %w", err)
 	}
 
 	return currentVersion, nil
@@ -140,7 +130,7 @@ func (es EventStore) appendEvent(tx *firestore.Transaction, evt event.Persisted)
 
 	payload, err := es.Serde.Serialize(evt.Message)
 	if err != nil {
-		return fmt.Errorf("eventuallyfirestore.EventStore.appendEvent: failed to serialize message, %w", err)
+		return fmt.Errorf("firestore.EventStore.appendEvent: failed to serialize message, %w", err)
 	}
 
 	if err := tx.Create(docRef, map[string]interface{}{
@@ -150,7 +140,7 @@ func (es EventStore) appendEvent(tx *firestore.Transaction, evt event.Persisted)
 		"metadata":        evt.Metadata,
 		"payload":         payload,
 	}); err != nil {
-		return fmt.Errorf("eventuallyfirestore.EventStore.appendEvent: failed to append event, %w", err)
+		return fmt.Errorf("firestore.EventStore.appendEvent: failed to append event, %w", err)
 	}
 
 	return nil
@@ -165,11 +155,10 @@ func (es EventStore) Append(
 ) (version.Version, error) {
 	var currentVersion version.Version
 
-	err := es.Client.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+	if err := es.Client.RunTransaction(ctx, func(_ context.Context, tx *firestore.Transaction) error {
 		var err error
 
-		currentVersion, err = es.checkAndUpsertEventStream(tx, id, expected, len(events))
-		if err != nil {
+		if currentVersion, err = es.checkAndUpsertEventStream(tx, id, expected, len(events)); err != nil {
 			return err
 		}
 
@@ -184,9 +173,8 @@ func (es EventStore) Append(
 		}
 
 		return nil
-	})
-	if err != nil {
-		return 0, fmt.Errorf("eventuallyfirestore.EventStore.Append: failed to commit transaction, %w", err)
+	}); err != nil {
+		return 0, fmt.Errorf("firestore.EventStore.Append: failed to commit transaction, %w", err)
 	}
 
 	return currentVersion + version.Version(len(events)), nil
