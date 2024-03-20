@@ -38,13 +38,8 @@ func TestEventStore(t *testing.T) {
 	conn, err := pgxpool.New(ctx, container.ConnectionDSN)
 	require.NoError(t, err)
 
-	eventStore := postgres.EventStore{
-		Conn: conn,
-		Serde: serde.Chain(
-			user.EventProtoSerde,
-			serde.NewProtoJSON(func() *userv1.Event { return new(userv1.Event) }),
-		),
-	}
-
-	user.EventStoreSuite(eventStore)(t)
+	user.EventStoreSuite(postgres.NewEventStore(conn, serde.Chain(
+		user.EventProtoSerde,
+		serde.NewProtoJSON(func() *userv1.Event { return new(userv1.Event) }),
+	)))(t)
 }

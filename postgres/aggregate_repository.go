@@ -24,16 +24,31 @@ import (
 // to both "events" and "event_streams" to append the Domain events
 // recorded by Aggregate Roots. These updates are performed within the same transaction.
 type AggregateRepository[ID aggregate.ID, T aggregate.Root[ID]] struct {
-	Conn           *pgxpool.Pool
-	AggregateType  aggregate.Type[ID, T]
-	AggregateSerde serde.Bytes[T]
-	MessageSerde   serde.Bytes[message.Message]
+	conn           *pgxpool.Pool
+	aggregateType  aggregate.Type[ID, T]
+	aggregateSerde serde.Bytes[T]
+	messageSerde   serde.Bytes[message.Message]
+}
+
+// NewAggregateRepository returns a new AggregateRepository instance.
+func NewAggregateRepository[ID aggregate.ID, T aggregate.Root[ID]](
+	conn *pgxpool.Pool,
+	aggregateType aggregate.Type[ID, T],
+	aggregateSerde serde.Bytes[T],
+	messageSerde serde.Bytes[message.Message],
+) AggregateRepository[ID, T] {
+	return AggregateRepository[ID, T]{
+		conn:           conn,
+		aggregateType:  aggregateType,
+		aggregateSerde: aggregateSerde,
+		messageSerde:   messageSerde,
+	}
 }
 
 // Get returns the aggregate.Root instance specified by the provided id.
 // Returns aggregate.ErrRootNotFound if the Aggregate Root doesn't exist.
 func (repo AggregateRepository[ID, T]) Get(ctx context.Context, id ID) (T, error) {
-	return repo.get(ctx, repo.Conn, id)
+	return repo.get(ctx, repo.conn, id)
 }
 
 type queryRower interface {
@@ -48,7 +63,7 @@ func (repo AggregateRepository[ID, T]) get(ctx context.Context, tx queryRower, i
 		`SELECT version, state
 		FROM aggregates
 		WHERE aggregate_id = $1 AND "type" = $2`,
-		id.String(), repo.AggregateType.Name,
+		id.String(), repo.aggregateType.Name,
 	)
 
 	var (
@@ -65,7 +80,7 @@ func (repo AggregateRepository[ID, T]) get(ctx context.Context, tx queryRower, i
 		)
 	}
 
-	root, err := aggregate.RehydrateFromState(v, state, repo.AggregateSerde)
+	root, err := aggregate.RehydrateFromState(v, state, repo.aggregateSerde)
 	if err != nil {
 		return zeroValue, fmt.Errorf(
 			"postgres.AggregateRepository: failed to deserialize state into aggregate root object, %w",
@@ -85,14 +100,14 @@ func (repo AggregateRepository[ID, T]) Save(ctx context.Context, root T) (err er
 		BeginQuery:     "",
 	}
 
-	return internal.RunTransaction(ctx, repo.Conn, txOpts, func(ctx context.Context, tx pgx.Tx) error {
+	return internal.RunTransaction(ctx, repo.conn, txOpts, func(ctx context.Context, tx pgx.Tx) error {
 		eventsToCommit := root.FlushRecordedEvents()
 		expectedRootVersion := root.Version() - version.Version(len(eventsToCommit))
 		eventStreamID := event.StreamID(root.AggregateID().String())
 
 		newEventStreamVersion, err := appendDomainEvents(
 			ctx, tx,
-			repo.MessageSerde,
+			repo.messageSerde,
 			eventStreamID,
 			version.CheckExact(expectedRootVersion),
 			eventsToCommit...,
@@ -118,7 +133,7 @@ func (repo AggregateRepository[ID, T]) saveAggregateState(
 	id event.StreamID,
 	root T,
 ) error {
-	state, err := repo.AggregateSerde.Serialize(root)
+	state, err := repo.aggregateSerde.Serialize(root)
 	if err != nil {
 		return repo.saveErr("failed to serialize aggregate root into wire format, %w", err)
 	}
@@ -129,7 +144,7 @@ func (repo AggregateRepository[ID, T]) saveAggregateState(
 		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (aggregate_id) DO
 		UPDATE SET "version" = $3, "state" = $4`,
-		id, repo.AggregateType.Name, root.Version(), state,
+		id, repo.aggregateType.Name, root.Version(), state,
 	); err != nil {
 		return repo.saveErr("failed to save new aggregate state, %w", err)
 	}

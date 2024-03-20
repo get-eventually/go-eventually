@@ -24,8 +24,16 @@ var _ event.Store = EventStore{}
 // The implementation uses "event_streams" and "events" as their
 // operational tables. Updates to these tables are transactional.
 type EventStore struct {
-	Conn  *pgxpool.Pool
-	Serde serde.Bytes[message.Message]
+	conn         *pgxpool.Pool
+	messageSerde serde.Bytes[message.Message]
+}
+
+// NewEventStore returns a new EventStore instance.
+func NewEventStore(conn *pgxpool.Pool, messageSerde serde.Bytes[message.Message]) EventStore {
+	return EventStore{
+		conn:         conn,
+		messageSerde: messageSerde,
+	}
 }
 
 // Stream implements the event.Streamer interface.
@@ -37,7 +45,7 @@ func (es EventStore) Stream(
 ) error {
 	defer close(stream)
 
-	rows, err := es.Conn.Query(
+	rows, err := es.conn.Query(
 		ctx,
 		`SELECT version, event, metadata FROM events
 		WHERE event_stream_id = $1 AND version >= $2
@@ -64,7 +72,7 @@ func (es EventStore) Stream(
 			return fmt.Errorf("postgres.EventStore: failed to scan next row")
 		}
 
-		msg, err := es.Serde.Deserialize(rawEvent)
+		msg, err := es.messageSerde.Deserialize(rawEvent)
 		if err != nil {
 			return fmt.Errorf("postgres.EventStore: failed to deserialize event, %w", err)
 		}
@@ -103,10 +111,10 @@ func (es EventStore) Append(
 		BeginQuery:     "",
 	}
 
-	if err := internal.RunTransaction(ctx, es.Conn, txOpts, func(ctx context.Context, tx pgx.Tx) error {
+	if err := internal.RunTransaction(ctx, es.conn, txOpts, func(ctx context.Context, tx pgx.Tx) error {
 		var err error
 
-		if newVersion, err = appendDomainEvents(ctx, tx, es.Serde, id, expected, events...); err != nil {
+		if newVersion, err = appendDomainEvents(ctx, tx, es.messageSerde, id, expected, events...); err != nil {
 			return fmt.Errorf("postgres.EventStore: failed to append domain events, %w", err)
 		}
 
