@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/get-eventually/go-eventually/internal/user"
-	"github.com/get-eventually/go-eventually/internal/user/proto"
+	userv1 "github.com/get-eventually/go-eventually/internal/user/gen/user/v1"
 	"github.com/get-eventually/go-eventually/postgres"
 	"github.com/get-eventually/go-eventually/serde"
 )
@@ -43,11 +43,11 @@ func TestAggregateRepository(t *testing.T) {
 		AggregateType: user.Type,
 		AggregateSerde: serde.Chain(
 			user.ProtoSerde,
-			serde.NewProtoJSON(func() *proto.User { return new(proto.User) }),
+			serde.NewProtoJSON(func() *userv1.User { return new(userv1.User) }),
 		),
 		MessageSerde: serde.Chain(
 			user.EventProtoSerde,
-			serde.NewProtoJSON(func() *proto.Event { return new(proto.Event) }),
+			serde.NewProtoJSON(func() *userv1.Event { return new(userv1.Event) }),
 		),
 	}
 

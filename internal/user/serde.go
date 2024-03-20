@@ -6,8 +6,9 @@ import (
 
 	"github.com/google/uuid"
 	"google.golang.org/genproto/googleapis/type/date"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/get-eventually/go-eventually/internal/user/proto"
+	userv1 "github.com/get-eventually/go-eventually/internal/user/gen/user/v1"
 	"github.com/get-eventually/go-eventually/message"
 	"github.com/get-eventually/go-eventually/serde"
 )
@@ -29,13 +30,13 @@ func dateToTime(d *date.Date) time.Time {
 
 // ProtoSerde is the serde.Serde implementation for a User to map
 // to its Protobuf type, defined in the proto/ folder.
-var ProtoSerde = serde.Fused[*User, *proto.User]{
-	Serializer:   serde.SerializerFunc[*User, *proto.User](protoSerializer),
-	Deserializer: serde.DeserializerFunc[*User, *proto.User](protoDeserializer),
+var ProtoSerde = serde.Fused[*User, *userv1.User]{
+	Serializer:   serde.SerializerFunc[*User, *userv1.User](protoSerializer),
+	Deserializer: serde.DeserializerFunc[*User, *userv1.User](protoDeserializer),
 }
 
-func protoSerializer(user *User) (*proto.User, error) {
-	return &proto.User{
+func protoSerializer(user *User) (*userv1.User, error) {
+	return &userv1.User{
 		Id:        user.id.String(),
 		FirstName: user.firstName,
 		LastName:  user.lastName,
@@ -44,7 +45,7 @@ func protoSerializer(user *User) (*proto.User, error) {
 	}, nil
 }
 
-func protoDeserializer(src *proto.User) (*User, error) {
+func protoDeserializer(src *userv1.User) (*User, error) {
 	id, err := uuid.Parse(src.Id)
 	if err != nil {
 		return nil, fmt.Errorf("user.protoDeserialize: failed to deserialize user id, %w", err)
@@ -63,12 +64,12 @@ func protoDeserializer(src *proto.User) (*User, error) {
 
 // EventProtoSerde is the serde.Serde implementation for User domain events
 // to map to their Protobuf type, defined in the proto/ folder.
-var EventProtoSerde = serde.Fused[message.Message, *proto.Event]{
-	Serializer:   serde.SerializerFunc[message.Message, *proto.Event](protoEventSerializer),
-	Deserializer: serde.DeserializerFunc[message.Message, *proto.Event](protoEventDeserializer),
+var EventProtoSerde = serde.Fused[message.Message, *userv1.Event]{
+	Serializer:   serde.SerializerFunc[message.Message, *userv1.Event](protoEventSerializer),
+	Deserializer: serde.DeserializerFunc[message.Message, *userv1.Event](protoEventDeserializer),
 }
 
-func protoEventSerializer(evt message.Message) (*proto.Event, error) {
+func protoEventSerializer(evt message.Message) (*userv1.Event, error) {
 	userEvent, ok := evt.(*Event)
 	if !ok {
 		return nil, fmt.Errorf("user.protoEventSerializer: unexpected event type, %T", evt)
@@ -76,10 +77,11 @@ func protoEventSerializer(evt message.Message) (*proto.Event, error) {
 
 	switch kind := userEvent.Kind.(type) {
 	case *WasCreated:
-		return &proto.Event{
-			Event: &proto.Event_WasCreated_{
-				WasCreated: &proto.Event_WasCreated{
-					Id:        userEvent.ID.String(),
+		return &userv1.Event{
+			Id:         userEvent.ID.String(),
+			RecordTime: timestamppb.New(userEvent.RecordTime),
+			Kind: &userv1.Event_WasCreated_{
+				WasCreated: &userv1.Event_WasCreated{
 					FirstName: kind.FirstName,
 					LastName:  kind.LastName,
 					BirthDate: timeToDate(kind.BirthDate),
@@ -88,9 +90,11 @@ func protoEventSerializer(evt message.Message) (*proto.Event, error) {
 			},
 		}, nil
 	case *EmailWasUpdated:
-		return &proto.Event{
-			Event: &proto.Event_EmailWasUpdated_{
-				EmailWasUpdated: &proto.Event_EmailWasUpdated{
+		return &userv1.Event{
+			Id:         userEvent.ID.String(),
+			RecordTime: timestamppb.New(userEvent.RecordTime),
+			Kind: &userv1.Event_EmailWasUpdated_{
+				EmailWasUpdated: &userv1.Event_EmailWasUpdated{
 					Email: kind.Email,
 				},
 			},
@@ -100,17 +104,17 @@ func protoEventSerializer(evt message.Message) (*proto.Event, error) {
 	}
 }
 
-func protoEventDeserializer(evt *proto.Event) (message.Message, error) {
-	switch t := evt.Event.(type) {
-	case *proto.Event_WasCreated_:
-		id, err := uuid.Parse(t.WasCreated.Id)
-		if err != nil {
-			return nil, fmt.Errorf("user.protoEventDeserializer: failed to parse id, %w", err)
-		}
+func protoEventDeserializer(evt *userv1.Event) (message.Message, error) {
+	id, err := uuid.Parse(evt.Id)
+	if err != nil {
+		return nil, fmt.Errorf("user.protoEventDeserializer: failed to parse id, %w", err)
+	}
 
+	switch t := evt.Kind.(type) {
+	case *userv1.Event_WasCreated_:
 		return &Event{
 			ID:         id,
-			RecordTime: time.Time{},
+			RecordTime: evt.RecordTime.AsTime(),
 			Kind: &WasCreated{
 				FirstName: t.WasCreated.FirstName,
 				LastName:  t.WasCreated.LastName,
@@ -119,10 +123,10 @@ func protoEventDeserializer(evt *proto.Event) (message.Message, error) {
 			},
 		}, nil
 
-	case *proto.Event_EmailWasUpdated_:
+	case *userv1.Event_EmailWasUpdated_:
 		return &Event{
-			ID:         uuid.Nil, // FIXME: this should be the actual ID
-			RecordTime: time.Time{},
+			ID:         id,
+			RecordTime: evt.RecordTime.AsTime(),
 			Kind: &EmailWasUpdated{
 				Email: t.EmailWasUpdated.Email,
 			},

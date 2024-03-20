@@ -1,0 +1,15 @@
+---
+version: v1
+managed:
+  enabled: true
+  go_package_prefix:
+    default: github.com/get-eventually/go-eventually/internal/user/gen
+    except:
+      - buf.build/googleapis/googleapis
+plugins:
+  - plugin: buf.build/protocolbuffers/go:v1.31.0
+    out: gen
+    opt: paths=source_relative
+  - plugin: buf.build/connectrpc/go:v1.12.0
+    out: gen
+    opt: paths=source_relative

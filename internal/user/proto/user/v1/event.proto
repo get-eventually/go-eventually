@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package user.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/type/date.proto";
+
+// Represents a domain event for a specific User.
+message Event {
+  // Specified that a new User was created.
+  message WasCreated {
+    // The User's first name.
+    string first_name = 1;
+    // The User's last name.
+    string last_name = 2;
+    // The User's birth name.
+    google.type.Date birth_date = 3;
+    // The User's email.
+    string email = 4;
+  }
+
+  // Specifies that the email of an existing User was updated.
+  message EmailWasUpdated {
+    // The new User email.
+    string email = 1;
+  }
+
+  // The primary identifier for the User.
+  string id = 1;
+
+  // The timestamp of when the domain event has been recorded.
+  google.protobuf.Timestamp record_time = 2;
+
+  // All the possible kind of User domain event supported.
+  oneof kind {
+    // When a new User has been created.
+    WasCreated was_created = 3;
+    // When a User email has been updated.
+    EmailWasUpdated email_was_updated = 4;
+  }
+}
