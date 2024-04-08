@@ -11,9 +11,9 @@ require (
 	github.com/testcontainers/testcontainers-go v0.29.1
 	github.com/testcontainers/testcontainers-go/modules/gcloud v0.29.1
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.29.1
-	go.opentelemetry.io/otel v1.24.0
-	go.opentelemetry.io/otel/metric v1.24.0
-	go.opentelemetry.io/otel/trace v1.24.0
+	go.opentelemetry.io/otel v1.25.0
+	go.opentelemetry.io/otel/metric v1.25.0
+	go.opentelemetry.io/otel/trace v1.25.0
 	golang.org/x/sync v0.6.0
 	google.golang.org/api v0.172.0
 	google.golang.org/genproto v0.0.0-20240318140521-94a12d6c2237
