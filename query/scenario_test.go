@@ -51,6 +51,38 @@ func TestScenario(t *testing.T) {
 			AssertOn(t, makeQueryHandler)
 	})
 
+	t.Run("returns the expected User by its email after it has been changed", func(t *testing.T) {
+		query.
+			Scenario[user.GetByEmail, user.View, *user.GetByEmailHandler]().
+			Given(event.Persisted{
+				StreamID: event.StreamID(id.String()),
+				Version:  1,
+				Envelope: event.ToEnvelope(&user.Event{
+					ID:         id,
+					RecordTime: before,
+					Kind: &user.WasCreated{
+						FirstName: expected.FirstName,
+						LastName:  expected.LastName,
+						BirthDate: expected.BirthDate,
+						Email:     "first@email.com",
+					},
+				}),
+			}, event.Persisted{
+				StreamID: event.StreamID(id.String()),
+				Version:  2,
+				Envelope: event.ToEnvelope(&user.Event{
+					ID:         id,
+					RecordTime: before,
+					Kind: &user.EmailWasUpdated{
+						Email: expected.Email,
+					},
+				}),
+			}).
+			When(query.ToEnvelope(user.GetByEmail(expected.Email))).
+			Then(expected).
+			AssertOn(t, makeQueryHandler)
+	})
+
 	t.Run("returns user.ErrNotFound if the requested User does not exist", func(t *testing.T) {
 		query.
 			Scenario[user.GetByEmail, user.View, *user.GetByEmailHandler]().
