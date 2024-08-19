@@ -49,7 +49,7 @@ jobs:
           # list of changed files within `super-linter`
           fetch-depth: 0
       - name: Run super-linter
-        uses: super-linter/super-linter@v6
+        uses: super-linter/super-linter@v7
         env:
           VALIDATE_ALL_CODEBASE: false
           DEFAULT_BRANCH: main
