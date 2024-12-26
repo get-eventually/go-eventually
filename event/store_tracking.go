@@ -60,12 +60,12 @@ func (es *TrackingStore) Append(
 		return v, err
 	}
 
-	previousVersion := v - version.Version(len(events))
+	previousVersion := v - version.Version(len(events)) //nolint:gosec // This should not overflow.
 
 	for i, evt := range events {
 		es.recorded = append(es.recorded, Persisted{
 			StreamID: id,
-			Version:  previousVersion + version.Version(i) + 1,
+			Version:  previousVersion + version.Version(i) + 1, //nolint:gosec // This should not overflow.
 			Envelope: evt,
 		})
 	}

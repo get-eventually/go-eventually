@@ -57,7 +57,7 @@ func (es *InMemoryStore) Stream(
 	}
 
 	for i, evt := range events {
-		eventVersion := version.Version(i) + 1
+		eventVersion := version.Version(i) + 1 //nolint:gosec // This should not overflow.
 
 		if eventVersion < selector.From {
 			continue
@@ -100,17 +100,17 @@ func (es *InMemoryStore) Append(
 	es.mx.Lock()
 	defer es.mx.Unlock()
 
-	currentVersion := version.CheckExact(len(es.events[id]))
+	currentVersion := version.CheckExact(len(es.events[id])) //nolint:gosec // This should not overflow.
 
-	if expected != version.Any && currentVersion != expected {
+	if v, expectsExactVersion := expected.(version.CheckExact); expectsExactVersion && currentVersion != expected {
 		return 0, fmt.Errorf("event.InMemoryStore: failed to append events, %w", version.ConflictError{
-			Expected: version.Version(expected.(version.CheckExact)),
+			Expected: version.Version(v),
 			Actual:   version.Version(currentVersion),
 		})
 	}
 
 	es.events[id] = append(es.events[id], events...)
-	newEventStreamVersion := version.Version(len(es.events[id]))
+	newEventStreamVersion := version.Version(len(es.events[id])) //nolint:gosec // This should not overflow.
 
 	return newEventStreamVersion, nil
 }

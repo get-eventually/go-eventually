@@ -11,7 +11,7 @@ type option[T any] func(T)
 
 func newOption[T any](f func(T)) option[T] { return option[T](f) }
 
-func (apply option[T]) apply(val T) { apply(val) } //nolint:unused // False positive.
+func (apply option[T]) apply(val T) { apply(val) }
 
 const (
 	// DefaultAggregateTableName is the default Aggregate table name an AggregateRepository points to.

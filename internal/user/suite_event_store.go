@@ -33,7 +33,7 @@ func EventStoreSuite(eventStore event.Store) func(t *testing.T) {
 			require.NoError(t, usr.UpdateEmail("dani.ross@mail.com", now, nil))
 
 			eventsToCommit := usr.FlushRecordedEvents()
-			expectedVersion := version.Version(len(eventsToCommit))
+			expectedVersion := version.Version(len(eventsToCommit)) //nolint:gosec // This should not overflow.
 
 			newVersion, err := eventStore.Append(
 				ctx,
@@ -50,7 +50,7 @@ func EventStoreSuite(eventStore event.Store) func(t *testing.T) {
 			require.NoError(t, usr.UpdateEmail("daniross123@gmail.com", now, nil))
 
 			newEventsToCommit := usr.FlushRecordedEvents()
-			expectedVersion += version.Version(len(newEventsToCommit))
+			expectedVersion += version.Version(len(newEventsToCommit)) //nolint:gosec // This should not overflow.
 
 			newVersion, err = eventStore.Append(
 				ctx,

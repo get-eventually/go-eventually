@@ -38,7 +38,7 @@ func TestEventStore(t *testing.T) {
 		require.NoError(t, firestoreContainer.Terminate(ctx))
 	}()
 
-	conn, err := grpc.Dial(firestoreContainer.URI, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(firestoreContainer.URI, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
 
 	client, err := firestore.NewClient(ctx, projectID, option.WithGRPCConn(conn))

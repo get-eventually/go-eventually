@@ -65,7 +65,12 @@ func (es EventStore) Stream(
 			return fmt.Errorf("firestore.EventStore.Stream: failed while reading iterator, %w", err)
 		}
 
-		msg, err := es.Serde.Deserialize(doc.Data()["payload"].([]byte))
+		payload, ok := doc.Data()["payload"].([]byte)
+		if !ok {
+			return fmt.Errorf("firestore.EventStore.Stream: invalid payload type, expected: []byte, got: %T", doc.Data()["payload"])
+		}
+
+		msg, err := es.Serde.Deserialize(payload)
 		if err != nil {
 			return fmt.Errorf("firestore.EventStore.Stream: failed to deserialize message payload, %w", err)
 		}
@@ -75,9 +80,14 @@ func (es EventStore) Stream(
 			metadata = v
 		}
 
+		v, ok := doc.Data()["version"].(int64)
+		if !ok {
+			return fmt.Errorf("firestore.EventStore.Stream: invalid version type, expected: int64, got: %T", doc.Data()["version"])
+		}
+
 		stream <- event.Persisted{
 			StreamID: id,
-			Version:  version.Version(doc.Data()["version"].(int64)),
+			Version:  version.Version(v), //nolint:gosec // This should not overflow.
 			Envelope: event.Envelope{
 				Message:  msg,
 				Metadata: metadata,
@@ -102,8 +112,14 @@ func (es EventStore) checkAndUpsertEventStream(
 	}
 
 	var currentVersion version.Version
+
 	if err == nil {
-		currentVersion = version.Version(doc.Data()["last_version"].(int64))
+		lastVersion, ok := doc.Data()["last_version"].(int64)
+		if !ok {
+			return 0, fmt.Errorf("firestore.EventStore.Append: invalid last_version type, expected: int64, got: %T", doc.Data()["last_version"])
+		}
+
+		currentVersion = version.Version(lastVersion) //nolint:gosec // This should not overflow.
 	}
 
 	if v, ok := expected.(version.CheckExact); ok && version.Version(v) != currentVersion {
@@ -113,7 +129,7 @@ func (es EventStore) checkAndUpsertEventStream(
 		})
 	}
 
-	newVersion := currentVersion + version.Version(newEventsLength)
+	newVersion := currentVersion + version.Version(newEventsLength) //nolint:gosec // This should not overflow.
 
 	if err := tx.Set(docRef, map[string]interface{}{
 		"last_version": newVersion,
@@ -165,7 +181,7 @@ func (es EventStore) Append(
 		for i, evt := range events {
 			if err := es.appendEvent(tx, event.Persisted{
 				StreamID: id,
-				Version:  currentVersion + version.Version(i) + 1,
+				Version:  currentVersion + version.Version(i) + 1, //nolint:gosec // This should not overflow.
 				Envelope: evt,
 			}); err != nil {
 				return err
@@ -177,5 +193,5 @@ func (es EventStore) Append(
 		return 0, fmt.Errorf("firestore.EventStore.Append: failed to commit transaction, %w", err)
 	}
 
-	return currentVersion + version.Version(len(events)), nil
+	return currentVersion + version.Version(len(events)), nil //nolint:gosec // This should not overflow.
 }

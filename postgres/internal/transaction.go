@@ -17,7 +17,7 @@ type TxBeginner interface {
 func RunTransaction(
 	ctx context.Context,
 	db TxBeginner,
-	options pgx.TxOptions,
+	options pgx.TxOptions, //nolint:gocritic // The pgx API uses value semantics, will do the same here.
 	do func(ctx context.Context, tx pgx.Tx) error,
 ) (err error) {
 	withContext := func(msg string, err error) error {

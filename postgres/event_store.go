@@ -104,11 +104,10 @@ func (es EventStore) Append(
 ) (version.Version, error) {
 	var newVersion version.Version
 
-	txOpts := pgx.TxOptions{
+	txOpts := pgx.TxOptions{ //nolint:exhaustruct // We don't need all fields.
 		IsoLevel:       pgx.Serializable,
 		AccessMode:     pgx.ReadWrite,
 		DeferrableMode: pgx.Deferrable,
-		BeginQuery:     "",
 	}
 
 	if err := internal.RunTransaction(ctx, es.conn, txOpts, func(ctx context.Context, tx pgx.Tx) error {

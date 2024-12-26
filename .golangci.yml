@@ -1,7 +1,7 @@
 ---
-# See https://github.com/golangci/golangci-lint/blob/master/.golangci.example.yml
+# See https://github.com/golangci/golangci-lint/blob/master/.golangci.reference.yml
 run:
-  go: '1.21'
+  go: '1.23' # Depends on the version with which golangci-lint was built.
   tests: true
 
 linters-settings:
@@ -14,9 +14,9 @@ linters-settings:
       - default
       - prefix(github.com/get-eventually/go-eventually)
   gocyclo:
-    min-complexity: 15
+    min-complexity: 20
   goimports:
-    local-prefixes: prefix(github.com/get-eventually/go-eventually)
+    local-prefixes: prefix(flugg.app/flugg)
   gocritic:
     enabled-tags:
       - diagnostic
@@ -29,14 +29,13 @@ linters-settings:
   misspell:
     locale: US
   lll:
-    line-length: 120
+    line-length: 160
   tagliatelle:
     case:
       rules:
         json: snake
   unused:
-    exported-is-used: true
-    exported-fields-are-used: true
+    exported-fields-are-used: false
   unparam:
     check-exported: true
   gomodguard:
@@ -59,7 +58,7 @@ linters:
     - errcheck
     - exhaustive
     - exhaustruct
-    - exportloopref
+    - copyloopvar
     - funlen
     - gci
     - gochecknoinits
@@ -69,13 +68,12 @@ linters:
     - gocritic
     - gocyclo
     - godot
-    - godox
+    # - godox
     - gofumpt
     - goimports
     - gomodguard
-    - gomnd
+    - mnd
     - goprintffuncname
-    - exportloopref
     - gosec
     - gosimple
     - govet
@@ -105,6 +103,8 @@ linters:
     - wsl
 
 issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
   exclude-use-default: false
   exclude-rules:
     - path: _test\.go

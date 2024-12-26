@@ -61,7 +61,7 @@ func appendDomainEvents(
 		)
 	}
 
-	newVersion := oldVersion + version.Version(len(events))
+	newVersion := oldVersion + version.Version(len(events)) //nolint:gosec // This should not overflow.
 
 	if _, err := tx.Exec(
 		ctx,
@@ -72,7 +72,7 @@ func appendDomainEvents(
 	}
 
 	for i, event := range events {
-		eventVersion := oldVersion + version.Version(i) + 1
+		eventVersion := oldVersion + version.Version(i) + 1 //nolint:gosec // This should not overflow.
 
 		if err := appendDomainEvent(
 			ctx, tx,

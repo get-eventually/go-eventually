@@ -21,7 +21,7 @@ import (
 //
 // Package user of this module exposes a Protobuf-based serde, which can be useful
 // to test serialization and deserialization of data to the target repository implementation.
-func AggregateRepositorySuite(repository aggregate.Repository[uuid.UUID, *User]) func(t *testing.T) { //nolint:funlen,lll // It's a test suite.
+func AggregateRepositorySuite(repository aggregate.Repository[uuid.UUID, *User]) func(t *testing.T) { //nolint:funlen // It's a test suite.
 	return func(t *testing.T) {
 		ctx := context.Background()
 		now := time.Now()
@@ -83,7 +83,7 @@ func AggregateRepositorySuite(repository aggregate.Repository[uuid.UUID, *User])
 
 			expectedErr := version.ConflictError{
 				Expected: 0,
-				Actual:   2, //nolint:gomnd // False positive.
+				Actual:   2, //nolint:mnd // False positive.
 			}
 
 			var conflictErr version.ConflictError

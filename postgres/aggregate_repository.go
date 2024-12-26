@@ -116,16 +116,15 @@ func (repo AggregateRepository[ID, T]) get(ctx context.Context, tx queryRower, i
 
 // Save saves the new state of the provided aggregate.Root instance.
 func (repo AggregateRepository[ID, T]) Save(ctx context.Context, root T) (err error) {
-	txOpts := pgx.TxOptions{
+	txOpts := pgx.TxOptions{ //nolint:exhaustruct // We don't need all fields.
 		IsoLevel:       pgx.Serializable,
 		AccessMode:     pgx.ReadWrite,
 		DeferrableMode: pgx.Deferrable,
-		BeginQuery:     "",
 	}
 
 	return internal.RunTransaction(ctx, repo.conn, txOpts, func(ctx context.Context, tx pgx.Tx) error {
 		eventsToCommit := root.FlushRecordedEvents()
-		expectedRootVersion := root.Version() - version.Version(len(eventsToCommit))
+		expectedRootVersion := root.Version() - version.Version(len(eventsToCommit)) //nolint:gosec // This should not overflow.
 		eventStreamID := event.StreamID(root.AggregateID().String())
 
 		newEventStreamVersion, err := appendDomainEvents(

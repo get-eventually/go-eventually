@@ -14,6 +14,7 @@ import (
 )
 
 func timeToDate(t time.Time) *date.Date {
+	//nolint:gosec // These surely won't overflow.
 	return &date.Date{
 		Year:  int32(t.Year()),
 		Month: int32(t.Month()),

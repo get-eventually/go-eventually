@@ -117,7 +117,7 @@ func (repo EventSourcedRepository[I, T]) Save(ctx context.Context, root T) error
 	}
 
 	streamID := event.StreamID(root.AggregateID().String())
-	expectedVersion := version.CheckExact(root.Version() - version.Version(len(events)))
+	expectedVersion := version.CheckExact(root.Version() - version.Version(len(events))) //nolint:gosec // This should not overflow.
 
 	if _, err := repo.eventStore.Append(ctx, streamID, expectedVersion, events...); err != nil {
 		return fmt.Errorf("aggregate.EventSourcedRepository: failed to commit recorded events, %w", err)

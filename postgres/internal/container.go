@@ -28,13 +28,14 @@ func NewPostgresContainer(ctx context.Context) (*PostgresContainer, error) {
 		return fmt.Errorf("internal.NewPostgresContainer: %s, %w", msg, err)
 	}
 
-	container, err := postgres.RunContainer(ctx,
-		testcontainers.WithImage("postgres:16-alpine"),
+	container, err := postgres.Run(
+		ctx,
+		"postgres:16-alpine",
 		postgres.WithDatabase("main"),
 		postgres.WithUsername("postgres"),
 		postgres.WithPassword("notasecret"),
 		testcontainers.WithWaitStrategy(
-			//nolint:gomnd // It's ok to use a magic number here.
+			//nolint:mnd // It's ok to use a magic number here.
 			wait.ForLog("database system is ready to accept connections").
 				WithOccurrence(2).
 				WithStartupTimeout(5*time.Second),

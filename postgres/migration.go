@@ -28,7 +28,7 @@ func RunMigrations(db *sql.DB) error {
 		return wrapErr(err, "failed to create new iofs driver for reading migrations")
 	}
 
-	driver, err := pgx.WithInstance(db, &pgx.Config{
+	driver, err := pgx.WithInstance(db, &pgx.Config{ //nolint:exhaustruct // We don't need all fields.
 		MigrationsTable:       "eventually_schema_migrations",
 		DatabaseName:          "",
 		SchemaName:            "",
