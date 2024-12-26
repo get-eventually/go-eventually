@@ -17,3 +17,9 @@ go.test:
 
 go.test.unit:
 	go test -short $(GO_TEST_FLAGS) ./...
+
+go.mod.update:
+	echo "==> update dependencies recursively"
+	go get -u ./...
+	echo "==> run 'go mod tidy'"
+	go mod tidy

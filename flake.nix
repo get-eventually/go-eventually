@@ -13,8 +13,11 @@
             config.allowUnfree = true;
           };
 
-          # NOTE: fixing Go 1.21 for the project.
-          go = pkgs.go_1_21;
+          go = pkgs.go_1_23;
+          withOurGoVersion = pkg: pkg.override { buildGoModule = pkgs.buildGo123Module; };
+
+          gopls = withOurGoVersion pkgs.gopls;
+          delve = withOurGoVersion pkgs.delve;
         in
         {
           devShells.default = with pkgs; mkShell {
@@ -24,14 +27,18 @@
             ];
 
             packages = [
+              go
+              buf
+            ] ++ [
               gopls
+              delve
+              goreleaser
+            ] ++ (map withOurGoVersion [
               gotools
               go-outline
               gopkgs
-              delve
-              goreleaser
-
-              # Linters
+            ]) ++ [
+              git
               nil
               golangci-lint
               markdownlint-cli

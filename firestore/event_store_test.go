@@ -6,7 +6,6 @@ import (
 
 	"cloud.google.com/go/firestore"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/gcloud"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
@@ -27,9 +26,9 @@ func TestEventStore(t *testing.T) {
 
 	ctx := context.Background()
 
-	firestoreContainer, err := gcloud.RunFirestoreContainer(
+	firestoreContainer, err := gcloud.RunFirestore(
 		ctx,
-		testcontainers.WithImage("google/cloud-sdk:469.0.0-emulators"),
+		"google/cloud-sdk:469.0.0-emulators",
 		gcloud.WithProjectID(projectID),
 	)
 	require.NoError(t, err)
