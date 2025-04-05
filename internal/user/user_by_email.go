@@ -78,9 +78,9 @@ func (handler *GetByEmailHandler) Process(_ context.Context, evt event.Persisted
 	handler.mx.Lock()
 	defer handler.mx.Unlock()
 
-	userEvent, ok := evt.Envelope.Message.(*Event)
+	userEvent, ok := evt.Message.(*Event)
 	if !ok {
-		return fmt.Errorf("user.GetByEmailHandler: unexpected event type, %T", evt.Envelope.Message)
+		return fmt.Errorf("user.GetByEmailHandler: unexpected event type, %T", evt.Message)
 	}
 
 	switch kind := userEvent.Kind.(type) {

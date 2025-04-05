@@ -1,0 +1,20 @@
+---
+name: Setup golangci-lint
+description: |
+  Sets up golangci-lint cache and smooth buttery experience to make it go brrrr!
+runs:
+  using: composite
+  steps:
+    - name: Setup Go
+      uses: ./.github/actions/go-setup
+    - name: Set cache directory in env
+      shell: bash
+      run: |
+        echo "GOLANGCI_LINT_CACHE=$HOME/.cache/golangci-lint" >> $GITHUB_ENV
+    - name: Setup cache
+      uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+      with:
+        path: ${{ env.GOLANGCI_LINT_CACHE }}
+        key: ${{ runner.os }}-golangci-lint-cache-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-golangci-lint-cache-

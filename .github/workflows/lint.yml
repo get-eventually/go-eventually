@@ -24,15 +24,20 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout source code
-        uses: actions/checkout@v4
-      - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
-          go-version: '1.21'
+          fetch-depth: 0
+      - name: Set up Nix system
+        uses: ./.github/actions/nix-setup
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Setup Go
+        uses: ./.github/actions/go-setup # NOTE: used for caching only.
+      - name: Set up golangci-lint
+        uses: ./.github/actions/golangci-lint-setup
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          args: --timeout=5m
+        run: make go.lint
+        shell: nix develop --quiet -c bash -e {0}
 
   super-linter:
     name: Super Linter
