@@ -13,19 +13,14 @@
             config.allowUnfree = true;
           };
 
-          go = pkgs.go_1_23;
-          withOurGoVersion = pkg: pkg.override { buildGoModule = pkgs.buildGo123Module; };
+          go = pkgs.go_1_24;
+          withOurGoVersion = pkg: pkg.override { buildGoModule = pkgs.buildGo124Module; };
 
           gopls = withOurGoVersion pkgs.gopls;
           delve = withOurGoVersion pkgs.delve;
         in
         {
           devShells.default = with pkgs; mkShell {
-            nativeBuildInputs = [
-              go
-              buf
-            ];
-
             packages = [
               go
               buf
@@ -48,9 +43,6 @@
             GO_BIN_PATH = "${go}/bin/go";
             GOPLS_PATH = "${gopls}/bin/gopls";
             DLV_PATH = "${delve}/bin/dlv";
-
-            # Disable ryuk container for testcontainers.
-            TESTCONTAINERS_RYUK_DISABLED = "true";
           };
         }
       );
