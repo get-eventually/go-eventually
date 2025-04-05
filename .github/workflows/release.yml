@@ -20,20 +20,20 @@ jobs:
       contents: write
     steps:
       - name: Checkout source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           # Using this to pick up the latest tag.
           fetch-depth: 0
       - name: Get next version
         id: semver
-        uses: ietf-tools/semver-action@v1
+        uses: ietf-tools/semver-action@778d1d5b7af80aa43f50104116b8363e7fc0d1ef # v1
         with:
           token: ${{ github.token }}
           branch: main
           minorList: 'major, breaking'
           patchList: 'feat, fix, bugfix, perf, refactor, test, tests, doc, docs'
       - name: Push new version tag
-        uses: rickstaa/action-create-tag@v1
+        uses: rickstaa/action-create-tag@a1c7777fcb2fee4f19b0f283ba888afa11678b72 # v1
         if: ${{ contains(github.ref, 'main') }}  # only push tags if on main branch.
         with:
           tag: ${{ steps.semver.outputs.next }}
@@ -46,15 +46,15 @@ jobs:
     needs: [tag]
     steps:
       - name: Checkout source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           fetch-depth: 0
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5
         with:
           go-version: '1.21'
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
+        uses: goreleaser/goreleaser-action@9c156ee8a17a598857849441385a2041ef570552 # v6
         with:
           distribution: goreleaser
           version: latest

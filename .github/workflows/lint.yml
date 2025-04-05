@@ -48,13 +48,13 @@ jobs:
       statuses: write
     steps:
       - name: Checkout source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           # Full git history is needed to get a proper
           # list of changed files within `super-linter`
           fetch-depth: 0
       - name: Run super-linter
-        uses: super-linter/super-linter@v6
+        uses: super-linter/super-linter@1fa6ba58a88783e9714725cf89ac26d53e80c148 # v6
         env:
           VALIDATE_ALL_CODEBASE: false
           DEFAULT_BRANCH: main
