@@ -1,0 +1,22 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: [
+    "config:best-practices",
+    "group:allNonMajor",
+    "customManagers:githubActionsVersions",
+    ":pinDependencies",
+  ],
+  branchPrefix: "chore/renovate-",
+  rebaseWhen: "behind-base-branch",
+  lockFileMaintenance: {
+    enabled: true,
+    recreateWhen: "always",
+    rebaseWhen: "behind-base-branch",
+  },
+  packageRules: [
+    {
+      matchManagers: ["github-actions"],
+      matchUpdateTypes: ["major", "minor", "patch"],
+    },
+  ],
+}
