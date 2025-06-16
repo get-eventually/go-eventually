@@ -16,4 +16,4 @@ runs:
         extra-conf: |
           experimental-features = nix-command flakes
     - name: Set up Nix cache
-      uses: DeterminateSystems/magic-nix-cache-action@6221693898146dc97e38ad0e013488a16477a4c4 # v9
+      uses: DeterminateSystems/magic-nix-cache-action@def9f5a5c6a6b8751c0534e8813a5d0ad2635660 # v11
