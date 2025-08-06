@@ -5,6 +5,7 @@
     "group:allNonMajor",
     "customManagers:githubActionsVersions",
     ":pinDependencies",
+    ":automergeAll",
   ],
   branchPrefix: "chore/renovate-",
   rebaseWhen: "behind-base-branch",
