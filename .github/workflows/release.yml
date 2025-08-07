@@ -26,7 +26,7 @@ jobs:
           fetch-depth: 0
       - name: Get next version
         id: semver
-        uses: ietf-tools/semver-action@778d1d5b7af80aa43f50104116b8363e7fc0d1ef # v1
+        uses: ietf-tools/semver-action@000ddb2ebacad350ff2a15382a344dc05ea4c0a4 # v1
         with:
           token: ${{ github.token }}
           branch: main
