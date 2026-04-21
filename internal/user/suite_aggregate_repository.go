@@ -23,6 +23,8 @@ import (
 // to test serialization and deserialization of data to the target repository implementation.
 func AggregateRepositorySuite(repository aggregate.Repository[uuid.UUID, *User]) func(t *testing.T) { //nolint:funlen // It's a test suite.
 	return func(t *testing.T) {
+		t.Helper()
+
 		ctx := context.Background()
 		now := time.Now()
 
@@ -36,21 +38,16 @@ func AggregateRepositorySuite(repository aggregate.Repository[uuid.UUID, *User])
 			)
 
 			_, err := repository.Get(ctx, id)
-			if !assert.ErrorIs(t, err, aggregate.ErrRootNotFound) {
-				return
-			}
+			require.ErrorIs(t, err, aggregate.ErrRootNotFound)
 
 			usr, err := Create(id, firstName, lastName, email, birthDate, now)
-			if !assert.NoError(t, err) {
-				return
-			}
+			require.NoError(t, err)
 
-			if err := repository.Save(ctx, usr); !assert.NoError(t, err) {
-				return
-			}
+			err = repository.Save(ctx, usr)
+			require.NoError(t, err)
 
 			got, err := repository.Get(ctx, id)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, usr, got)
 		})
 
@@ -71,9 +68,8 @@ func AggregateRepositorySuite(repository aggregate.Repository[uuid.UUID, *User])
 				"Testing-Metadata-Time": time.Now().Format(time.RFC3339),
 			}))
 
-			if err := repository.Save(ctx, user); !assert.NoError(t, err) {
-				return
-			}
+			err = repository.Save(ctx, user)
+			require.NoError(t, err)
 
 			// Try to create a new User instance, but stop at Create.
 			outdatedUsr, err := Create(id, firstName, lastName, email, birthDate, now)
@@ -88,7 +84,7 @@ func AggregateRepositorySuite(repository aggregate.Repository[uuid.UUID, *User])
 
 			var conflictErr version.ConflictError
 
-			assert.ErrorAs(t, err, &conflictErr)
+			require.ErrorAs(t, err, &conflictErr)
 			assert.Equal(t, expectedErr, conflictErr)
 		})
 	}

@@ -96,17 +96,17 @@ func TestJSON(t *testing.T) {
 		require.NoError(t, err)
 
 		serialized, err := myJSONSerde.Serialize(myJSON)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, bytes, serialized)
 
 		deserialized, err := myJSONSerde.Deserialize(serialized)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, myJSON, deserialized)
 	})
 
 	t.Run("it fails deserialization of invalid json data", func(t *testing.T) {
 		deserialized, err := myJSONSerde.Deserialize([]byte("{"))
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Zero(t, deserialized)
 	})
 
@@ -119,11 +119,11 @@ func TestJSON(t *testing.T) {
 		myValue := byValue{Test: true}
 
 		serialized, err := mySerde.Serialize(myValue)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.NotEmpty(t, serialized)
 
 		deserialized, err := mySerde.Deserialize(serialized)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, myValue, deserialized)
 	})
 }

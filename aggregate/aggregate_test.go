@@ -24,7 +24,7 @@ func TestRoot(t *testing.T) {
 
 	t.Run("create new aggregate root", func(t *testing.T) {
 		usr, err := user.Create(id, firstName, lastName, email, birthDate, now)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		expectedEvents := event.ToEnvelopes(&user.Event{
 			ID:         id,
@@ -42,7 +42,7 @@ func TestRoot(t *testing.T) {
 
 	t.Run("create new aggregate root with invalid fields", func(t *testing.T) {
 		usr, err := user.Create(id, "", lastName, email, birthDate, now)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Nil(t, usr)
 	})
 
@@ -54,7 +54,7 @@ func TestRoot(t *testing.T) {
 		newEmail := "john.doe@email.com"
 
 		err = usr.UpdateEmail(newEmail, now, nil)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		expectedEvents := event.ToEnvelopes(&user.Event{
 			ID:         id,

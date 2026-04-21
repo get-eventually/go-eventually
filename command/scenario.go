@@ -156,6 +156,8 @@ func (sc ScenarioThen[Cmd, T]) AssertOn(
 	t *testing.T,
 	handlerFactory func(event.Store) T,
 ) {
+	t.Helper()
+
 	ctx := context.Background()
 	store := event.NewInMemoryStore()
 
@@ -172,7 +174,7 @@ func (sc ScenarioThen[Cmd, T]) AssertOn(
 
 	switch err := handler.Handle(context.Background(), sc.when); {
 	case sc.wantErr:
-		assert.Error(t, err)
+		require.Error(t, err)
 
 		if expected := errors.Join(sc.errors...); expected != nil {
 			for _, expectedErr := range sc.errors {
@@ -181,7 +183,7 @@ func (sc ScenarioThen[Cmd, T]) AssertOn(
 		}
 
 	default:
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, sc.then, trackingStore.Recorded())
 	}
 }

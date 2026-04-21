@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/get-eventually/go-eventually/serde"
 )
@@ -23,10 +24,10 @@ func TestChained(t *testing.T) {
 	expected := []byte(`{"enum":"FIRST","something":1,"else":"Else"}`)
 
 	bytes, err := mySerde.Serialize(data)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expected, bytes)
 
 	deserialized, err := mySerde.Deserialize(bytes)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, data, deserialized)
 }

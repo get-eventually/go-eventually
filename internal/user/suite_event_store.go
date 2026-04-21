@@ -17,6 +17,8 @@ import (
 // value provided in input.
 func EventStoreSuite(eventStore event.Store) func(t *testing.T) {
 	return func(t *testing.T) {
+		t.Helper()
+
 		ctx := context.Background()
 		now := time.Now()
 
