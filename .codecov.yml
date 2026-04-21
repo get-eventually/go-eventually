@@ -1,0 +1,7 @@
+---
+# Codecov configuration.
+# https://docs.codecov.com/docs/codecov-yaml
+
+ignore:
+  - "examples/**"
+  - "**/gen/**"
