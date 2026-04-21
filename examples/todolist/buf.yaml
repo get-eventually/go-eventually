@@ -1,0 +1,19 @@
+version: v2
+modules:
+  - path: proto
+lint:
+  use:
+    - COMMENTS
+    - PACKAGE_NO_IMPORT_CYCLE
+    - STANDARD
+    - UNARY_RPC
+  except:
+    - FIELD_NOT_REQUIRED
+  rpc_allow_google_protobuf_empty_responses: true
+  disallow_comment_ignores: true
+breaking:
+  use:
+    - FILE
+  except:
+    - EXTENSION_NO_DELETE
+    - FIELD_SAME_DEFAULT
