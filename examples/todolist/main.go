@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -18,17 +19,14 @@ import (
 	connectgrpchealth "connectrpc.com/grpchealth"
 	connectgrpcreflect "connectrpc.com/grpcreflect"
 	"github.com/kelseyhightower/envconfig"
-	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 
 	"github.com/get-eventually/go-eventually/aggregate"
 	"github.com/get-eventually/go-eventually/event"
 	"github.com/get-eventually/go-eventually/examples/todolist/gen/todolist/v1/todolistv1connect"
-	"github.com/get-eventually/go-eventually/examples/todolist/internal/command"
 	appconnect "github.com/get-eventually/go-eventually/examples/todolist/internal/connect"
-	"github.com/get-eventually/go-eventually/examples/todolist/internal/domain/todolist"
-	"github.com/get-eventually/go-eventually/examples/todolist/internal/query"
+	"github.com/get-eventually/go-eventually/examples/todolist/internal/todolist"
 )
 
 type serverConfig struct {
@@ -57,16 +55,12 @@ func run() error { //nolint:funlen // Single linear wire-up of the service; spli
 		return err
 	}
 
-	logger, err := zap.NewDevelopment()
-	if err != nil {
-		return fmt.Errorf("failed to initialize logger, %w", err)
-	}
-
-	defer func() {
-		// Sync can fail on stderr with "invalid argument" on some
-		// platforms; it's safe to ignore at shutdown.
-		_ = logger.Sync() //nolint:errcheck // See comment above.
-	}()
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+		Level:       slog.LevelDebug,
+		AddSource:   false,
+		ReplaceAttr: nil,
+	}))
+	slog.SetDefault(logger)
 
 	// In-memory plumbing: a single Store feeds both the command and query
 	// sides through an EventSourcedRepository.
@@ -75,14 +69,14 @@ func run() error { //nolint:funlen // Single linear wire-up of the service; spli
 
 	server := appconnect.TodoListServiceServer{
 		UnimplementedTodoListServiceHandler: todolistv1connect.UnimplementedTodoListServiceHandler{},
-		GetTodoListHandler: query.GetTodoListHandler{
+		GetQueryHandler: todolist.GetQueryHandler{
 			Getter: todoListRepository,
 		},
-		CreateTodoListHandler: command.CreateTodoListHandler{
+		CreateCommandHandler: todolist.CreateCommandHandler{
 			Clock:      time.Now,
 			Repository: todoListRepository,
 		},
-		AddTodoListHandler: command.AddTodoListItemHandler{
+		AddItemCommandHandler: todolist.AddItemCommandHandler{
 			Clock:      time.Now,
 			Repository: todoListRepository,
 		},
@@ -114,7 +108,7 @@ func run() error { //nolint:funlen // Single linear wire-up of the service; spli
 	serverErrs := make(chan error, 1)
 
 	go func() {
-		logger.Sugar().Infow("connect server started", "address", cfg.Server.Address)
+		logger.Info("connect server started", slog.String("address", cfg.Server.Address))
 
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			serverErrs <- fmt.Errorf("connect server exited unexpectedly, %w", err)
