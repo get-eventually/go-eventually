@@ -2,6 +2,8 @@
 // a message in a system (e.g. Event, Command, etc.).
 package message
 
+import "maps"
+
 // Message is a Message payload.
 //
 // Each payload should have a unique name identifier, that can be used
@@ -34,9 +36,7 @@ func (m Metadata) Merge(other Metadata) Metadata {
 		return other
 	}
 
-	for k, v := range other {
-		m[k] = v
-	}
+	maps.Copy(m, other)
 
 	return m
 }

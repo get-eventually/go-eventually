@@ -65,7 +65,7 @@ func (es *TrackingStore) Append(
 	for i, evt := range events {
 		es.recorded = append(es.recorded, Persisted{
 			StreamID: id,
-			Version:  previousVersion + version.Version(i) + 1, //nolint:gosec // This should not overflow.
+			Version:  previousVersion + version.Version(i) + 1,
 			Envelope: evt,
 		})
 	}

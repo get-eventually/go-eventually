@@ -2,12 +2,12 @@ package aggregate
 
 import (
 	"context"
-	"fmt"
+	"errors"
 )
 
 // ErrRootNotFound is returned when the Aggregate Root requested
 // through a Repository was not found.
-var ErrRootNotFound = fmt.Errorf("aggregate: root not found")
+var ErrRootNotFound = errors.New("aggregate: root not found")
 
 // Getter is an Aggregate Repository interface component,
 // that can be used for retrieving Aggregate Roots from some storage.

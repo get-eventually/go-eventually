@@ -115,7 +115,7 @@ func TestJSON(t *testing.T) {
 			Test bool
 		}
 
-		mySerde := serde.NewJSON(func() byValue { return byValue{} }) //nolint:exhaustruct // Unnecessary.
+		mySerde := serde.NewJSON(func() byValue { return byValue{} })
 		myValue := byValue{Test: true}
 
 		serialized, err := mySerde.Serialize(myValue)

@@ -71,7 +71,7 @@ func (repo AggregateRepository[ID, T]) Get(ctx context.Context, id ID) (T, error
 }
 
 type queryRower interface {
-	QueryRow(context.Context, string, ...interface{}) pgx.Row
+	QueryRow(context.Context, string, ...any) pgx.Row
 }
 
 const getAggregateQueryTemplate = `

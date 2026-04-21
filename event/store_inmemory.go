@@ -57,7 +57,7 @@ func (es *InMemoryStore) Stream(
 	}
 
 	for i, evt := range events {
-		eventVersion := version.Version(i) + 1 //nolint:gosec // This should not overflow.
+		eventVersion := version.Version(i) + 1
 
 		if eventVersion < selector.From {
 			continue
