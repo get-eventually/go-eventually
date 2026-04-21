@@ -38,64 +38,61 @@ func NewEventStore(conn *pgxpool.Pool, messageSerde serde.Bytes[message.Message]
 // Stream implements the event.Streamer interface.
 func (es EventStore) Stream(
 	ctx context.Context,
-	stream event.StreamWrite,
 	id event.StreamID,
 	selector version.Selector,
-) error {
-	defer close(stream)
-
-	rows, err := es.conn.Query(
-		ctx,
-		`SELECT version, event, metadata FROM events
-		WHERE event_stream_id = $1 AND version >= $2
-		ORDER BY version`,
-		id, selector.From,
-	)
-	if err != nil {
-		return fmt.Errorf("postgres.EventStore: failed to query events table, %w", err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var (
-			rawEvent     []byte
-			rawMetadata  json.RawMessage
-			eventVersion version.Version
+) *event.Stream {
+	return event.NewStream(func(yield func(event.Persisted) bool) error {
+		rows, err := es.conn.Query(
+			ctx,
+			`SELECT version, event, metadata FROM events
+			WHERE event_stream_id = $1 AND version >= $2
+			ORDER BY version`,
+			id, selector.From,
 		)
-
-		if err := rows.Scan(&eventVersion, &rawEvent, &rawMetadata); err != nil {
-			return fmt.Errorf("postgres.EventStore: failed to scan next row, %w", err)
-		}
-
-		msg, err := es.messageSerde.Deserialize(rawEvent)
 		if err != nil {
-			return fmt.Errorf("postgres.EventStore: failed to deserialize event, %w", err)
+			return fmt.Errorf("postgres.EventStore: failed to query events table, %w", err)
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var (
+				rawEvent     []byte
+				rawMetadata  json.RawMessage
+				eventVersion version.Version
+			)
+
+			if err := rows.Scan(&eventVersion, &rawEvent, &rawMetadata); err != nil {
+				return fmt.Errorf("postgres.EventStore: failed to scan next row, %w", err)
+			}
+
+			msg, err := es.messageSerde.Deserialize(rawEvent)
+			if err != nil {
+				return fmt.Errorf("postgres.EventStore: failed to deserialize event, %w", err)
+			}
+
+			var metadata message.Metadata
+			if err := json.Unmarshal(rawMetadata, &metadata); err != nil {
+				return fmt.Errorf("postgres.EventStore: failed to deserialize metadata, %w", err)
+			}
+
+			if !yield(event.Persisted{
+				StreamID: id,
+				Version:  eventVersion,
+				Envelope: event.Envelope{
+					Message:  msg,
+					Metadata: metadata,
+				},
+			}) {
+				return nil
+			}
 		}
 
-		var metadata message.Metadata
-		if err := json.Unmarshal(rawMetadata, &metadata); err != nil {
-			return fmt.Errorf("postgres.EventStore: failed to deserialize metadata, %w", err)
+		if err := rows.Err(); err != nil {
+			return fmt.Errorf("postgres.EventStore: failed to iterate events rows, %w", err)
 		}
 
-		select {
-		case stream <- event.Persisted{
-			StreamID: id,
-			Version:  eventVersion,
-			Envelope: event.Envelope{
-				Message:  msg,
-				Metadata: metadata,
-			},
-		}:
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-	}
-
-	if err := rows.Err(); err != nil {
-		return fmt.Errorf("postgres.EventStore: failed to iterate events rows, %w", err)
-	}
-
-	return nil
+		return nil
+	})
 }
 
 // Append implements event.Store.
