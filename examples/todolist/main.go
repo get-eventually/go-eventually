@@ -25,7 +25,6 @@ import (
 	"github.com/get-eventually/go-eventually/aggregate"
 	"github.com/get-eventually/go-eventually/event"
 	"github.com/get-eventually/go-eventually/examples/todolist/gen/todolist/v1/todolistv1connect"
-	appconnect "github.com/get-eventually/go-eventually/examples/todolist/internal/connect"
 	"github.com/get-eventually/go-eventually/examples/todolist/internal/todolist"
 )
 
@@ -67,7 +66,7 @@ func run() error { //nolint:funlen // Single linear wire-up of the service; spli
 	eventStore := event.NewInMemoryStore()
 	todoListRepository := aggregate.NewEventSourcedRepository(eventStore, todolist.Type)
 
-	server := appconnect.TodoListServiceServer{
+	server := todolist.ConnectServiceHandler{
 		UnimplementedTodoListServiceHandler: todolistv1connect.UnimplementedTodoListServiceHandler{},
 		GetQueryHandler: todolist.GetQueryHandler{
 			Getter: todoListRepository,

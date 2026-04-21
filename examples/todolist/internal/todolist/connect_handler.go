@@ -1,10 +1,4 @@
-// Package connect contains the Connect server implementation for the TodoList
-// service.
-//
-// This package deliberately uses the import alias "connect" for
-// connectrpc.com/connect to match the framework's own naming; the package
-// name is kept short because it exclusively hosts the Connect transport.
-package connect
+package todolist
 
 import (
 	"context"
@@ -20,36 +14,33 @@ import (
 	"github.com/get-eventually/go-eventually/command"
 	todolistv1 "github.com/get-eventually/go-eventually/examples/todolist/gen/todolist/v1"
 	"github.com/get-eventually/go-eventually/examples/todolist/gen/todolist/v1/todolistv1connect"
-	"github.com/get-eventually/go-eventually/examples/todolist/internal/protoconv"
-	"github.com/get-eventually/go-eventually/examples/todolist/internal/todolist"
 	"github.com/get-eventually/go-eventually/query"
 )
 
 //nolint:exhaustruct // Interface implementation assertion.
-var _ todolistv1connect.TodoListServiceHandler = TodoListServiceServer{}
+var _ todolistv1connect.TodoListServiceHandler = ConnectServiceHandler{}
 
-// TodoListServiceServer is the Connect server implementation for the TodoList
-// service.
+// ConnectServiceHandler is the Connect transport for the TodoList service.
 //
 // Clients generate IDs for new resources and pass them in the request; the
 // server responds to commands with google.protobuf.Empty. This keeps
 // commands idempotent and free of response-payload coupling.
-type TodoListServiceServer struct {
+type ConnectServiceHandler struct {
 	todolistv1connect.UnimplementedTodoListServiceHandler
 
-	GetQueryHandler       todolist.GetQueryHandler
-	CreateCommandHandler  todolist.CreateCommandHandler
-	AddItemCommandHandler todolist.AddItemCommandHandler
+	GetQueryHandler       GetQueryHandler
+	CreateCommandHandler  CreateCommandHandler
+	AddItemCommandHandler AddItemCommandHandler
 }
 
-// parseUUID converts a string field into a uuid.UUID, returning an
+// parseUUIDField converts a string field into a uuid.UUID, returning an
 // InvalidArgument Connect error on failure.
-func parseUUID(field, value string) (uuid.UUID, error) {
+func parseUUIDField(field, value string) (uuid.UUID, error) {
 	id, err := uuid.Parse(value)
 	if err != nil {
 		return uuid.Nil, connect.NewError(
 			connect.CodeInvalidArgument,
-			fmt.Errorf("connect: failed to parse %s as uuid, %w", field, err),
+			fmt.Errorf("todolist.ConnectServiceHandler: failed to parse %s as uuid, %w", field, err),
 		)
 	}
 
@@ -65,17 +56,17 @@ func mapCommandError(op string, err error) *connect.Error {
 	code := connect.CodeInternal
 
 	switch {
-	case errors.Is(err, todolist.ErrEmptyID),
-		errors.Is(err, todolist.ErrEmptyTitle),
-		errors.Is(err, todolist.ErrNoOwnerSpecified),
-		errors.Is(err, todolist.ErrEmptyItemID),
-		errors.Is(err, todolist.ErrEmptyItemTitle):
+	case errors.Is(err, ErrEmptyID),
+		errors.Is(err, ErrEmptyTitle),
+		errors.Is(err, ErrNoOwnerSpecified),
+		errors.Is(err, ErrEmptyItemID),
+		errors.Is(err, ErrEmptyItemTitle):
 		code = connect.CodeInvalidArgument
 
-	case errors.Is(err, todolist.ErrItemAlreadyExists):
+	case errors.Is(err, ErrItemAlreadyExists):
 		code = connect.CodeAlreadyExists
 
-	case errors.Is(err, todolist.ErrItemNotFound),
+	case errors.Is(err, ErrItemNotFound),
 		errors.Is(err, aggregate.ErrRootNotFound):
 		code = connect.CodeNotFound
 	}
@@ -84,61 +75,61 @@ func mapCommandError(op string, err error) *connect.Error {
 }
 
 // CreateTodoList implements the Connect service handler.
-func (srv TodoListServiceServer) CreateTodoList(
+func (srv ConnectServiceHandler) CreateTodoList(
 	ctx context.Context,
 	req *connect.Request[todolistv1.CreateTodoListRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	id, err := parseUUID("todo_list_id", req.Msg.TodoListId)
+	id, err := parseUUIDField("todo_list_id", req.Msg.TodoListId)
 	if err != nil {
 		return nil, err
 	}
 
-	cmd := command.ToEnvelope(todolist.CreateCommand{
-		ID:    todolist.ID(id),
+	cmd := command.ToEnvelope(CreateCommand{
+		ID:    ID(id),
 		Title: req.Msg.Title,
 		Owner: req.Msg.Owner,
 	})
 
 	if err := srv.CreateCommandHandler.Handle(ctx, cmd); err != nil {
-		return nil, mapCommandError("connect.CreateTodoList", err)
+		return nil, mapCommandError("todolist.ConnectServiceHandler.CreateTodoList", err)
 	}
 
 	return connect.NewResponse(&emptypb.Empty{}), nil
 }
 
 // GetTodoList implements the Connect service handler.
-func (srv TodoListServiceServer) GetTodoList(
+func (srv ConnectServiceHandler) GetTodoList(
 	ctx context.Context,
 	req *connect.Request[todolistv1.GetTodoListRequest],
 ) (*connect.Response[todolistv1.GetTodoListResponse], error) {
-	id, err := parseUUID("todo_list_id", req.Msg.TodoListId)
+	id, err := parseUUIDField("todo_list_id", req.Msg.TodoListId)
 	if err != nil {
 		return nil, err
 	}
 
-	q := query.ToEnvelope(todolist.GetQuery{ID: todolist.ID(id)})
+	q := query.ToEnvelope(GetQuery{ID: ID(id)})
 
 	tl, err := srv.GetQueryHandler.Handle(ctx, q)
 	if err != nil {
-		return nil, mapCommandError("connect.GetTodoList", err)
+		return nil, mapCommandError("todolist.ConnectServiceHandler.GetTodoList", err)
 	}
 
 	return connect.NewResponse(&todolistv1.GetTodoListResponse{
-		TodoList: protoconv.FromTodoList(tl),
+		TodoList: ToProto(tl),
 	}), nil
 }
 
 // AddTodoItem implements the Connect service handler.
-func (srv TodoListServiceServer) AddTodoItem(
+func (srv ConnectServiceHandler) AddTodoItem(
 	ctx context.Context,
 	req *connect.Request[todolistv1.AddTodoItemRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	listID, err := parseUUID("todo_list_id", req.Msg.TodoListId)
+	listID, err := parseUUIDField("todo_list_id", req.Msg.TodoListId)
 	if err != nil {
 		return nil, err
 	}
 
-	itemID, err := parseUUID("todo_item_id", req.Msg.TodoItemId)
+	itemID, err := parseUUIDField("todo_item_id", req.Msg.TodoItemId)
 	if err != nil {
 		return nil, err
 	}
@@ -148,16 +139,16 @@ func (srv TodoListServiceServer) AddTodoItem(
 		dueDate = req.Msg.DueDate.AsTime()
 	}
 
-	cmd := command.ToEnvelope(todolist.AddItemCommand{
-		TodoListID:  todolist.ID(listID),
-		TodoItemID:  todolist.ItemID(itemID),
+	cmd := command.ToEnvelope(AddItemCommand{
+		TodoListID:  ID(listID),
+		TodoItemID:  ItemID(itemID),
 		Title:       req.Msg.Title,
 		Description: req.Msg.Description,
 		DueDate:     dueDate,
 	})
 
 	if err := srv.AddItemCommandHandler.Handle(ctx, cmd); err != nil {
-		return nil, mapCommandError("connect.AddTodoItem", err)
+		return nil, mapCommandError("todolist.ConnectServiceHandler.AddTodoItem", err)
 	}
 
 	return connect.NewResponse(&emptypb.Empty{}), nil
@@ -167,7 +158,7 @@ func (srv TodoListServiceServer) AddTodoItem(
 //
 // Not wired up yet in the example: the corresponding command handler is not
 // yet defined, so this returns Unimplemented to be explicit about it.
-func (srv TodoListServiceServer) MarkTodoItemAsDone(
+func (srv ConnectServiceHandler) MarkTodoItemAsDone(
 	_ context.Context,
 	_ *connect.Request[todolistv1.MarkTodoItemAsDoneRequest],
 ) (*connect.Response[emptypb.Empty], error) {
@@ -177,7 +168,7 @@ func (srv TodoListServiceServer) MarkTodoItemAsDone(
 // MarkTodoItemAsPending implements the Connect service handler.
 //
 // Not wired up yet in the example: see MarkTodoItemAsDone.
-func (srv TodoListServiceServer) MarkTodoItemAsPending(
+func (srv ConnectServiceHandler) MarkTodoItemAsPending(
 	_ context.Context,
 	_ *connect.Request[todolistv1.MarkTodoItemAsPendingRequest],
 ) (*connect.Response[emptypb.Empty], error) {
@@ -187,7 +178,7 @@ func (srv TodoListServiceServer) MarkTodoItemAsPending(
 // DeleteTodoItem implements the Connect service handler.
 //
 // Not wired up yet in the example: see MarkTodoItemAsDone.
-func (srv TodoListServiceServer) DeleteTodoItem(
+func (srv ConnectServiceHandler) DeleteTodoItem(
 	_ context.Context,
 	_ *connect.Request[todolistv1.DeleteTodoItemRequest],
 ) (*connect.Response[emptypb.Empty], error) {

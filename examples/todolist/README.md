@@ -61,13 +61,13 @@ grpcurl -plaintext -d '{"todo_list_id":"...","title":"chores","owner":"me"}' \
   codes (`InvalidArgument`, `AlreadyExists`, `NotFound`, `Internal`) and
   the full error chain is propagated to the client. A real service would
   sanitize messages before they cross the wire.
-- **Package by domain, not by layer.** All TodoList artifacts (aggregate,
-  events, commands, queries, handlers) live in a single
-  `internal/todolist` package. Names like `CreateCommand`, `GetQuery`,
-  and `AddItemCommandHandler` ride on top of the package prefix to keep
-  call sites terse and the domain boundary obvious at a glance. Transport
-  (`internal/connect`) and proto conversion (`internal/protoconv`) stay
-  in their own packages since they are not domain artifacts.
+- **Package by domain, not by layer.** Everything TodoList-related —
+  aggregate, events, commands, queries, handlers, Connect transport,
+  proto conversion — lives in a single `internal/todolist` package. Names
+  like `CreateCommand`, `GetQuery`, `AddItemCommandHandler`,
+  `ConnectServiceHandler`, and `ToProto` ride on top of the package
+  prefix to keep call sites terse and the domain boundary obvious at a
+  glance.
 - **`MarkTodoItemAsDone` / `MarkTodoItemAsPending` / `DeleteTodoItem`**
   exist in the domain but don't yet have command handlers nor wired
   Connect handlers. Adding them follows the same pattern as

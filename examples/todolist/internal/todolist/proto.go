@@ -1,16 +1,13 @@
-// Package protoconv contains conversions between domain types and their
-// generated Protobuf counterparts.
-package protoconv
+package todolist
 
 import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	todolistv1 "github.com/get-eventually/go-eventually/examples/todolist/gen/todolist/v1"
-	"github.com/get-eventually/go-eventually/examples/todolist/internal/todolist"
 )
 
-// FromTodoList converts a TodoList aggregate root into its Protobuf counterpart.
-func FromTodoList(tl *todolist.TodoList) *todolistv1.TodoList {
+// ToProto converts a TodoList into its generated Protobuf counterpart.
+func ToProto(tl *TodoList) *todolistv1.TodoList {
 	result := &todolistv1.TodoList{
 		Id:           tl.ID.String(),
 		Title:        tl.Title,
