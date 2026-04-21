@@ -80,38 +80,52 @@ func NewInstrumentedEventStore(eventStore event.Store, options ...Option) (*Inst
 	return ies, nil
 }
 
-// Stream calls the wrapped event.Store.Stream method and records metrics and traces around it.
+// Stream calls the wrapped event.Store.Stream method and records metrics and
+// traces around it.
+//
+// The recorded duration covers the full iteration of the returned Stream
+// (including consumer backpressure), not just the time to open the stream.
 func (ies *InstrumentedEventStore) Stream(
 	ctx context.Context,
-	stream event.StreamWrite,
 	id event.StreamID,
 	selector version.Selector,
-) (err error) {
+) *event.Stream {
 	attributes := []attribute.KeyValue{
 		EventStreamIDKey.String(string(id)),
 		EventStreamVersionSelectorKey.Int64(int64(selector.From)),
 	}
 
-	ctx, span := ies.tracer.Start(ctx, "event.Store.Stream", trace.WithAttributes(attributes...))
-	start := time.Now()
+	return event.NewStream(func(yield func(event.Persisted) bool) error {
+		ctx, span := ies.tracer.Start(ctx, "event.Store.Stream", trace.WithAttributes(attributes...))
+		start := time.Now()
 
-	defer func() {
-		duration := time.Since(start)
-		ies.streamDuration.Record(ctx, duration.Milliseconds(), metric.WithAttributes(
-			ErrorAttribute.Bool(err != nil),
-		))
+		inner := ies.eventStore.Stream(ctx, id, selector)
 
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
+		var producerErr error
+
+		defer func() {
+			ies.streamDuration.Record(ctx, time.Since(start).Milliseconds(), metric.WithAttributes(
+				ErrorAttribute.Bool(producerErr != nil),
+			))
+
+			if producerErr != nil {
+				span.RecordError(producerErr)
+				span.SetStatus(codes.Error, producerErr.Error())
+			}
+
+			span.End()
+		}()
+
+		for evt := range inner.Iter() {
+			if !yield(evt) {
+				return nil
+			}
 		}
 
-		span.End()
-	}()
+		producerErr = inner.Err()
 
-	err = ies.eventStore.Stream(ctx, stream, id, selector)
-
-	return err
+		return producerErr
+	})
 }
 
 // Append calls the wrapped event.Store.Append method and records metrics and traces around it.
