@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 
@@ -44,7 +45,7 @@ func (ies *InstrumentedEventStore) registerMetrics(meter metric.Meter) error {
 		metric.WithUnit("ms"),
 		metric.WithDescription("Duration in milliseconds of event.Store.Stream operations performed."),
 	); err != nil {
-		return fmt.Errorf("oteleventually.InstrumentedEventStore: failed to register metric, %w", err)
+		return fmt.Errorf("opentelemetry.InstrumentedEventStore: failed to register metric, %w", err)
 	}
 
 	if ies.appendDuration, err = meter.Int64Histogram(
@@ -52,7 +53,7 @@ func (ies *InstrumentedEventStore) registerMetrics(meter metric.Meter) error {
 		metric.WithUnit("ms"),
 		metric.WithDescription("Duration in milliseconds of event.Store.Append operations performed."),
 	); err != nil {
-		return fmt.Errorf("oteleventually.InstrumentedEventStore: failed to register metric, %w", err)
+		return fmt.Errorf("opentelemetry.InstrumentedEventStore: failed to register metric, %w", err)
 	}
 
 	return nil
@@ -102,6 +103,7 @@ func (ies *InstrumentedEventStore) Stream(
 
 		if err != nil {
 			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
 		}
 
 		span.End()
@@ -109,7 +111,7 @@ func (ies *InstrumentedEventStore) Stream(
 
 	err = ies.eventStore.Stream(ctx, stream, id, selector)
 
-	return
+	return err
 }
 
 // Append calls the wrapped event.Store.Append method and records metrics and traces around it.
@@ -135,12 +137,13 @@ func (ies *InstrumentedEventStore) Append(
 
 	defer func() {
 		duration := time.Since(start)
-		ies.streamDuration.Record(ctx, duration.Milliseconds(), metric.WithAttributes(
+		ies.appendDuration.Record(ctx, duration.Milliseconds(), metric.WithAttributes(
 			ErrorAttribute.Bool(err != nil),
 		))
 
 		if err != nil {
 			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
 		}
 
 		span.End()
