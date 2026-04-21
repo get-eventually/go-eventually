@@ -13,11 +13,8 @@
             config.allowUnfree = true;
           };
 
-          go = pkgs.go_1_24;
-          withOurGoVersion = pkg: pkg.override { buildGoModule = pkgs.buildGo124Module; };
-
-          gopls = withOurGoVersion pkgs.gopls;
-          delve = withOurGoVersion pkgs.delve;
+          go = pkgs.go_1_25;
+          withOurGoVersion = pkg: pkg.override { buildGoModule = pkgs.buildGo125Module; };
         in
         {
           devShells.default = with pkgs; mkShell {
@@ -26,9 +23,9 @@
               buf
             ] ++ [
               gopls
-              delve
               goreleaser
             ] ++ (map withOurGoVersion [
+              delve
               gotools
               go-outline
               gopkgs
