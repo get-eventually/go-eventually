@@ -13,8 +13,8 @@
             config.allowUnfree = true;
           };
 
-          go = pkgs.go_1_25;
-          withOurGoVersion = pkg: pkg.override { buildGoModule = pkgs.buildGo125Module; };
+          go = pkgs.go_1_26;
+          withOurGoVersion = pkg: pkg.override { buildGoModule = pkgs.buildGo126Module; };
         in
         {
           devShells.default = with pkgs; mkShell {
