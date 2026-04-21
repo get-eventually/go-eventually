@@ -18,6 +18,7 @@ type GetTodoList struct {
 // Name implements message.Message.
 func (GetTodoList) Name() string { return "GetTodoList" }
 
+//nolint:exhaustruct // Interface implementation assertion.
 var _ query.Handler[GetTodoList, *todolist.TodoList] = GetTodoListHandler{}
 
 // GetTodoListHandler handles a GetTodoList query, returning the TodoList

@@ -137,7 +137,7 @@ func Create(id ID, title, owner string, now time.Time) (*TodoList, error) {
 		return nil, wrapErr(ErrNoOwnerSpecified)
 	}
 
-	var todoList TodoList //nolint:exhaustruct // Fields are populated by WasCreated apply.
+	var todoList TodoList
 
 	if err := aggregate.RecordThat[ID](&todoList, event.ToEnvelope(WasCreated{
 		ID:           id,

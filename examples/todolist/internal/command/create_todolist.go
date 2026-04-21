@@ -19,6 +19,7 @@ type CreateTodoList struct {
 // Name implements message.Message.
 func (CreateTodoList) Name() string { return "CreateTodoList" }
 
+//nolint:exhaustruct // Interface implementation assertion.
 var _ command.Handler[CreateTodoList] = CreateTodoListHandler{}
 
 // CreateTodoListHandler is the Command Handler for CreateTodoList commands.

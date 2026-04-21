@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	connect "connectrpc.com/connect"
 	"github.com/google/uuid"
@@ -26,6 +27,7 @@ import (
 	"github.com/get-eventually/go-eventually/query"
 )
 
+//nolint:exhaustruct // Interface implementation assertion.
 var _ todolistv1connect.TodoListServiceHandler = TodoListServiceServer{}
 
 // TodoListServiceServer is the Connect server implementation for the TodoList
@@ -143,16 +145,18 @@ func (srv TodoListServiceServer) AddTodoItem(
 		return nil, err
 	}
 
+	var dueDate time.Time
+	if req.Msg.DueDate != nil {
+		dueDate = req.Msg.DueDate.AsTime()
+	}
+
 	cmd := command.ToEnvelope(appcommand.AddTodoListItem{
 		TodoListID:  todolist.ID(listID),
 		TodoItemID:  todolist.ItemID(itemID),
 		Title:       req.Msg.Title,
 		Description: req.Msg.Description,
+		DueDate:     dueDate,
 	})
-
-	if req.Msg.DueDate != nil {
-		cmd.Message.DueDate = req.Msg.DueDate.AsTime()
-	}
 
 	if err := srv.AddTodoListHandler.Handle(ctx, cmd); err != nil {
 		return nil, mapCommandError("connect.AddTodoItem", err)

@@ -51,7 +51,7 @@ func parseConfig() (config, error) {
 	return cfg, nil
 }
 
-func run() error {
+func run() error { //nolint:funlen // Single linear wire-up of the service; splitting hurts readability.
 	cfg, err := parseConfig()
 	if err != nil {
 		return err
@@ -61,7 +61,12 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("failed to initialize logger, %w", err)
 	}
-	defer func() { _ = logger.Sync() }()
+
+	defer func() {
+		// Sync can fail on stderr with "invalid argument" on some
+		// platforms; it's safe to ignore at shutdown.
+		_ = logger.Sync() //nolint:errcheck // See comment above.
+	}()
 
 	// In-memory plumbing: a single Store feeds both the command and query
 	// sides through an EventSourcedRepository.
@@ -95,7 +100,7 @@ func run() error {
 		connectgrpcreflect.NewStaticReflector(todolistv1connect.TodoListServiceName),
 	))
 
-	srv := &http.Server{
+	srv := &http.Server{ //nolint:exhaustruct // Stdlib struct with many optional fields; defaults are fine.
 		Addr:              cfg.Server.Address,
 		Handler:           h2c.NewHandler(mux, &http2.Server{}), //nolint:exhaustruct // h2c.Server defaults are fine.
 		ReadTimeout:       cfg.Server.ReadTimeout,
@@ -110,10 +115,13 @@ func run() error {
 
 	go func() {
 		logger.Sugar().Infow("connect server started", "address", cfg.Server.Address)
+
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			serverErrs <- fmt.Errorf("connect server exited unexpectedly, %w", err)
+
 			return
 		}
+
 		serverErrs <- nil
 	}()
 
