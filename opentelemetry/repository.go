@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 
@@ -42,7 +43,7 @@ func (ir *InstrumentedRepository[I, T]) registerMetrics(meter metric.Meter) erro
 		metric.WithUnit("ms"),
 		metric.WithDescription("Duration in milliseconds of aggregate.Repository.Get operations performed."),
 	); err != nil {
-		return fmt.Errorf("oteleventually.InstrumentedRepository: failed to register metric, %w", err)
+		return fmt.Errorf("opentelemetry.InstrumentedRepository: failed to register metric, %w", err)
 	}
 
 	if ir.saveDuration, err = meter.Int64Histogram(
@@ -50,7 +51,7 @@ func (ir *InstrumentedRepository[I, T]) registerMetrics(meter metric.Meter) erro
 		metric.WithUnit("ms"),
 		metric.WithDescription("Duration in milliseconds of aggregate.Repository.Save operations performed."),
 	); err != nil {
-		return fmt.Errorf("oteleventually.InstrumentedRepository: failed to register metric, %w", err)
+		return fmt.Errorf("opentelemetry.InstrumentedRepository: failed to register metric, %w", err)
 	}
 
 	return nil
@@ -108,6 +109,7 @@ func (ir *InstrumentedRepository[I, T]) Get(ctx context.Context, id I) (result T
 
 		if err != nil {
 			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
 		} else {
 			span.SetAttributes(AggregateVersionAttribute.Int64(int64(result.Version())))
 		}
@@ -144,6 +146,7 @@ func (ir *InstrumentedRepository[I, T]) Save(ctx context.Context, root T) (err e
 
 		if err != nil {
 			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
 		}
 
 		span.End()
@@ -151,5 +154,5 @@ func (ir *InstrumentedRepository[I, T]) Save(ctx context.Context, root T) (err e
 
 	err = ir.repository.Save(ctx, root)
 
-	return
+	return err
 }

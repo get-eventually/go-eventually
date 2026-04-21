@@ -37,7 +37,7 @@ func ToEnvelope[T Query](query T) Envelope[T] {
 // Useful for testing and stateless Handlers.
 type HandlerFunc[T Query, R any] func(ctx context.Context, query Envelope[T]) (R, error)
 
-// Handle implements xquery.Handler.
+// Handle implements query.Handler.
 func (f HandlerFunc[T, R]) Handle(ctx context.Context, query Envelope[T]) (R, error) {
 	return f(ctx, query)
 }

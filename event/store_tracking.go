@@ -31,10 +31,9 @@ func NewTrackingStore(appender Appender) *TrackingStore {
 // Recorded returns the list of Events that have been appended
 // to the Event Store.
 //
-// Please note: these events do not record the Sequence Number assigned by
-// the Event Store. Usually you should not need it in test assertions, since
-// the order of Events in the returned slice always follows the global order
-// of the Event Stream (or the Event Store).
+// Each returned Persisted event carries the Version assigned by the wrapped
+// Event Store, reconstructed from the version returned by Append and the
+// order in which events were appended.
 func (es *TrackingStore) Recorded() []Persisted {
 	es.mx.RLock()
 	defer es.mx.RUnlock()
