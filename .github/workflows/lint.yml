@@ -69,3 +69,7 @@ jobs:
           # We use the official linter action for it instead.
           VALIDATE_GO: false
           VALIDATE_GO_MODULES: false
+          # NOTE: textlint's default terminology rules flag correct usage
+          # of "README" and "Bug Fixes" (the conventional-changelog section
+          # name). Not worth maintaining a local .textlintrc override.
+          VALIDATE_NATURAL_LANGUAGE: false

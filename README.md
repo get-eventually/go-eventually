@@ -3,7 +3,7 @@
 
 <br />
 <div align="center">
-    <img alt="Eventually" src = "./resources/logo.png" width = 300>
+    <img alt="Eventually" src = "./docs/logo.png" width = 300>
 </div>
 <br />
 <div align="center">
