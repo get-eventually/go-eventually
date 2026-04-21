@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -52,14 +51,10 @@ func (es EventStore) Stream(
 		ORDER BY version`,
 		id, selector.From,
 	)
-
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil
-	}
-
 	if err != nil {
 		return fmt.Errorf("postgres.EventStore: failed to query events table, %w", err)
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		var (
@@ -69,7 +64,7 @@ func (es EventStore) Stream(
 		)
 
 		if err := rows.Scan(&eventVersion, &rawEvent, &rawMetadata); err != nil {
-			return errors.New("postgres.EventStore: failed to scan next row")
+			return fmt.Errorf("postgres.EventStore: failed to scan next row, %w", err)
 		}
 
 		msg, err := es.messageSerde.Deserialize(rawEvent)
@@ -82,14 +77,22 @@ func (es EventStore) Stream(
 			return fmt.Errorf("postgres.EventStore: failed to deserialize metadata, %w", err)
 		}
 
-		stream <- event.Persisted{
+		select {
+		case stream <- event.Persisted{
 			StreamID: id,
 			Version:  eventVersion,
 			Envelope: event.Envelope{
 				Message:  msg,
 				Metadata: metadata,
 			},
+		}:
+		case <-ctx.Done():
+			return ctx.Err()
 		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("postgres.EventStore: failed to iterate events rows, %w", err)
 	}
 
 	return nil
@@ -105,9 +108,8 @@ func (es EventStore) Append(
 	var newVersion version.Version
 
 	txOpts := pgx.TxOptions{ //nolint:exhaustruct // We don't need all fields.
-		IsoLevel:       pgx.Serializable,
-		AccessMode:     pgx.ReadWrite,
-		DeferrableMode: pgx.Deferrable,
+		IsoLevel:   pgx.Serializable,
+		AccessMode: pgx.ReadWrite,
 	}
 
 	if err := internal.RunTransaction(ctx, es.conn, txOpts, func(ctx context.Context, tx pgx.Tx) error {
