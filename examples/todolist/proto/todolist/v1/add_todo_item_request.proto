@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package todolist.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// AddTodoItemRequest adds a new TodoItem to an existing TodoList.
+//
+// The todo_item_id is client-generated, same as in CreateTodoListRequest.
+message AddTodoItemRequest {
+  // UUID of the target list.
+  string todo_list_id = 1;
+  // Client-generated UUID for the new item.
+  string todo_item_id = 2;
+  // Short title of the item.
+  string title = 3;
+  // Free-form description of the item.
+  string description = 4;
+  // Optional due date; omit for no due date.
+  google.protobuf.Timestamp due_date = 5;
+}

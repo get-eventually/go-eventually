@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package todolist.v1;
+
+import "google/protobuf/timestamp.proto";
+import "todolist/v1/todo_item.proto";
+
+// TodoList is a list of TodoItems belonging to an owner.
+message TodoList {
+  // Unique identifier (UUID) for this list.
+  string id = 1;
+  // Display title of the list.
+  string title = 2;
+  // Owner identifier (application-defined, typically a username).
+  string owner = 3;
+  // When the list was created.
+  google.protobuf.Timestamp creation_time = 4;
+  // Items currently in the list, in insertion order.
+  repeated TodoItem items = 5;
+}

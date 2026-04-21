@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package todolist.v1;
+
+import "google/protobuf/empty.proto";
+import "todolist/v1/add_todo_item_request.proto";
+import "todolist/v1/create_todo_list_request.proto";
+import "todolist/v1/delete_todo_item_request.proto";
+import "todolist/v1/get_todo_list_request.proto";
+import "todolist/v1/get_todo_list_response.proto";
+import "todolist/v1/mark_todo_item_as_done_request.proto";
+import "todolist/v1/mark_todo_item_as_pending_request.proto";
+
+// TodoListService exposes TodoList operations over Connect.
+//
+// Commands return google.protobuf.Empty; they never produce response
+// payloads. Queries return a dedicated response message.
+service TodoListService {
+  // CreateTodoList creates a new TodoList with a client-generated ID.
+  rpc CreateTodoList(CreateTodoListRequest) returns (google.protobuf.Empty);
+  // GetTodoList fetches an existing TodoList by ID.
+  rpc GetTodoList(GetTodoListRequest) returns (GetTodoListResponse);
+  // AddTodoItem appends a new item to an existing TodoList.
+  rpc AddTodoItem(AddTodoItemRequest) returns (google.protobuf.Empty);
+  // MarkTodoItemAsDone marks an existing item as completed.
+  rpc MarkTodoItemAsDone(MarkTodoItemAsDoneRequest) returns (google.protobuf.Empty);
+  // MarkTodoItemAsPending reverts a previous "mark as done".
+  rpc MarkTodoItemAsPending(MarkTodoItemAsPendingRequest) returns (google.protobuf.Empty);
+  // DeleteTodoItem removes an item from a TodoList.
+  rpc DeleteTodoItem(DeleteTodoItemRequest) returns (google.protobuf.Empty);
+}

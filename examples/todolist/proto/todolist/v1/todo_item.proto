@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package todolist.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// TodoItem is a single entry in a TodoList.
+message TodoItem {
+  // Unique identifier (UUID) for this item.
+  string id = 1;
+  // Short title of the item.
+  string title = 2;
+  // Free-form description of the item.
+  string description = 3;
+  // Whether the item is completed.
+  bool completed = 4;
+  // Optional due date; zero-valued if not set.
+  google.protobuf.Timestamp due_date = 5;
+  // When the item was added to its list.
+  google.protobuf.Timestamp creation_time = 6;
+}

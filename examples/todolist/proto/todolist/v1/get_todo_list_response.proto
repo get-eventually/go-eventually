@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package todolist.v1;
+
+import "todolist/v1/todo_list.proto";
+
+// GetTodoListResponse contains the requested TodoList.
+message GetTodoListResponse {
+  // The requested list.
+  TodoList todo_list = 1;
+}
