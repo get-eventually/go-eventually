@@ -29,10 +29,18 @@ end-to-end.
 ## Running
 
 ```sh
-cd examples/todolist
-go run .
+go run ./examples/todolist
+# or from the example dir:
+cd examples/todolist && go run .
 # Server listens on :8080 by default
 ```
+
+The example is a member of the repository's Go workspace (`go.work` at
+repo root). The workspace is what resolves the `go-eventually` import
+to the in-repo library code. The example's `go.mod` still carries a
+`require github.com/get-eventually/go-eventually v0.4.0` line as a
+nominal floor — `GOWORK=off` would fall back to that released version,
+which is NOT what you want when evaluating in-progress library changes.
 
 Hit it with a Connect client, `grpcurl`, or the built-in reflection:
 
@@ -83,6 +91,6 @@ at the module root).
 ## CI coverage
 
 `make go.lint` and `make go.test` at the repo root iterate over every
-Go module (root + every nested example). This example is therefore
-lint-gated and test-gated on every PR — a library change that breaks
-the example fails CI.
+Go workspace member (discovered from `go.work`). This example is
+therefore lint-gated and test-gated on every PR — a library change
+that breaks the example fails CI.
