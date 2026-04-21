@@ -22,7 +22,6 @@
   ],
   "packages": {
     ".": {
-      "package-name": "go-eventually",
       "changelog-path": "docs/CHANGELOG.md"
     }
   }
