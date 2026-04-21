@@ -1,5 +1,13 @@
-// Package todolist contains the domain types and implementations
-// for the TodoList Aggregate Root.
+// Package todolist contains everything related to the TodoList bounded
+// context: the aggregate root, its domain events, commands, queries, and
+// their handlers.
+//
+// This package follows the "package by domain" convention: all artifacts
+// that belong to the TodoList context live together, regardless of whether
+// they are conceptually on the command, query, or domain side. Naming is
+// used to keep the boundary clear (e.g. CreateCommand / GetQuery), taking
+// advantage of the package prefix to avoid repeating "TodoList" in every
+// identifier.
 package todolist
 
 import (

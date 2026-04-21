@@ -1,4 +1,4 @@
-package command_test
+package todolist_test
 
 import (
 	"testing"
@@ -9,25 +9,24 @@ import (
 	"github.com/get-eventually/go-eventually/aggregate"
 	"github.com/get-eventually/go-eventually/command"
 	"github.com/get-eventually/go-eventually/event"
-	appcommand "github.com/get-eventually/go-eventually/examples/todolist/internal/command"
-	"github.com/get-eventually/go-eventually/examples/todolist/internal/domain/todolist"
+	"github.com/get-eventually/go-eventually/examples/todolist/internal/todolist"
 )
 
-func TestCreateTodoListHandler(t *testing.T) {
+func TestCreateCommandHandler(t *testing.T) {
 	id := uuid.New()
 	now := time.Now()
 	clock := func() time.Time { return now }
 
-	commandHandlerFactory := func(s event.Store) appcommand.CreateTodoListHandler {
-		return appcommand.CreateTodoListHandler{
+	commandHandlerFactory := func(s event.Store) todolist.CreateCommandHandler {
+		return todolist.CreateCommandHandler{
 			Clock:      clock,
 			Repository: aggregate.NewEventSourcedRepository(s, todolist.Type),
 		}
 	}
 
 	t.Run("it fails when an invalid id has been provided", func(t *testing.T) {
-		command.Scenario[appcommand.CreateTodoList, appcommand.CreateTodoListHandler]().
-			When(command.ToEnvelope(appcommand.CreateTodoList{
+		command.Scenario[todolist.CreateCommand, todolist.CreateCommandHandler]().
+			When(command.ToEnvelope(todolist.CreateCommand{
 				ID:    todolist.ID(uuid.Nil),
 				Title: "my-title",
 				Owner: "owner",
@@ -37,8 +36,8 @@ func TestCreateTodoListHandler(t *testing.T) {
 	})
 
 	t.Run("it fails when a title has not been provided", func(t *testing.T) {
-		command.Scenario[appcommand.CreateTodoList, appcommand.CreateTodoListHandler]().
-			When(command.ToEnvelope(appcommand.CreateTodoList{
+		command.Scenario[todolist.CreateCommand, todolist.CreateCommandHandler]().
+			When(command.ToEnvelope(todolist.CreateCommand{
 				ID:    todolist.ID(id),
 				Title: "",
 				Owner: "owner",
@@ -48,8 +47,8 @@ func TestCreateTodoListHandler(t *testing.T) {
 	})
 
 	t.Run("it fails when an owner has not been provided", func(t *testing.T) {
-		command.Scenario[appcommand.CreateTodoList, appcommand.CreateTodoListHandler]().
-			When(command.ToEnvelope(appcommand.CreateTodoList{
+		command.Scenario[todolist.CreateCommand, todolist.CreateCommandHandler]().
+			When(command.ToEnvelope(todolist.CreateCommand{
 				ID:    todolist.ID(id),
 				Title: "my-title",
 				Owner: "",
@@ -59,8 +58,8 @@ func TestCreateTodoListHandler(t *testing.T) {
 	})
 
 	t.Run("it works", func(t *testing.T) {
-		command.Scenario[appcommand.CreateTodoList, appcommand.CreateTodoListHandler]().
-			When(command.ToEnvelope(appcommand.CreateTodoList{
+		command.Scenario[todolist.CreateCommand, todolist.CreateCommandHandler]().
+			When(command.ToEnvelope(todolist.CreateCommand{
 				ID:    todolist.ID(id),
 				Title: "my-title",
 				Owner: "owner",

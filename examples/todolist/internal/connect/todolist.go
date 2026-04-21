@@ -20,10 +20,8 @@ import (
 	"github.com/get-eventually/go-eventually/command"
 	todolistv1 "github.com/get-eventually/go-eventually/examples/todolist/gen/todolist/v1"
 	"github.com/get-eventually/go-eventually/examples/todolist/gen/todolist/v1/todolistv1connect"
-	appcommand "github.com/get-eventually/go-eventually/examples/todolist/internal/command"
-	"github.com/get-eventually/go-eventually/examples/todolist/internal/domain/todolist"
 	"github.com/get-eventually/go-eventually/examples/todolist/internal/protoconv"
-	appquery "github.com/get-eventually/go-eventually/examples/todolist/internal/query"
+	"github.com/get-eventually/go-eventually/examples/todolist/internal/todolist"
 	"github.com/get-eventually/go-eventually/query"
 )
 
@@ -39,9 +37,9 @@ var _ todolistv1connect.TodoListServiceHandler = TodoListServiceServer{}
 type TodoListServiceServer struct {
 	todolistv1connect.UnimplementedTodoListServiceHandler
 
-	GetTodoListHandler    appquery.GetTodoListHandler
-	CreateTodoListHandler appcommand.CreateTodoListHandler
-	AddTodoListHandler    appcommand.AddTodoListItemHandler
+	GetQueryHandler       todolist.GetQueryHandler
+	CreateCommandHandler  todolist.CreateCommandHandler
+	AddItemCommandHandler todolist.AddItemCommandHandler
 }
 
 // parseUUID converts a string field into a uuid.UUID, returning an
@@ -95,13 +93,13 @@ func (srv TodoListServiceServer) CreateTodoList(
 		return nil, err
 	}
 
-	cmd := command.ToEnvelope(appcommand.CreateTodoList{
+	cmd := command.ToEnvelope(todolist.CreateCommand{
 		ID:    todolist.ID(id),
 		Title: req.Msg.Title,
 		Owner: req.Msg.Owner,
 	})
 
-	if err := srv.CreateTodoListHandler.Handle(ctx, cmd); err != nil {
+	if err := srv.CreateCommandHandler.Handle(ctx, cmd); err != nil {
 		return nil, mapCommandError("connect.CreateTodoList", err)
 	}
 
@@ -118,9 +116,9 @@ func (srv TodoListServiceServer) GetTodoList(
 		return nil, err
 	}
 
-	q := query.ToEnvelope(appquery.GetTodoList{ID: todolist.ID(id)})
+	q := query.ToEnvelope(todolist.GetQuery{ID: todolist.ID(id)})
 
-	tl, err := srv.GetTodoListHandler.Handle(ctx, q)
+	tl, err := srv.GetQueryHandler.Handle(ctx, q)
 	if err != nil {
 		return nil, mapCommandError("connect.GetTodoList", err)
 	}
@@ -150,7 +148,7 @@ func (srv TodoListServiceServer) AddTodoItem(
 		dueDate = req.Msg.DueDate.AsTime()
 	}
 
-	cmd := command.ToEnvelope(appcommand.AddTodoListItem{
+	cmd := command.ToEnvelope(todolist.AddItemCommand{
 		TodoListID:  todolist.ID(listID),
 		TodoItemID:  todolist.ItemID(itemID),
 		Title:       req.Msg.Title,
@@ -158,7 +156,7 @@ func (srv TodoListServiceServer) AddTodoItem(
 		DueDate:     dueDate,
 	})
 
-	if err := srv.AddTodoListHandler.Handle(ctx, cmd); err != nil {
+	if err := srv.AddItemCommandHandler.Handle(ctx, cmd); err != nil {
 		return nil, mapCommandError("connect.AddTodoItem", err)
 	}
 

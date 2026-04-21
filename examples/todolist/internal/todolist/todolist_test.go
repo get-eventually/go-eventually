@@ -8,7 +8,7 @@ import (
 
 	"github.com/get-eventually/go-eventually/aggregate"
 	"github.com/get-eventually/go-eventually/event"
-	"github.com/get-eventually/go-eventually/examples/todolist/internal/domain/todolist"
+	"github.com/get-eventually/go-eventually/examples/todolist/internal/todolist"
 )
 
 func TestTodoList(t *testing.T) {

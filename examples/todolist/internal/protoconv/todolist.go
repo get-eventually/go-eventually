@@ -6,7 +6,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	todolistv1 "github.com/get-eventually/go-eventually/examples/todolist/gen/todolist/v1"
-	"github.com/get-eventually/go-eventually/examples/todolist/internal/domain/todolist"
+	"github.com/get-eventually/go-eventually/examples/todolist/internal/todolist"
 )
 
 // FromTodoList converts a TodoList aggregate root into its Protobuf counterpart.

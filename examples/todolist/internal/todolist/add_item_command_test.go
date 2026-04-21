@@ -1,4 +1,4 @@
-package command_test
+package todolist_test
 
 import (
 	"testing"
@@ -9,14 +9,13 @@ import (
 	"github.com/get-eventually/go-eventually/aggregate"
 	"github.com/get-eventually/go-eventually/command"
 	"github.com/get-eventually/go-eventually/event"
-	appcommand "github.com/get-eventually/go-eventually/examples/todolist/internal/command"
-	"github.com/get-eventually/go-eventually/examples/todolist/internal/domain/todolist"
+	"github.com/get-eventually/go-eventually/examples/todolist/internal/todolist"
 )
 
-func TestAddTodoListItem(t *testing.T) {
+func TestAddItemCommandHandler(t *testing.T) {
 	now := time.Now()
-	commandHandlerFactory := func(es event.Store) appcommand.AddTodoListItemHandler {
-		return appcommand.AddTodoListItemHandler{
+	commandHandlerFactory := func(es event.Store) todolist.AddItemCommandHandler {
+		return todolist.AddItemCommandHandler{
 			Clock:      func() time.Time { return now },
 			Repository: aggregate.NewEventSourcedRepository(es, todolist.Type),
 		}
@@ -28,8 +27,8 @@ func TestAddTodoListItem(t *testing.T) {
 	listOwner := "me"
 
 	t.Run("it fails when the target TodoList does not exist", func(t *testing.T) {
-		command.Scenario[appcommand.AddTodoListItem, appcommand.AddTodoListItemHandler]().
-			When(command.ToEnvelope(appcommand.AddTodoListItem{
+		command.Scenario[todolist.AddItemCommand, todolist.AddItemCommandHandler]().
+			When(command.ToEnvelope(todolist.AddItemCommand{
 				TodoListID:  todoListID,
 				TodoItemID:  todoItemID,
 				Title:       "a todo item that should fail",
@@ -41,7 +40,7 @@ func TestAddTodoListItem(t *testing.T) {
 	})
 
 	t.Run("it fails when the same item has already been added", func(t *testing.T) {
-		command.Scenario[appcommand.AddTodoListItem, appcommand.AddTodoListItemHandler]().
+		command.Scenario[todolist.AddItemCommand, todolist.AddItemCommandHandler]().
 			Given(event.Persisted{
 				StreamID: event.StreamID(todoListID.String()),
 				Version:  1,
@@ -62,7 +61,7 @@ func TestAddTodoListItem(t *testing.T) {
 					CreationTime: now,
 				}),
 			}).
-			When(command.ToEnvelope(appcommand.AddTodoListItem{
+			When(command.ToEnvelope(todolist.AddItemCommand{
 				TodoListID:  todoListID,
 				TodoItemID:  todoItemID,
 				Title:       "uh oh, this is gonna fail",
@@ -74,7 +73,7 @@ func TestAddTodoListItem(t *testing.T) {
 	})
 
 	t.Run("it fails when the item title is empty", func(t *testing.T) {
-		command.Scenario[appcommand.AddTodoListItem, appcommand.AddTodoListItemHandler]().
+		command.Scenario[todolist.AddItemCommand, todolist.AddItemCommandHandler]().
 			Given(event.Persisted{
 				StreamID: event.StreamID(todoListID.String()),
 				Version:  1,
@@ -85,7 +84,7 @@ func TestAddTodoListItem(t *testing.T) {
 					CreationTime: now.Add(-2 * time.Minute),
 				}),
 			}).
-			When(command.ToEnvelope(appcommand.AddTodoListItem{
+			When(command.ToEnvelope(todolist.AddItemCommand{
 				TodoListID:  todoListID,
 				TodoItemID:  todoItemID,
 				Title:       "",
@@ -97,7 +96,7 @@ func TestAddTodoListItem(t *testing.T) {
 	})
 
 	t.Run("it works", func(t *testing.T) {
-		command.Scenario[appcommand.AddTodoListItem, appcommand.AddTodoListItemHandler]().
+		command.Scenario[todolist.AddItemCommand, todolist.AddItemCommandHandler]().
 			Given(event.Persisted{
 				StreamID: event.StreamID(todoListID.String()),
 				Version:  1,
@@ -108,7 +107,7 @@ func TestAddTodoListItem(t *testing.T) {
 					CreationTime: now.Add(-2 * time.Minute),
 				}),
 			}).
-			When(command.ToEnvelope(appcommand.AddTodoListItem{
+			When(command.ToEnvelope(todolist.AddItemCommand{
 				TodoListID:  todoListID,
 				TodoItemID:  todoItemID,
 				Title:       "a todo item that should succeed",
