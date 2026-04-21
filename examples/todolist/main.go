@@ -66,7 +66,7 @@ func run() error { //nolint:funlen // Single linear wire-up of the service; spli
 	eventStore := event.NewInMemoryStore()
 	todoListRepository := aggregate.NewEventSourcedRepository(eventStore, todolist.Type)
 
-	server := todolist.ConnectServiceHandler{
+	server := &todolist.ConnectServiceHandler{
 		UnimplementedTodoListServiceHandler: todolistv1connect.UnimplementedTodoListServiceHandler{},
 		GetQueryHandler: todolist.GetQueryHandler{
 			Getter: todoListRepository,
@@ -77,6 +77,15 @@ func run() error { //nolint:funlen // Single linear wire-up of the service; spli
 		},
 		AddItemCommandHandler: todolist.AddItemCommandHandler{
 			Clock:      time.Now,
+			Repository: todoListRepository,
+		},
+		MarkItemAsDoneCommandHandler: todolist.MarkItemAsDoneCommandHandler{
+			Repository: todoListRepository,
+		},
+		MarkItemAsPendingCommandHandler: todolist.MarkItemAsPendingCommandHandler{
+			Repository: todoListRepository,
+		},
+		DeleteItemCommandHandler: todolist.DeleteItemCommandHandler{
 			Repository: todoListRepository,
 		},
 	}

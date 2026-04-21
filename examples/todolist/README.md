@@ -68,10 +68,6 @@ grpcurl -plaintext -d '{"todo_list_id":"...","title":"chores","owner":"me"}' \
   `ConnectServiceHandler`, and `ToProto` ride on top of the package
   prefix to keep call sites terse and the domain boundary obvious at a
   glance.
-- **`MarkTodoItemAsDone` / `MarkTodoItemAsPending` / `DeleteTodoItem`**
-  exist in the domain but don't yet have command handlers nor wired
-  Connect handlers. Adding them follows the same pattern as
-  `AddItemCommand`; left as an exercise / follow-up PR.
 
 ## Regenerating the protos
 

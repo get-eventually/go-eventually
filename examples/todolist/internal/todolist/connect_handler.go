@@ -17,8 +17,7 @@ import (
 	"github.com/get-eventually/go-eventually/query"
 )
 
-//nolint:exhaustruct // Interface implementation assertion.
-var _ todolistv1connect.TodoListServiceHandler = ConnectServiceHandler{}
+var _ todolistv1connect.TodoListServiceHandler = (*ConnectServiceHandler)(nil)
 
 // ConnectServiceHandler is the Connect transport for the TodoList service.
 //
@@ -28,9 +27,12 @@ var _ todolistv1connect.TodoListServiceHandler = ConnectServiceHandler{}
 type ConnectServiceHandler struct {
 	todolistv1connect.UnimplementedTodoListServiceHandler
 
-	GetQueryHandler       GetQueryHandler
-	CreateCommandHandler  CreateCommandHandler
-	AddItemCommandHandler AddItemCommandHandler
+	GetQueryHandler                 GetQueryHandler
+	CreateCommandHandler            CreateCommandHandler
+	AddItemCommandHandler           AddItemCommandHandler
+	MarkItemAsDoneCommandHandler    MarkItemAsDoneCommandHandler
+	MarkItemAsPendingCommandHandler MarkItemAsPendingCommandHandler
+	DeleteItemCommandHandler        DeleteItemCommandHandler
 }
 
 // parseUUIDField converts a string field into a uuid.UUID, returning an
@@ -75,7 +77,7 @@ func mapCommandError(op string, err error) *connect.Error {
 }
 
 // CreateTodoList implements the Connect service handler.
-func (srv ConnectServiceHandler) CreateTodoList(
+func (srv *ConnectServiceHandler) CreateTodoList(
 	ctx context.Context,
 	req *connect.Request[todolistv1.CreateTodoListRequest],
 ) (*connect.Response[emptypb.Empty], error) {
@@ -98,7 +100,7 @@ func (srv ConnectServiceHandler) CreateTodoList(
 }
 
 // GetTodoList implements the Connect service handler.
-func (srv ConnectServiceHandler) GetTodoList(
+func (srv *ConnectServiceHandler) GetTodoList(
 	ctx context.Context,
 	req *connect.Request[todolistv1.GetTodoListRequest],
 ) (*connect.Response[todolistv1.GetTodoListResponse], error) {
@@ -120,7 +122,7 @@ func (srv ConnectServiceHandler) GetTodoList(
 }
 
 // AddTodoItem implements the Connect service handler.
-func (srv ConnectServiceHandler) AddTodoItem(
+func (srv *ConnectServiceHandler) AddTodoItem(
 	ctx context.Context,
 	req *connect.Request[todolistv1.AddTodoItemRequest],
 ) (*connect.Response[emptypb.Empty], error) {
@@ -154,33 +156,84 @@ func (srv ConnectServiceHandler) AddTodoItem(
 	return connect.NewResponse(&emptypb.Empty{}), nil
 }
 
+// parseListAndItemIDs extracts and validates both UUID identifiers that
+// appear in every per-item request.
+func parseListAndItemIDs(todoListID, todoItemID string) (ID, ItemID, error) {
+	listID, err := parseUUIDField("todo_list_id", todoListID)
+	if err != nil {
+		return ID(uuid.Nil), ItemID(uuid.Nil), err
+	}
+
+	itemID, err := parseUUIDField("todo_item_id", todoItemID)
+	if err != nil {
+		return ID(uuid.Nil), ItemID(uuid.Nil), err
+	}
+
+	return ID(listID), ItemID(itemID), nil
+}
+
 // MarkTodoItemAsDone implements the Connect service handler.
-//
-// Not wired up yet in the example: the corresponding command handler is not
-// yet defined, so this returns Unimplemented to be explicit about it.
-func (srv ConnectServiceHandler) MarkTodoItemAsDone(
-	_ context.Context,
-	_ *connect.Request[todolistv1.MarkTodoItemAsDoneRequest],
+func (srv *ConnectServiceHandler) MarkTodoItemAsDone(
+	ctx context.Context,
+	req *connect.Request[todolistv1.MarkTodoItemAsDoneRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mark-as-done not implemented"))
+	listID, itemID, err := parseListAndItemIDs(req.Msg.TodoListId, req.Msg.TodoItemId)
+	if err != nil {
+		return nil, err
+	}
+
+	cmd := command.ToEnvelope(MarkItemAsDoneCommand{
+		TodoListID: listID,
+		TodoItemID: itemID,
+	})
+
+	if err := srv.MarkItemAsDoneCommandHandler.Handle(ctx, cmd); err != nil {
+		return nil, mapCommandError("todolist.ConnectServiceHandler.MarkTodoItemAsDone", err)
+	}
+
+	return connect.NewResponse(&emptypb.Empty{}), nil
 }
 
 // MarkTodoItemAsPending implements the Connect service handler.
-//
-// Not wired up yet in the example: see MarkTodoItemAsDone.
-func (srv ConnectServiceHandler) MarkTodoItemAsPending(
-	_ context.Context,
-	_ *connect.Request[todolistv1.MarkTodoItemAsPendingRequest],
+func (srv *ConnectServiceHandler) MarkTodoItemAsPending(
+	ctx context.Context,
+	req *connect.Request[todolistv1.MarkTodoItemAsPendingRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mark-as-pending not implemented"))
+	listID, itemID, err := parseListAndItemIDs(req.Msg.TodoListId, req.Msg.TodoItemId)
+	if err != nil {
+		return nil, err
+	}
+
+	cmd := command.ToEnvelope(MarkItemAsPendingCommand{
+		TodoListID: listID,
+		TodoItemID: itemID,
+	})
+
+	if err := srv.MarkItemAsPendingCommandHandler.Handle(ctx, cmd); err != nil {
+		return nil, mapCommandError("todolist.ConnectServiceHandler.MarkTodoItemAsPending", err)
+	}
+
+	return connect.NewResponse(&emptypb.Empty{}), nil
 }
 
 // DeleteTodoItem implements the Connect service handler.
-//
-// Not wired up yet in the example: see MarkTodoItemAsDone.
-func (srv ConnectServiceHandler) DeleteTodoItem(
-	_ context.Context,
-	_ *connect.Request[todolistv1.DeleteTodoItemRequest],
+func (srv *ConnectServiceHandler) DeleteTodoItem(
+	ctx context.Context,
+	req *connect.Request[todolistv1.DeleteTodoItemRequest],
 ) (*connect.Response[emptypb.Empty], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("delete not implemented"))
+	listID, itemID, err := parseListAndItemIDs(req.Msg.TodoListId, req.Msg.TodoItemId)
+	if err != nil {
+		return nil, err
+	}
+
+	cmd := command.ToEnvelope(DeleteItemCommand{
+		TodoListID: listID,
+		TodoItemID: itemID,
+	})
+
+	if err := srv.DeleteItemCommandHandler.Handle(ctx, cmd); err != nil {
+		return nil, mapCommandError("todolist.ConnectServiceHandler.DeleteTodoItem", err)
+	}
+
+	return connect.NewResponse(&emptypb.Empty{}), nil
 }
