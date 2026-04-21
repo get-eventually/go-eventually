@@ -1,9 +1,0 @@
-syntax = "proto3";
-
-package todolist.v1;
-
-// GetTodoListRequest fetches a TodoList by its ID.
-message GetTodoListRequest {
-  // UUID of the list to fetch.
-  string todo_list_id = 1;
-}

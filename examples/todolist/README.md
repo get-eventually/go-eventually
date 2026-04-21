@@ -46,8 +46,10 @@ grpcurl -plaintext -d '{"todo_list_id":"...","title":"chores","owner":"me"}' \
 - **Commands return `google.protobuf.Empty`.** Clients generate IDs and
   pass them in; the server acknowledges. Idempotent on retries with the
   same ID.
-- **One proto file per message** (the "1-1-1" Buf convention). Keeps each
-  RPC contract isolated and easy to evolve.
+- **Request/response messages colocated with the service** in
+  `todo_list_service.proto`; domain messages live in their own files.
+  Small service surface benefits more from colocation than from strict
+  one-message-per-file splitting.
 - **Connect only.** No HTTP/REST gateway, no `google.api.http`
   annotations. The Connect protocol itself already speaks gRPC, gRPC-Web,
   and Connect-over-HTTP; that's enough surface for an example.
@@ -67,7 +69,9 @@ grpcurl -plaintext -d '{"todo_list_id":"...","title":"chores","owner":"me"}' \
 
 ```sh
 cd examples/todolist
-buf generate proto
+buf generate
 ```
 
 Committed output lives under `gen/`; regenerate after any proto change.
+The buf configuration uses the v2 schema (see `buf.yaml` + `buf.gen.yaml`
+at the module root).
