@@ -11,8 +11,12 @@ import (
 // committed to the inner Event Store.
 //
 // Useful for tests assertion.
+//
+// TrackingStore embeds a full [Store]: Stream is inherited through the
+// embedded value; only Append is overridden to record events as they are
+// appended.
 type TrackingStore struct {
-	Appender
+	Store
 
 	mx       sync.RWMutex
 	recorded []Persisted
@@ -20,9 +24,9 @@ type TrackingStore struct {
 
 // NewTrackingStore wraps an Event Store to capture events that get
 // appended to it.
-func NewTrackingStore(appender Appender) *TrackingStore {
+func NewTrackingStore(store Store) *TrackingStore {
 	return &TrackingStore{
-		Appender: appender,
+		Store:    store,
 		mx:       sync.RWMutex{},
 		recorded: nil,
 	}
@@ -54,7 +58,7 @@ func (es *TrackingStore) Append(
 	es.mx.Lock()
 	defer es.mx.Unlock()
 
-	v, err := es.Appender.Append(ctx, id, expected, events...)
+	v, err := es.Store.Append(ctx, id, expected, events...)
 	if err != nil {
 		return v, err
 	}

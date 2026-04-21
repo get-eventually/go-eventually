@@ -25,58 +25,50 @@ func NewInMemoryStore() *InMemoryStore {
 	}
 }
 
-func contextErr(ctx context.Context) error {
-	if err := ctx.Err(); err != nil {
-		return fmt.Errorf("event.InMemoryStore: context error, %w", err)
-	}
-
-	return nil
-}
-
-// Stream streams committed events in the Event Store onto the provided EventStream,
-// from the specified Global Sequence Number in `from`, based on the provided stream.Target.
+// Stream returns a Stream over the committed events for the given Event Stream,
+// filtered by the provided version.Selector.
 //
-// Note: this call is synchronous, and will return when all the Events
-// have been successfully written to the provided EventStream, or when
-// the context has been canceled.
+// The returned Stream holds a read-lock on the underlying store for the
+// duration of iteration; long-paused iterations will block concurrent writers.
 //
-// This method fails only when the context is canceled.
+// Iteration stops if the consumer abandons the range loop or if the context
+// is canceled between yields.
 func (es *InMemoryStore) Stream(
 	ctx context.Context,
-	eventStream StreamWrite,
 	id StreamID,
 	selector version.Selector,
-) error {
-	es.mx.RLock()
-	defer es.mx.RUnlock()
-	defer close(eventStream)
+) *Stream {
+	return NewStream(func(yield func(Persisted) bool) error {
+		es.mx.RLock()
+		defer es.mx.RUnlock()
 
-	events, ok := es.events[id]
-	if !ok {
+		events, ok := es.events[id]
+		if !ok {
+			return nil
+		}
+
+		for i, evt := range events {
+			if err := ctx.Err(); err != nil {
+				return fmt.Errorf("event.InMemoryStore: context error, %w", err)
+			}
+
+			eventVersion := version.Version(i) + 1
+
+			if eventVersion < selector.From {
+				continue
+			}
+
+			if !yield(Persisted{
+				Envelope: evt,
+				StreamID: id,
+				Version:  eventVersion,
+			}) {
+				return nil
+			}
+		}
+
 		return nil
-	}
-
-	for i, evt := range events {
-		eventVersion := version.Version(i) + 1
-
-		if eventVersion < selector.From {
-			continue
-		}
-
-		persistedEvent := Persisted{
-			Envelope: evt,
-			StreamID: id,
-			Version:  eventVersion,
-		}
-
-		select {
-		case eventStream <- persistedEvent:
-		case <-ctx.Done():
-			return contextErr(ctx)
-		}
-	}
-
-	return nil
+	})
 }
 
 // Append inserts the specified Domain Events into the Event Stream specified

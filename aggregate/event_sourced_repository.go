@@ -4,21 +4,28 @@ import (
 	"context"
 	"fmt"
 
-	"golang.org/x/sync/errgroup"
-
 	"github.com/get-eventually/go-eventually/event"
 	"github.com/get-eventually/go-eventually/serde"
 	"github.com/get-eventually/go-eventually/version"
 )
 
-// RehydrateFromEvents rehydrates an Aggregate Root from a read-only Event Stream.
-func RehydrateFromEvents[I ID](root Root[I], eventStream event.StreamRead) error {
-	for event := range eventStream {
-		if err := root.Apply(event.Message); err != nil {
+// RehydrateFromEvents rehydrates an Aggregate Root from a Stream of persisted
+// Domain Events.
+//
+// The Stream is iterated to completion or until the Aggregate Root's Apply
+// method returns an error. After iteration, the stream's terminal error (if
+// any) is checked via Stream.Err.
+func RehydrateFromEvents[I ID](root Root[I], stream *event.Stream) error {
+	for evt := range stream.Iter() {
+		if err := root.Apply(evt.Message); err != nil {
 			return fmt.Errorf("aggregate.RehydrateFromEvents: failed to record event, %w", err)
 		}
 
-		root.setVersion(event.Version)
+		root.setVersion(evt.Version)
+	}
+
+	if err := stream.Err(); err != nil {
+		return fmt.Errorf("aggregate.RehydrateFromEvents: streaming failed, %w", err)
 	}
 
 	return nil
@@ -74,29 +81,12 @@ func NewEventSourcedRepository[I ID, T Root[I]](eventStore event.Store, typ Type
 func (repo EventSourcedRepository[I, T]) Get(ctx context.Context, id I) (T, error) {
 	var zeroValue T
 
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
 	streamID := event.StreamID(id.String())
-	eventStream := make(event.Stream, 1)
-
-	group, ctx := errgroup.WithContext(ctx)
-	group.Go(func() error {
-		if err := repo.eventStore.Stream(ctx, eventStream, streamID, version.SelectFromBeginning); err != nil {
-			return fmt.Errorf("aggregate.EventSourcedRepository: failed while reading event from stream, %w", err)
-		}
-
-		return nil
-	})
+	stream := repo.eventStore.Stream(ctx, streamID, version.SelectFromBeginning)
 
 	root := repo.typ.Factory()
-
-	if err := RehydrateFromEvents(root, eventStream); err != nil {
+	if err := RehydrateFromEvents(root, stream); err != nil {
 		return zeroValue, fmt.Errorf("aggregate.EventSourcedRepository: failed to rehydrate aggregate root, %w", err)
-	}
-
-	if err := group.Wait(); err != nil {
-		return zeroValue, err
 	}
 
 	if root.Version() == 0 {
