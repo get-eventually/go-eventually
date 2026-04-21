@@ -23,8 +23,6 @@ func TestAddItemCommandHandler(t *testing.T) {
 
 	todoListID := todolist.ID(uuid.New())
 	todoItemID := todolist.ItemID(uuid.New())
-	listTitle := "my list"
-	listOwner := "me"
 
 	t.Run("it fails when the target TodoList does not exist", func(t *testing.T) {
 		command.Scenario[todolist.AddItemCommand, todolist.AddItemCommandHandler]().
@@ -46,8 +44,8 @@ func TestAddItemCommandHandler(t *testing.T) {
 				Version:  1,
 				Envelope: event.ToEnvelope(todolist.WasCreated{
 					ID:           todoListID,
-					Title:        listTitle,
-					Owner:        listOwner,
+					Title:        testListTitle,
+					Owner:        testListOwner,
 					CreationTime: now.Add(-2 * time.Minute),
 				}),
 			}, event.Persisted{
@@ -79,8 +77,8 @@ func TestAddItemCommandHandler(t *testing.T) {
 				Version:  1,
 				Envelope: event.ToEnvelope(todolist.WasCreated{
 					ID:           todoListID,
-					Title:        listTitle,
-					Owner:        listOwner,
+					Title:        testListTitle,
+					Owner:        testListOwner,
 					CreationTime: now.Add(-2 * time.Minute),
 				}),
 			}).
@@ -102,8 +100,8 @@ func TestAddItemCommandHandler(t *testing.T) {
 				Version:  1,
 				Envelope: event.ToEnvelope(todolist.WasCreated{
 					ID:           todoListID,
-					Title:        listTitle,
-					Owner:        listOwner,
+					Title:        testListTitle,
+					Owner:        testListOwner,
 					CreationTime: now.Add(-2 * time.Minute),
 				}),
 			}).
