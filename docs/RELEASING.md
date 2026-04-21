@@ -21,11 +21,7 @@ No manual tagging. No `git tag -a`. No `goreleaser`.
 
 ## Tag scheme
 
-- **Only** `vMAJOR.MINOR.PATCH[-PRERELEASE]` tags at the repository root.
-- Subdirectory-style tags (`postgres/v0.2.1`, `firestore-v0.2.1`,
-  `core/v0.2.1`, etc.) are **not** supported. The legacy ones from the
-  multi-module era are purged from the remote — see
-  [Tag hygiene](#tag-hygiene) below.
+**Only** `vMAJOR.MINOR.PATCH[-PRERELEASE]` tags at the repository root.
 
 ## SemVer dialect (pre-v1)
 
