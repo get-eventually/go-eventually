@@ -79,3 +79,10 @@ buf generate
 Committed output lives under `gen/`; regenerate after any proto change.
 The buf configuration uses the v2 schema (see `buf.yaml` + `buf.gen.yaml`
 at the module root).
+
+## CI coverage
+
+`make go.lint` and `make go.test` at the repo root iterate over every
+Go module (root + every nested example). This example is therefore
+lint-gated and test-gated on every PR — a library change that breaks
+the example fails CI.
