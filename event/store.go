@@ -3,43 +3,49 @@ package event
 import (
 	"context"
 
+	"github.com/get-eventually/go-eventually/message"
 	"github.com/get-eventually/go-eventually/version"
 )
 
-// Stream represents a stream of persisted Domain Events coming from some
-// stream-able source of data, like an Event Store.
-type Stream = chan Persisted
-
-// StreamWrite provides write-only access to an event.Stream object.
-type StreamWrite chan<- Persisted
-
-// StreamRead provides read-only access to an event.Stream object.
-type StreamRead <-chan Persisted
-
-// SliceToStream converts a slice of event.Persisted domain events to an event.Stream type.
+// Stream is a single-use, iterator-backed sequence of persisted Domain Events
+// coming from some stream-able source of data, like an Event Store.
 //
-// The event.Stream channel has the same buffer size as the input slice.
-//
-// The channel returned by the function contains all the original slice elements
-// and is already closed.
-func SliceToStream(events []Persisted) Stream {
-	ch := make(chan Persisted, len(events))
-	defer close(ch)
+// Stream is an alias for message.Stream[Persisted]. See [message.Stream] for
+// the full iteration and error-reporting contract.
+type Stream = message.Stream[Persisted]
 
-	for _, event := range events {
-		ch <- event
-	}
-
-	return ch
+// NewStream wraps a producer into a Stream. Convenience re-export of
+// [message.NewStream] for values of type [Persisted].
+func NewStream(produce func(yield func(Persisted) bool) error) *Stream {
+	return message.NewStream(produce)
 }
 
-// Streamer is an event.Store trait used to open a specific Event Stream and stream it back
-// in the application.
+// SliceToStream returns a Stream that yields each element of events in order.
+//
+// Useful for tests and for adapting fully-buffered results.
+func SliceToStream(events []Persisted) *Stream {
+	return NewStream(func(yield func(Persisted) bool) error {
+		for _, evt := range events {
+			if !yield(evt) {
+				return nil
+			}
+		}
+
+		return nil
+	})
+}
+
+// Streamer is an event.Store trait used to open a specific Event Stream and
+// stream it back in the application.
+//
+// Implementations should respect ctx cancellation between yields by checking
+// ctx.Err() at loop boundaries inside the producer.
 type Streamer interface {
-	Stream(ctx context.Context, stream StreamWrite, id StreamID, selector version.Selector) error
+	Stream(ctx context.Context, id StreamID, selector version.Selector) *Stream
 }
 
-// Appender is an event.Store trait used to append new Domain Events in the Event Stream.
+// Appender is an event.Store trait used to append new Domain Events in the
+// Event Stream.
 type Appender interface {
 	Append(ctx context.Context, id StreamID, expected version.Check, events ...Envelope) (version.Version, error)
 }
