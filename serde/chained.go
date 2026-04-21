@@ -34,12 +34,12 @@ func (s Chained[Src, Mid, Dst]) Deserialize(dst Dst) (Src, error) {
 
 	mid, err := s.second.Deserialize(dst)
 	if err != nil {
-		return zeroValue, fmt.Errorf("serde.Chained: first stage deserializer failed, %w", err)
+		return zeroValue, fmt.Errorf("serde.Chained: second stage deserializer failed, %w", err)
 	}
 
 	src, err := s.first.Deserialize(mid)
 	if err != nil {
-		return zeroValue, fmt.Errorf("serde.Chained: second stage deserializer failed, %w", err)
+		return zeroValue, fmt.Errorf("serde.Chained: first stage deserializer failed, %w", err)
 	}
 
 	return src, nil
