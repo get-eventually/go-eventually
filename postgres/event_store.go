@@ -69,7 +69,7 @@ func (es EventStore) Stream(
 		)
 
 		if err := rows.Scan(&eventVersion, &rawEvent, &rawMetadata); err != nil {
-			return fmt.Errorf("postgres.EventStore: failed to scan next row")
+			return errors.New("postgres.EventStore: failed to scan next row")
 		}
 
 		msg, err := es.messageSerde.Deserialize(rawEvent)

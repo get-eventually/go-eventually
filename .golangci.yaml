@@ -3,16 +3,25 @@ version: "2"
 
 run:
   timeout: 5m
+  go: "1.26"
 
 linters:
   default: none
   enable:
+    - asasalint
+    - bidichk
     - bodyclose
+    - contextcheck
     - copyloopvar
     - dogsled
+    - durationcheck
     - errcheck
+    - errname
+    - errorlint
     - exhaustive
     - exhaustruct
+    - exptostd
+    - fatcontext
     - funlen
     - gochecknoinits
     - gocognit
@@ -25,31 +34,48 @@ linters:
     - gosec
     - govet
     - ineffassign
+    - intrange
     - lll
     - makezero
     - misspell
     - mnd
+    - modernize
     - nakedret
     - nestif
     - nilerr
+    - nilnesserr
+    - noctx
     - nolintlint
+    - perfsprint
     - prealloc
+    - reassign
+    - recvcheck
     - revive
     - rowserrcheck
+    - spancheck
     - sqlclosecheck
     - staticcheck
     - tagliatelle
+    - testifylint
     - testpackage
+    - thelper
+    - tparallel
     - unconvert
     - unparam
     - unused
+    - usestdlibvars
+    - usetesting
     - wastedassign
     - whitespace
-    - wsl
+    - wsl_v5
   settings:
     errcheck:
       check-type-assertions: true
       check-blank: true
+    errorlint:
+      errorf: true
+      asserts: true
+      comparison: true
     gocritic:
       disabled-checks:
         - dupImport
@@ -71,10 +97,18 @@ linters:
       line-length: 160
     misspell:
       locale: US
+    perfsprint:
+      int-conversion: true
+      err-error: true
+      errorf: true
+      sprintf1: true
+      strconcat: true
     tagliatelle:
       case:
         rules:
           json: snake
+    testifylint:
+      enable-all: true
     unparam:
       check-exported: true
     unused:
@@ -88,6 +122,7 @@ linters:
     generated: lax
     rules:
       - linters:
+          - exhaustruct
           - funlen
         path: _test\.go
     paths:
@@ -112,7 +147,7 @@ formatters:
         - prefix(github.com/get-eventually/go-eventually)
     goimports:
       local-prefixes:
-        - prefix(github.com/get-eventually/go-eventually)
+        - github.com/get-eventually/go-eventually
   exclusions:
     generated: lax
     paths:

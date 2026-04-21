@@ -98,12 +98,12 @@ func (handler *GetByEmailHandler) Process(_ context.Context, evt event.Persisted
 	case *EmailWasUpdated:
 		previousEmail, ok := handler.idToEmail[userEvent.ID]
 		if !ok {
-			return fmt.Errorf("user.GetByEmailHandler: expected id to have been registered, none found")
+			return errors.New("user.GetByEmailHandler: expected id to have been registered, none found")
 		}
 
 		view, ok := handler.data[previousEmail]
 		if !ok {
-			return fmt.Errorf("user.GetByEmailHandler: expected view to be registered, none found")
+			return errors.New("user.GetByEmailHandler: expected view to be registered, none found")
 		}
 
 		if view.Version >= evt.Version {

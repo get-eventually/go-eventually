@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/get-eventually/go-eventually/event"
 	"github.com/get-eventually/go-eventually/version"
@@ -183,9 +184,11 @@ type ScenarioThen[I ID, T Root[I]] struct {
 
 // AssertOn runs the test scenario using the specified testing.T instance.
 func (sc ScenarioThen[I, T]) AssertOn(t *testing.T) {
+	t.Helper()
+
 	switch root, err := sc.fn(); {
 	case sc.wantErr:
-		assert.Error(t, err)
+		require.Error(t, err)
 
 		if expected := errors.Join(sc.errors...); expected != nil {
 			for _, expectedErr := range sc.errors {
@@ -194,7 +197,7 @@ func (sc ScenarioThen[I, T]) AssertOn(t *testing.T) {
 		}
 
 	default:
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		recordedEvents := root.FlushRecordedEvents()
 		assert.Equal(t, sc.expected, recordedEvents)

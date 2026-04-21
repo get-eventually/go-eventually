@@ -135,6 +135,8 @@ func (sc ScenarioThen[Q, R, T]) AssertOn( //nolint:gocritic
 	t *testing.T,
 	handlerFactory func(es event.Store) T,
 ) {
+	t.Helper()
+
 	ctx := context.Background()
 
 	eventStore := event.NewInMemoryStore()
@@ -151,15 +153,13 @@ func (sc ScenarioThen[Q, R, T]) AssertOn( //nolint:gocritic
 	actual, err := queryHandler.Handle(ctx, sc.when)
 
 	if !sc.wantError {
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, sc.then, actual)
 
 		return
 	}
 
-	if !assert.Error(t, err) {
-		return
-	}
+	require.Error(t, err)
 
 	if sc.thenError != nil {
 		assert.ErrorIs(t, err, sc.thenError)

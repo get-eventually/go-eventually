@@ -91,7 +91,7 @@ type BaseRoot struct {
 }
 
 // Version returns the current version of the Aggregate Root instance.
-func (br BaseRoot) Version() version.Version { return br.version }
+func (br *BaseRoot) Version() version.Version { return br.version }
 
 // FlushRecordedEvents returns the list of uncommitted, recorded Domain Events
 // through the Aggregate Root.
