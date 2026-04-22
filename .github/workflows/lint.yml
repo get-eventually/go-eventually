@@ -54,7 +54,7 @@ jobs:
           # list of changed files within `super-linter`
           fetch-depth: 0
       - name: Run super-linter
-        uses: super-linter/super-linter@1fa6ba58a88783e9714725cf89ac26d53e80c148 # v6
+        uses: super-linter/super-linter@9e863354e3ff62e0727d37183162c4a88873df41 # v8
         env:
           VALIDATE_ALL_CODEBASE: false
           DEFAULT_BRANCH: main
