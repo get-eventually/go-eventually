@@ -2,6 +2,9 @@ module github.com/get-eventually/go-eventually
 
 go 1.26.0
 
+// Published prematurely: missing the message.Stream iterator migration. Use v0.4.1.
+retract v0.4.0
+
 require (
 	github.com/golang-migrate/migrate/v4 v4.19.1
 	github.com/google/uuid v1.6.0

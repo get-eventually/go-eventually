@@ -2,6 +2,7 @@
 
 ## [0.4.1](https://github.com/get-eventually/go-eventually/compare/v0.4.0...v0.4.1) (2026-04-22)
 
+> **Note:** This release retracts `v0.4.0`, which was published prematurely without the `message.Stream` iterator migration. Users on v0.4.0 should upgrade to v0.4.1.
 
 ### ⚠ BREAKING CHANGES
 
