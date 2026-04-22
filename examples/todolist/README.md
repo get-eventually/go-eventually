@@ -1,11 +1,7 @@
-# TodoList example
+# Todo List
 
 A small Connect-based service that exercises `go-eventually`'s DDD / Event
-Sourcing primitives end-to-end. It serves as a real-world litmus test for
-the library's API: if something feels awkward in this example, it probably
-needs rethinking in the library.
-
-## What this example demonstrates
+Sourcing primitives end-to-end with:
 
 - An aggregate root (`todolist.TodoList`) with a child entity
   (`todolist.Item`), built on `aggregate.BaseRoot` and
@@ -21,11 +17,6 @@ needs rethinking in the library.
 - A Connect service exposing the above over HTTP/2 (h2c), with gRPC
   health + gRPC reflection wired up.
 
-Because the repository internally streams events through the new
-`message.Stream[event.Persisted]` iterator, any request that triggers
-`AddTodoItem` (which loads the existing aggregate) exercises the iterator
-end-to-end.
-
 ## Running
 
 ```sh
@@ -35,13 +26,6 @@ cd examples/todolist && go run .
 # Server listens on :8080 by default
 ```
 
-The example is a member of the repository's Go workspace (`go.work` at
-repo root). The workspace is what resolves the `go-eventually` import
-to the in-repo library code. The example's `go.mod` still carries a
-`require github.com/get-eventually/go-eventually v0.4.0` line as a
-nominal floor — `GOWORK=off` would fall back to that released version,
-which is NOT what you want when evaluating in-progress library changes.
-
 Hit it with a Connect client, `grpcurl`, or the built-in reflection:
 
 ```sh
@@ -50,7 +34,7 @@ grpcurl -plaintext -d '{"todo_list_id":"...","title":"chores","owner":"me"}' \
   localhost:8080 todolist.v1.TodoListService/CreateTodoList
 ```
 
-## Design choices worth noting
+## Design choices
 
 - **Commands return `google.protobuf.Empty`.** Clients generate IDs and
   pass them in; the server acknowledges. Idempotent on retries with the
@@ -77,7 +61,7 @@ grpcurl -plaintext -d '{"todo_list_id":"...","title":"chores","owner":"me"}' \
   prefix to keep call sites terse and the domain boundary obvious at a
   glance.
 
-## Regenerating the protos
+## Protobuf generation
 
 ```sh
 cd examples/todolist
@@ -87,10 +71,3 @@ buf generate
 Committed output lives under `gen/`; regenerate after any proto change.
 The buf configuration uses the v2 schema (see `buf.yaml` + `buf.gen.yaml`
 at the module root).
-
-## CI coverage
-
-`make go.lint` and `make go.test` at the repo root iterate over every
-Go workspace member (discovered from `go.work`). This example is
-therefore lint-gated and test-gated on every PR — a library change
-that breaks the example fails CI.
