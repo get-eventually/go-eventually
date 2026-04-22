@@ -6,7 +6,15 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-const instrumentationName = "github.com/get-eventually/go-eventually/opentelemetry"
+// InstrumentationName is the instrumentation scope name used by the Tracer
+// and Meter exposed by this package.
+const InstrumentationName = "github.com/get-eventually/go-eventually/opentelemetry"
+
+// MetricUnitMilliseconds is the [OpenTelemetry-compatible unit] used by the
+// duration histograms exposed by this package.
+//
+// [OpenTelemetry-compatible unit]: https://ucum.org/ucum
+const MetricUnitMilliseconds = "ms"
 
 type config struct {
 	MeterProvider  metric.MeterProvider
@@ -14,11 +22,11 @@ type config struct {
 }
 
 func (c config) meter() metric.Meter {
-	return c.MeterProvider.Meter(instrumentationName)
+	return c.MeterProvider.Meter(InstrumentationName)
 }
 
 func (c config) tracer() trace.Tracer {
-	return c.TracerProvider.Tracer(instrumentationName)
+	return c.TracerProvider.Tracer(InstrumentationName)
 }
 
 // Option specifies instrumentation configuration options.

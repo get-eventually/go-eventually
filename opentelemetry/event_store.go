@@ -22,6 +22,21 @@ const (
 	EventStoreNumEventsKey        attribute.Key = "event_store.num_events"
 )
 
+// Span names emitted by the InstrumentedEventStore instrumentation.
+const (
+	EventStoreStreamSpanName = "event.Store.Stream"
+	EventStoreAppendSpanName = "event.Store.Append"
+)
+
+// Metric names and descriptions exposed by the InstrumentedEventStore instrumentation.
+const (
+	EventStoreStreamDurationMetricName        = "eventually.event_store.stream.duration.milliseconds"
+	EventStoreStreamDurationMetricDescription = "Duration in milliseconds of event.Store.Stream operations performed."
+
+	EventStoreAppendDurationMetricName        = "eventually.event_store.append.duration.milliseconds"
+	EventStoreAppendDurationMetricDescription = "Duration in milliseconds of event.Store.Append operations performed."
+)
+
 var _ event.Store = new(InstrumentedEventStore)
 
 // InstrumentedEventStore is a wrapper type over an event.Store
@@ -41,17 +56,17 @@ func (ies *InstrumentedEventStore) registerMetrics(meter metric.Meter) error {
 	var err error
 
 	if ies.streamDuration, err = meter.Int64Histogram(
-		"eventually.event_store.stream.duration.milliseconds",
-		metric.WithUnit("ms"),
-		metric.WithDescription("Duration in milliseconds of event.Store.Stream operations performed."),
+		EventStoreStreamDurationMetricName,
+		metric.WithUnit(MetricUnitMilliseconds),
+		metric.WithDescription(EventStoreStreamDurationMetricDescription),
 	); err != nil {
 		return fmt.Errorf("opentelemetry.InstrumentedEventStore: failed to register metric, %w", err)
 	}
 
 	if ies.appendDuration, err = meter.Int64Histogram(
-		"eventually.event_store.append.duration.milliseconds",
-		metric.WithUnit("ms"),
-		metric.WithDescription("Duration in milliseconds of event.Store.Append operations performed."),
+		EventStoreAppendDurationMetricName,
+		metric.WithUnit(MetricUnitMilliseconds),
+		metric.WithDescription(EventStoreAppendDurationMetricDescription),
 	); err != nil {
 		return fmt.Errorf("opentelemetry.InstrumentedEventStore: failed to register metric, %w", err)
 	}
@@ -96,7 +111,7 @@ func (ies *InstrumentedEventStore) Stream(
 	}
 
 	return event.NewStream(func(yield func(event.Persisted) bool) error {
-		ctx, span := ies.tracer.Start(ctx, "event.Store.Stream", trace.WithAttributes(attributes...))
+		ctx, span := ies.tracer.Start(ctx, EventStoreStreamSpanName, trace.WithAttributes(attributes...))
 		start := time.Now()
 
 		inner := ies.eventStore.Stream(ctx, id, selector)
@@ -146,7 +161,7 @@ func (ies *InstrumentedEventStore) Append(
 		EventStoreNumEventsKey.Int(len(events)),
 	}
 
-	ctx, span := ies.tracer.Start(ctx, "event.Store.Append", trace.WithAttributes(attributes...))
+	ctx, span := ies.tracer.Start(ctx, EventStoreAppendSpanName, trace.WithAttributes(attributes...))
 	start := time.Now()
 
 	defer func() {
