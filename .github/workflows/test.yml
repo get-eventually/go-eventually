@@ -35,6 +35,8 @@ jobs:
         uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage.txt
+          # One coverage file per Go workspace member (see go.work).
+          # Keep this list in sync with go.work's use directives.
+          files: ./coverage.txt,./examples/todolist/coverage.txt
           verbose: true
           fail_ci_if_error: true

@@ -60,6 +60,14 @@ You can add this library to your project by running:
 go get -u github.com/get-eventually/go-eventually
 ```
 
+## Examples
+
+End-to-end examples live under [`examples/`](./examples):
+
+* [`examples/todolist`](./examples/todolist) — a Connect-based TodoList
+  service demonstrating aggregates, commands, queries, and BDD-style
+  scenario tests, backed by the in-memory event store.
+
 ## Contributing
 
 Thank you for your consideration ❤️ You can head over our [CONTRIBUTING](./CONTRIBUTING.md) page to get started.

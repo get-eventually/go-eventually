@@ -128,7 +128,6 @@ linters:
     paths:
       - third_party$
       - builtin$
-      - examples$
 
 issues:
   max-issues-per-linter: 0
@@ -153,4 +152,3 @@ formatters:
     paths:
       - third_party$
       - builtin$
-      - examples$

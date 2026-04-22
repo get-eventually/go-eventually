@@ -1,0 +1,93 @@
+syntax = "proto3";
+
+package todolist.v1;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "todolist/v1/todo_list.proto";
+
+// TodoListService exposes TodoList operations over Connect.
+//
+// Commands return google.protobuf.Empty; they never produce response
+// payloads. Queries return a dedicated response message.
+service TodoListService {
+  // CreateTodoList creates a new TodoList with a client-generated ID.
+  rpc CreateTodoList(CreateTodoListRequest) returns (google.protobuf.Empty);
+  // GetTodoList fetches an existing TodoList by ID.
+  rpc GetTodoList(GetTodoListRequest) returns (GetTodoListResponse);
+  // AddTodoItem appends a new item to an existing TodoList.
+  rpc AddTodoItem(AddTodoItemRequest) returns (google.protobuf.Empty);
+  // MarkTodoItemAsDone marks an existing item as completed.
+  rpc MarkTodoItemAsDone(MarkTodoItemAsDoneRequest) returns (google.protobuf.Empty);
+  // MarkTodoItemAsPending reverts a previous "mark as done".
+  rpc MarkTodoItemAsPending(MarkTodoItemAsPendingRequest) returns (google.protobuf.Empty);
+  // DeleteTodoItem removes an item from a TodoList.
+  rpc DeleteTodoItem(DeleteTodoItemRequest) returns (google.protobuf.Empty);
+}
+
+// CreateTodoListRequest creates a new TodoList with the specified ID.
+//
+// The todo_list_id is client-generated: clients are expected to generate a
+// UUID and pass it in the request. This keeps the command idempotent and
+// frees the response of a payload.
+message CreateTodoListRequest {
+  // Client-generated UUID for the new list.
+  string todo_list_id = 1;
+  // Display title of the list.
+  string title = 2;
+  // Owner identifier.
+  string owner = 3;
+}
+
+// GetTodoListRequest fetches a TodoList by its ID.
+message GetTodoListRequest {
+  // UUID of the list to fetch.
+  string todo_list_id = 1;
+}
+
+// GetTodoListResponse contains the requested TodoList.
+message GetTodoListResponse {
+  // The requested list.
+  TodoList todo_list = 1;
+}
+
+// AddTodoItemRequest adds a new TodoItem to an existing TodoList.
+//
+// The todo_item_id is client-generated, same as in CreateTodoListRequest.
+message AddTodoItemRequest {
+  // UUID of the target list.
+  string todo_list_id = 1;
+  // Client-generated UUID for the new item.
+  string todo_item_id = 2;
+  // Short title of the item.
+  string title = 3;
+  // Free-form description of the item.
+  string description = 4;
+  // Optional due date; omit for no due date.
+  google.protobuf.Timestamp due_date = 5;
+}
+
+// MarkTodoItemAsDoneRequest marks an item in a TodoList as completed.
+message MarkTodoItemAsDoneRequest {
+  // UUID of the list that owns the item.
+  string todo_list_id = 1;
+  // UUID of the item to mark as done.
+  string todo_item_id = 2;
+}
+
+// MarkTodoItemAsPendingRequest marks an item in a TodoList as pending
+// (i.e., undoes a previous "mark as done").
+message MarkTodoItemAsPendingRequest {
+  // UUID of the list that owns the item.
+  string todo_list_id = 1;
+  // UUID of the item to mark as pending.
+  string todo_item_id = 2;
+}
+
+// DeleteTodoItemRequest removes an item from a TodoList.
+message DeleteTodoItemRequest {
+  // UUID of the list that owns the item.
+  string todo_list_id = 1;
+  // UUID of the item to delete.
+  string todo_item_id = 2;
+}
