@@ -3,8 +3,8 @@
   "release-type": "go",
   "include-component-in-tag": false,
   "separate-pull-requests": false,
-  "bump-minor-pre-major": false,
-  "bump-patch-for-minor-pre-major": false,
+  "bump-minor-pre-major": true,
+  "bump-patch-for-minor-pre-major": true,
   "bootstrap-sha": "05533afd3f9b6078e3e96fd6dc0a68f4ee917e1e",
   "changelog-sections": [
     { "type": "feat", "section": "Features" },
