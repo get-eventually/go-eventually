@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.4.1](https://github.com/get-eventually/go-eventually/compare/v0.4.0...v0.4.1) (2026-04-22)
+
+
+### ⚠ BREAKING CHANGES
+
+* replace channel-based event streaming with message.Stream iterator ([#330](https://github.com/get-eventually/go-eventually/issues/330))
+
+### Features
+
+* **examples:** add todolist connect example exercising the new streaming API ([#331](https://github.com/get-eventually/go-eventually/issues/331)) ([492525f](https://github.com/get-eventually/go-eventually/commit/492525f904d6dc1318460c008fb100e08350ebba))
+* replace channel-based event streaming with message.Stream iterator ([#330](https://github.com/get-eventually/go-eventually/issues/330)) ([a96b37a](https://github.com/get-eventually/go-eventually/commit/a96b37a9f3f683e200670c76ffc7d4338901c885))
+
+
+### Bug Fixes
+
+* **release-please:** enable bump-*-pre-major feature flags ([f8456ab](https://github.com/get-eventually/go-eventually/commit/f8456ab24d7816e29b90fa78fc76224160f51747))
+* **release:** drop package-name from release-please config ([#328](https://github.com/get-eventually/go-eventually/issues/328)) ([6ae1f8e](https://github.com/get-eventually/go-eventually/commit/6ae1f8e0bc9163ff708b43df1429a1d51d2afaf1))
+* rephrase docs ([1aa4425](https://github.com/get-eventually/go-eventually/commit/1aa4425ea048def137b7e62d26358b302ea1d866))
+
+
+### Documentation
+
+* **README:** add the How to Use section ([baddbb7](https://github.com/get-eventually/go-eventually/commit/baddbb7ce0e7c54c0299071793d2720e2e34405a))
+
+
+### Miscellaneous
+
+* release 0.4.1 ([f34e71c](https://github.com/get-eventually/go-eventually/commit/f34e71c6caaf4ad86537728dcb14df4459e7193c))
+
 ## [0.4.0](https://github.com/get-eventually/go-eventually/compare/v0.3.0...v0.4.0) (2026-04-21)
 
 
