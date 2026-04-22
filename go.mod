@@ -14,6 +14,8 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.42.0
 	go.opentelemetry.io/otel v1.43.0
 	go.opentelemetry.io/otel/metric v1.43.0
+	go.opentelemetry.io/otel/sdk v1.43.0
+	go.opentelemetry.io/otel/sdk/metric v1.43.0
 	go.opentelemetry.io/otel/trace v1.43.0
 	google.golang.org/genproto v0.0.0-20260420184626-e10c466a9529
 	google.golang.org/protobuf v1.36.11

@@ -21,6 +21,21 @@ const (
 	AggregateIDAttribute      attribute.Key = "aggregate.id"
 )
 
+// Span names emitted by the InstrumentedRepository instrumentation.
+const (
+	RepositoryGetSpanName  = "aggregate.Repository.Get"
+	RepositorySaveSpanName = "aggregate.Repository.Save"
+)
+
+// Metric names and descriptions exposed by the InstrumentedRepository instrumentation.
+const (
+	RepositoryGetDurationMetricName        = "eventually.repository.get.duration.milliseconds"
+	RepositoryGetDurationMetricDescription = "Duration in milliseconds of aggregate.Repository.Get operations performed."
+
+	RepositorySaveDurationMetricName        = "eventually.repository.save.duration.milliseconds"
+	RepositorySaveDurationMetricDescription = "Duration in milliseconds of aggregate.Repository.Save operations performed."
+)
+
 // InstrumentedRepository is a wrapper type over an aggregate.Repository
 // instance to provide instrumentation, in the form of metrics and traces
 // using OpenTelemetry.
@@ -39,17 +54,17 @@ func (ir *InstrumentedRepository[I, T]) registerMetrics(meter metric.Meter) erro
 	var err error
 
 	if ir.getDuration, err = meter.Int64Histogram(
-		"eventually.repository.get.duration.milliseconds",
-		metric.WithUnit("ms"),
-		metric.WithDescription("Duration in milliseconds of aggregate.Repository.Get operations performed."),
+		RepositoryGetDurationMetricName,
+		metric.WithUnit(MetricUnitMilliseconds),
+		metric.WithDescription(RepositoryGetDurationMetricDescription),
 	); err != nil {
 		return fmt.Errorf("opentelemetry.InstrumentedRepository: failed to register metric, %w", err)
 	}
 
 	if ir.saveDuration, err = meter.Int64Histogram(
-		"eventually.repository.save.duration.milliseconds",
-		metric.WithUnit("ms"),
-		metric.WithDescription("Duration in milliseconds of aggregate.Repository.Save operations performed."),
+		RepositorySaveDurationMetricName,
+		metric.WithUnit(MetricUnitMilliseconds),
+		metric.WithDescription(RepositorySaveDurationMetricDescription),
 	); err != nil {
 		return fmt.Errorf("opentelemetry.InstrumentedRepository: failed to register metric, %w", err)
 	}
@@ -98,7 +113,7 @@ func (ir *InstrumentedRepository[I, T]) Get(ctx context.Context, id I) (result T
 		AggregateIDAttribute.String(id.String()),
 	)
 
-	ctx, span := ir.tracer.Start(ctx, "aggregate.Repository.Get", trace.WithAttributes(spanAttributes...))
+	ctx, span := ir.tracer.Start(ctx, RepositoryGetSpanName, trace.WithAttributes(spanAttributes...))
 	start := time.Now()
 
 	defer func() {
@@ -135,7 +150,7 @@ func (ir *InstrumentedRepository[I, T]) Save(ctx context.Context, root T) (err e
 		AggregateVersionAttribute.Int64(int64(root.Version())),
 	)
 
-	ctx, span := ir.tracer.Start(ctx, "aggregate.Repository.Save", trace.WithAttributes(spanAttributes...))
+	ctx, span := ir.tracer.Start(ctx, RepositorySaveSpanName, trace.WithAttributes(spanAttributes...))
 	start := time.Now()
 
 	defer func() {
