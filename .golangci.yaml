@@ -29,7 +29,7 @@ linters:
     - gocritic
     - gocyclo
     - godot
-    - gomodguard
+    - gomodguard_v2
     - goprintffuncname
     - gosec
     - govet
@@ -87,12 +87,11 @@ linters:
         - style
     gocyclo:
       min-complexity: 20
-    gomodguard:
+    gomodguard_v2:
       blocked:
-        modules:
-          - github.com/golang/protobuf:
-              recommendations:
-                - google.golang.org/protobuf
+        - module: github.com/golang/protobuf
+          recommendations:
+            - google.golang.org/protobuf
     lll:
       line-length: 160
     misspell:
@@ -121,10 +120,17 @@ linters:
   exclusions:
     generated: lax
     rules:
-      - linters:
+      - path: _test\.go
+        linters:
           - exhaustruct
           - funlen
-        path: _test\.go
+      # NOTE: false positive to ignore in this file.
+      - path: command/scenario_test\.go
+        linters:
+          - goconst
+      - path: _command_test\.go
+        linters:
+          - goconst
     paths:
       - third_party$
       - builtin$
