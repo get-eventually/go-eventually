@@ -19,9 +19,6 @@ import (
 	connectgrpchealth "connectrpc.com/grpchealth"
 	connectgrpcreflect "connectrpc.com/grpcreflect"
 	"github.com/kelseyhightower/envconfig"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
-
 	"github.com/get-eventually/go-eventually/aggregate"
 	"github.com/get-eventually/go-eventually/event"
 	"github.com/get-eventually/go-eventually/examples/todolist/gen/todolist/v1/todolistv1connect"
@@ -104,11 +101,14 @@ func run() error { //nolint:funlen // Single linear wire-up of the service; spli
 
 	srv := &http.Server{ //nolint:exhaustruct // Stdlib struct with many optional fields; defaults are fine.
 		Addr:              cfg.Server.Address,
-		Handler:           h2c.NewHandler(mux, &http2.Server{}), //nolint:exhaustruct // h2c.Server defaults are fine.
+		Handler:           mux,
 		ReadTimeout:       cfg.Server.ReadTimeout,
 		WriteTimeout:      cfg.Server.WriteTimeout,
 		ReadHeaderTimeout: cfg.Server.ReadTimeout,
 	}
+	srv.Protocols = new(http.Protocols)
+	srv.Protocols.SetHTTP1(true)
+	srv.Protocols.SetUnencryptedHTTP2(true)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

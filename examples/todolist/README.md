@@ -14,7 +14,7 @@ Sourcing primitives end-to-end with:
 - BDD-style test scenarios using `aggregate.Scenario`, `command.Scenario`,
   and (implicitly through the command scenarios) the event streaming
   plumbing.
-- A Connect service exposing the above over HTTP/2 (h2c), with gRPC
+- A Connect service exposing the above over unencrypted HTTP/2, with gRPC
   health + gRPC reflection wired up.
 
 ## Running
