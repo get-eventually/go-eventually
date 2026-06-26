@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.2](https://github.com/get-eventually/go-eventually/compare/v0.4.1...v0.4.2) (2026-06-26)
+
+
+### Bug Fixes
+
+* **deps:** update all non-major dependencies to v0.43.0 ([#344](https://github.com/get-eventually/go-eventually/issues/344)) ([c5c25ea](https://github.com/get-eventually/go-eventually/commit/c5c25eaa1f883c63b72b18e3d5ea1d1296158aab))
+* **deps:** update all non-major dependencies to v1.44.0 ([#338](https://github.com/get-eventually/go-eventually/issues/338)) ([068dc48](https://github.com/get-eventually/go-eventually/commit/068dc485d41970d135a469b54bf4a8d1883133c5))
+* **deps:** update all non-major dependencies to v5.10.0 ([#340](https://github.com/get-eventually/go-eventually/issues/340)) ([bd4448c](https://github.com/get-eventually/go-eventually/commit/bd4448c02f6d23062f2189721f59843e7236ab69))
+* **deps:** update google.golang.org/genproto digest to 60b97b3 ([#335](https://github.com/get-eventually/go-eventually/issues/335)) ([53968ff](https://github.com/get-eventually/go-eventually/commit/53968ffab2cd3316c00638408fc77c7e39938c3c))
+* **deps:** update google.golang.org/genproto digest to 7cedc36 ([#320](https://github.com/get-eventually/go-eventually/issues/320)) ([f838c21](https://github.com/get-eventually/go-eventually/commit/f838c21529199f80cd8668694d9ee8bc90b6033a))
+* h2c deprecation ([#346](https://github.com/get-eventually/go-eventually/issues/346)) ([1807f4e](https://github.com/get-eventually/go-eventually/commit/1807f4ee16544a673c79278f6dc6e59d14f25a7e))
+
 ## [0.4.1](https://github.com/get-eventually/go-eventually/compare/v0.4.0...v0.4.1) (2026-04-22)
 
 > **Note:** This release retracts `v0.4.0`, which was published prematurely without the `message.Stream` iterator migration. Users on v0.4.0 should upgrade to v0.4.1.
