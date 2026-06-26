@@ -19,6 +19,7 @@ import (
 	connectgrpchealth "connectrpc.com/grpchealth"
 	connectgrpcreflect "connectrpc.com/grpcreflect"
 	"github.com/kelseyhightower/envconfig"
+
 	"github.com/get-eventually/go-eventually/aggregate"
 	"github.com/get-eventually/go-eventually/event"
 	"github.com/get-eventually/go-eventually/examples/todolist/gen/todolist/v1/todolistv1connect"
