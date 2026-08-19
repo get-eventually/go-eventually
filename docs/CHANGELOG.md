@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.3](https://github.com/get-eventually/go-eventually/compare/v0.4.2...v0.4.3) (2026-08-19)
+
+
+### Bug Fixes
+
+* **deps:** update all non-major dependencies ([#355](https://github.com/get-eventually/go-eventually/issues/355)) ([c9342d2](https://github.com/get-eventually/go-eventually/commit/c9342d2d53991c063969bf31dc0003386cfa12b6))
+* **deps:** update all non-major dependencies to v0.44.0 ([#353](https://github.com/get-eventually/go-eventually/issues/353)) ([a3d825b](https://github.com/get-eventually/go-eventually/commit/a3d825bd1a4fde44d2545a7f201d53632415044a))
+* **deps:** update all non-major dependencies to v1.45.0 ([#351](https://github.com/get-eventually/go-eventually/issues/351)) ([cb89913](https://github.com/get-eventually/go-eventually/commit/cb89913f03ca0a4e494256876aad4532aa585e36))
+* **deps:** update google.golang.org/genproto digest to 1b09341 ([#356](https://github.com/get-eventually/go-eventually/issues/356)) ([36dda5a](https://github.com/get-eventually/go-eventually/commit/36dda5a5dfd40464c4d47cd8b7bdc9018ff182fc))
+* **deps:** update google.golang.org/genproto digest to c8921c7 ([#348](https://github.com/get-eventually/go-eventually/issues/348)) ([6cd43a2](https://github.com/get-eventually/go-eventually/commit/6cd43a20ab3284a1b03888ae58a505d0a9228280))
+* **deps:** update google.golang.org/genproto digest to ec0a776 ([#354](https://github.com/get-eventually/go-eventually/issues/354)) ([12091bb](https://github.com/get-eventually/go-eventually/commit/12091bb47bb331be871cf7be25a80daaf3fd75ed))
+
 ## [0.4.2](https://github.com/get-eventually/go-eventually/compare/v0.4.1...v0.4.2) (2026-06-26)
 
 
