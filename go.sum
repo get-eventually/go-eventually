@@ -350,6 +350,8 @@ golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898/go.mod h1:I/5z698sn9Ka8T
 golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
 google.golang.org/genproto v0.0.0-20260810153831-ec0a7760b754 h1:Kj7g/XOpdB2mzcVV92AFeNKvYR5WRNpxfX5Mj3wQ2SM=
 google.golang.org/genproto v0.0.0-20260810153831-ec0a7760b754/go.mod h1:UpDDw2l68z31m5UZN/Qi0Kow16ohhlJVlmqC3qRM5Q8=
+google.golang.org/genproto v0.0.0-20260818201246-1b0934165a6f h1:mIpuZeRssq9TYLzKcruaLOCbOgJt8WDF1FSyEPZBw24=
+google.golang.org/genproto v0.0.0-20260818201246-1b0934165a6f/go.mod h1:UpDDw2l68z31m5UZN/Qi0Kow16ohhlJVlmqC3qRM5Q8=
 google.golang.org/protobuf v1.36.12 h1:pJOKDDOyeXErUroCihFAd5LQuwXBSpVnKGrj5o/fwxc=
 google.golang.org/protobuf v1.36.12/go.mod h1:HTf+CrKn2C3g5S8VImy6tdcUvCska2kB7j23XfzDpco=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
