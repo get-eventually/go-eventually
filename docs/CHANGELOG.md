@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.4](https://github.com/get-eventually/go-eventually/compare/v0.4.3...v0.4.4) (2026-08-26)
+
+
+### Bug Fixes
+
+* **deps:** update all non-major dependencies to v1.46.0 ([#361](https://github.com/get-eventually/go-eventually/issues/361)) ([4222124](https://github.com/get-eventually/go-eventually/commit/4222124216e618e397959a35da863e2c824f07a1))
+* **deps:** update module github.com/stretchr/testify to v1.12.1 ([#359](https://github.com/get-eventually/go-eventually/issues/359)) ([a88a5fc](https://github.com/get-eventually/go-eventually/commit/a88a5fcc4e54544502176fbb6afd255af45332c5))
+
 ## [0.4.3](https://github.com/get-eventually/go-eventually/compare/v0.4.2...v0.4.3) (2026-08-19)
 
 
