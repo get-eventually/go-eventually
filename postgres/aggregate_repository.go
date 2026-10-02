@@ -56,7 +56,7 @@ func (repo AggregateRepository[ID, T]) Get(ctx context.Context, id ID) (T, error
 
 // Save saves the snapshot and recorded events of root in its own transaction.
 func (repo AggregateRepository[ID, T]) Save(ctx context.Context, root T) error {
-	txOpts := pgx.TxOptions{ //nolint:exhaustruct // We don't need all fields.
+	txOpts := pgx.TxOptions{ //nolint:exhaustruct_v5 // We don't need all fields.
 		IsoLevel:   pgx.Serializable,
 		AccessMode: pgx.ReadWrite,
 	}
@@ -130,7 +130,7 @@ type Option[ID aggregate.ID, T aggregate.Root[ID]] interface {
 
 type option[T any] func(T)
 
-func (apply option[T]) apply(val T) { apply(val) } //nolint:unused // Called through the generic Option interface.
+func (apply option[T]) apply(val T) { apply(val) }
 
 // WithAggregateTableName configures the aggregate snapshot table.
 func WithAggregateTableName[ID aggregate.ID, T aggregate.Root[ID]](tableName string) Option[ID, T] {

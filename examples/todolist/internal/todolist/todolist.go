@@ -80,7 +80,7 @@ func (tl *TodoList) Apply(evt event.Event) error {
 		tl.CreationTime = evt.CreationTime
 
 	case ItemWasAdded:
-		item := &Item{} //nolint:exhaustruct // Applied below.
+		item := &Item{} //nolint:exhaustruct_v5 // Applied below.
 		if err := item.Apply(evt); err != nil {
 			return fmt.Errorf("todolist.TodoList.Apply: failed to apply item event, %w", err)
 		}

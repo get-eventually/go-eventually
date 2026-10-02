@@ -100,7 +100,7 @@ func run() error { //nolint:funlen // Single linear wire-up of the service; spli
 		connectgrpcreflect.NewStaticReflector(todolistv1connect.TodoListServiceName),
 	))
 
-	srv := &http.Server{ //nolint:exhaustruct // Stdlib struct with many optional fields; defaults are fine.
+	srv := &http.Server{ //nolint:exhaustruct_v5 // Stdlib struct with many optional fields; defaults are fine.
 		Addr:              cfg.Server.Address,
 		Handler:           mux,
 		ReadTimeout:       cfg.Server.ReadTimeout,

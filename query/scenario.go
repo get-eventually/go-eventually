@@ -53,7 +53,7 @@ func (sc ScenarioInit[Q, R, T]) Given(events ...event.Persisted) ScenarioGiven[Q
 
 // When provides the Domain Query to evaluate.
 func (sc ScenarioInit[Q, R, T]) When(q Envelope[Q]) ScenarioWhen[Q, R, T] {
-	//nolint:exhaustruct // Zero values are fine here.
+	//nolint:exhaustruct_v5 // Zero values are fine here.
 	return ScenarioWhen[Q, R, T]{
 		when: q,
 	}
@@ -84,7 +84,7 @@ type ScenarioWhen[Q Query, R any, T ProcessorHandler[Q, R]] struct {
 // Then sets a positive expectation on the scenario outcome, to produce
 // the Query Result provided in input.
 func (sc ScenarioWhen[Q, R, T]) Then(result R) ScenarioThen[Q, R, T] {
-	//nolint:exhaustruct // Zero values are fine here.
+	//nolint:exhaustruct_v5 // Zero values are fine here.
 	return ScenarioThen[Q, R, T]{
 		ScenarioWhen: sc,
 		then:         result,
@@ -98,7 +98,7 @@ func (sc ScenarioWhen[Q, R, T]) Then(result R) ScenarioThen[Q, R, T] {
 // by the Query Handler is unwrapped until the cause error to match
 // the provided expectation.
 func (sc ScenarioWhen[Q, R, T]) ThenError(err error) ScenarioThen[Q, R, T] {
-	//nolint:exhaustruct // Zero values are fine here.
+	//nolint:exhaustruct_v5 // Zero values are fine here.
 	return ScenarioThen[Q, R, T]{
 		ScenarioWhen: sc,
 		wantError:    true,
@@ -112,7 +112,7 @@ func (sc ScenarioWhen[Q, R, T]) ThenError(err error) ScenarioThen[Q, R, T] {
 // This is useful when the error returned is not important for the Domain Query
 // you're trying to test.
 func (sc ScenarioWhen[Q, R, T]) ThenFails() ScenarioThen[Q, R, T] {
-	//nolint:exhaustruct // Zero values are fine here.
+	//nolint:exhaustruct_v5 // Zero values are fine here.
 	return ScenarioThen[Q, R, T]{
 		ScenarioWhen: sc,
 		wantError:    true,

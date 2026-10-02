@@ -16,7 +16,7 @@ type DeleteItemCommand struct {
 // Name implements message.Message.
 func (DeleteItemCommand) Name() string { return "DeleteTodoListItem" }
 
-//nolint:exhaustruct // Interface implementation assertion.
+//nolint:exhaustruct_v5 // Interface implementation assertion.
 var _ command.Handler[DeleteItemCommand] = DeleteItemCommandHandler{}
 
 // DeleteItemCommandHandler is the command.Handler for DeleteItemCommand

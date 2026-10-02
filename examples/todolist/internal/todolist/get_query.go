@@ -17,7 +17,7 @@ type GetQuery struct {
 // Name implements message.Message.
 func (GetQuery) Name() string { return "GetTodoList" }
 
-//nolint:exhaustruct // Interface implementation assertion.
+//nolint:exhaustruct_v5 // Interface implementation assertion.
 var _ query.Handler[GetQuery, *TodoList] = GetQueryHandler{}
 
 // GetQueryHandler handles a GetQuery by returning the TodoList specified

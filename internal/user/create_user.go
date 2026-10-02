@@ -11,7 +11,7 @@ import (
 	"github.com/get-eventually/go-eventually/command"
 )
 
-//nolint:exhaustruct // Interface implementation assertion.
+//nolint:exhaustruct_v5 // Interface implementation assertion.
 var (
 	_ command.Command                = CreateCommand{}
 	_ command.Handler[CreateCommand] = CreateCommandHandler{}
