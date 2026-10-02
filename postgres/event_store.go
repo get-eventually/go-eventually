@@ -15,7 +15,7 @@ import (
 	"github.com/get-eventually/go-eventually/version"
 )
 
-//nolint:exhaustruct // Interface implementation assertion.
+//nolint:exhaustruct_v5 // Interface implementation assertion.
 var _ event.Store = EventStore{}
 
 // EventStore is an event.Store implementation targeted to PostgreSQL databases.
@@ -104,7 +104,7 @@ func (es EventStore) Append(
 ) (version.Version, error) {
 	var newVersion version.Version
 
-	txOpts := pgx.TxOptions{ //nolint:exhaustruct // We don't need all fields.
+	txOpts := pgx.TxOptions{ //nolint:exhaustruct_v5 // We don't need all fields.
 		IsoLevel:   pgx.Serializable,
 		AccessMode: pgx.ReadWrite,
 	}

@@ -17,7 +17,7 @@ type MarkItemAsDoneCommand struct {
 // Name implements message.Message.
 func (MarkItemAsDoneCommand) Name() string { return "MarkTodoListItemAsDone" }
 
-//nolint:exhaustruct // Interface implementation assertion.
+//nolint:exhaustruct_v5 // Interface implementation assertion.
 var _ command.Handler[MarkItemAsDoneCommand] = MarkItemAsDoneCommandHandler{}
 
 // MarkItemAsDoneCommandHandler is the command.Handler for

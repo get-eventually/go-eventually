@@ -20,7 +20,7 @@ type AddItemCommand struct {
 // Name implements message.Message.
 func (AddItemCommand) Name() string { return "AddTodoListItem" }
 
-//nolint:exhaustruct // Interface implementation assertion.
+//nolint:exhaustruct_v5 // Interface implementation assertion.
 var _ command.Handler[AddItemCommand] = AddItemCommandHandler{}
 
 // AddItemCommandHandler is the command.Handler for AddItemCommand commands.

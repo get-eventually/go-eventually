@@ -52,7 +52,7 @@ func protoDeserializer(src *userv1.User) (*User, error) {
 		return nil, fmt.Errorf("user.protoDeserialize: failed to deserialize user id, %w", err)
 	}
 
-	user := &User{ //nolint:exhaustruct // Other fields will be set by eventually.
+	user := &User{ //nolint:exhaustruct_v5 // Other fields will be set by eventually.
 		id:        id,
 		firstName: src.FirstName,
 		lastName:  src.LastName,

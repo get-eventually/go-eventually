@@ -17,7 +17,7 @@ type MarkItemAsPendingCommand struct {
 // Name implements message.Message.
 func (MarkItemAsPendingCommand) Name() string { return "MarkTodoListItemAsPending" }
 
-//nolint:exhaustruct // Interface implementation assertion.
+//nolint:exhaustruct_v5 // Interface implementation assertion.
 var _ command.Handler[MarkItemAsPendingCommand] = MarkItemAsPendingCommandHandler{}
 
 // MarkItemAsPendingCommandHandler is the command.Handler for
