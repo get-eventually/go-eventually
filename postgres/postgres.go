@@ -1,3 +1,5 @@
+// Package postgres contains implementations of go-eventually interfaces
+// specific to PostgreSQL, such as Aggregate Repository, Event Store, etc.
 package postgres
 
 import (
@@ -8,12 +10,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-
 	"github.com/get-eventually/go-eventually/event"
 	"github.com/get-eventually/go-eventually/message"
 	"github.com/get-eventually/go-eventually/serde"
 	"github.com/get-eventually/go-eventually/version"
+	"github.com/jackc/pgx/v5"
 )
 
 const (

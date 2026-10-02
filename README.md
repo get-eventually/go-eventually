@@ -179,6 +179,31 @@ In `eventually` there are a couple of implementation types:
   Pick this when you want snapshot-style reads but still need the event
   log for projections, auditing, or downstream consumers.
 
+- **`postgres.TransactionAwareAggregateRepository`** uses a caller-owned
+  PostgreSQL transaction for both snapshot reads and writes. Supply a function
+  that retrieves a `pgx.Tx` from the operation's context:
+
+  ```go
+  userRepository := postgres.NewTransactionAwareAggregateRepository(
+      unitofwork.TxFromContext, // func(context.Context) (pgx.Tx, bool)
+      UserType,
+      userSerde,
+      messageSerde,
+  )
+  ```
+
+  This repository requires a transaction for every `Get` and `Save`; a missing
+  transaction returns `postgres.ErrTransactionRequired`. It needs no connection
+  pool and never begins, commits, or rolls back transactions. Configure table
+  names with the same `WithAggregateTableName`, `WithEventsTableName`, and
+  `WithStreamsTableName` options used by `AggregateRepository`.
+
+  The unit of work must open a **Serializable** transaction, propagate it through
+  context, and roll back if any operation fails. `Save` success means the snapshot
+  and events are staged; only the unit-of-work commit makes them durable. After a
+  failed or rolled-back save, discard affected aggregate instances and reload
+  before retrying the command, because saving flushes their recorded events.
+
 ### CQRS with Commands and Queries
 
 CQRS - or _Command/Query Responsibility Segregation_ - splits the write path from the read path.
