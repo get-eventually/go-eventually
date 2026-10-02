@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.4.4](https://github.com/get-eventually/go-eventually/compare/v0.4.3...v0.4.4) (2026-10-02)
+
+
+### Features
+
+* **postgres:** add TransactionAwareAggregateRepository for unit-of-work pattern ([#369](https://github.com/get-eventually/go-eventually/issues/369)) ([bf021ca](https://github.com/get-eventually/go-eventually/commit/bf021cadf3dfa2fc2a15978dc03c114eeaa9e2e1))
+
+
+### Bug Fixes
+
+* **deps:** update all non-major dependencies ([#363](https://github.com/get-eventually/go-eventually/issues/363)) ([23ab466](https://github.com/get-eventually/go-eventually/commit/23ab4661b7bddd085b458d7a84a80b2742221188))
+* **deps:** update all non-major dependencies to v1.46.0 ([#361](https://github.com/get-eventually/go-eventually/issues/361)) ([4222124](https://github.com/get-eventually/go-eventually/commit/4222124216e618e397959a35da863e2c824f07a1))
+* **deps:** update google.golang.org/genproto digest to f8649dd ([#358](https://github.com/get-eventually/go-eventually/issues/358)) ([09cfa5e](https://github.com/get-eventually/go-eventually/commit/09cfa5e7553897127ce3261791e9f0529a32713b))
+* **deps:** update module github.com/jackc/pgx/v5 to v5.11.0 ([#362](https://github.com/get-eventually/go-eventually/issues/362)) ([e7788f8](https://github.com/get-eventually/go-eventually/commit/e7788f831c5dd10237cf5af04230e91421d574a0))
+* **deps:** update module github.com/stretchr/testify to v1.12.1 ([#359](https://github.com/get-eventually/go-eventually/issues/359)) ([a88a5fc](https://github.com/get-eventually/go-eventually/commit/a88a5fcc4e54544502176fbb6afd255af45332c5))
+
 ## [0.4.3](https://github.com/get-eventually/go-eventually/compare/v0.4.2...v0.4.3) (2026-08-19)
 
 
