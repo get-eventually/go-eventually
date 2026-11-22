@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.5](https://github.com/get-eventually/go-eventually/compare/v0.4.4...v0.4.5) (2026-11-07)
+
+
+### Bug Fixes
+
+* **deps:** update all non-major dependencies to v0.45.0 ([#372](https://github.com/get-eventually/go-eventually/issues/372)) ([046eec2](https://github.com/get-eventually/go-eventually/commit/046eec23e80c0569f95447fbcecd1110d2dcb620))
+* **deps:** update google.golang.org/genproto digest to d1e00e9 ([#366](https://github.com/get-eventually/go-eventually/issues/366)) ([4da4a81](https://github.com/get-eventually/go-eventually/commit/4da4a812e28993f65058efe4a5f943501ee12ea0))
+* **deps:** update module github.com/jackc/pgx/v5 to v5.12.0 ([#370](https://github.com/get-eventually/go-eventually/issues/370)) ([9a9968f](https://github.com/get-eventually/go-eventually/commit/9a9968f353c736c0508f74eeedbb4b755be82a91))
+
 ## [0.4.4](https://github.com/get-eventually/go-eventually/compare/v0.4.3...v0.4.4) (2026-10-02)
 
 
